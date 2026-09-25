@@ -143,3 +143,50 @@ def test_recorder(tmp_path):
     meta = json.loads((rec.dir / "session.json").read_text())
     assert meta["samples"] == {"muse_eeg": 2, "marker": 1}
     assert meta["end_unix"] is not None
+
+
+def test_decode_pmd_acc_16bit():
+    from musepolar.polar import PMD_ACC, decode_pmd
+
+    samples = [[-980, 50, 120], [1000, -1, 0]]
+    frame = bytes([PMD_ACC]) + (5_000_000).to_bytes(8, "little") + bytes([0x01])
+    frame += b"".join(v.to_bytes(2, "little", signed=True) for s in samples for v in s)
+    kind, ts, out = decode_pmd(frame)
+    assert kind == PMD_ACC and ts == 5_000_000 and out == samples
+    assert decode_pmd(frame[:9] + bytes([0x81]) + frame[10:]) is None  # compressed: not handled
+
+
+def test_sensor_times_spacing_and_gap():
+    from musepolar.polar import SensorTimes
+
+    st = SensorTimes(130)
+    period = 1e9 / 130
+    ns, skipped = st.stamps(int(73 * period), 73)
+    assert skipped == 0 and ns[-1] == int(73 * period) and math.isclose(ns[1] - ns[0], period, rel_tol=1e-3)
+    # next frame follows a real clock that is slightly fast -> spacing follows it
+    ns, skipped = st.stamps(int(146 * period * 1.0001), 73)
+    assert skipped == 0 and ns[1] - ns[0] > period
+    # one frame lost -> reported as skipped samples
+    ns, skipped = st.stamps(int(292 * period), 73)
+    assert skipped == 73
+
+
+def test_estimate_offset_recovers_lag():
+    from musepolar.analysis import estimate_offset
+
+    rng = np.random.default_rng(1)
+
+    def acc(rate, delay):
+        t = np.arange(0, 10, 1 / rate) + 1000
+        bump = sum(2.0 * np.exp(-((t - 1000 - e - delay) ** 2) / (2 * 0.03 ** 2)) for e in (2.0, 4.3, 7.1))
+        return t, np.stack([rng.normal(0, 0.01, len(t)), rng.normal(0, 0.01, len(t)), 1 + bump], 1)
+
+    for lag in (0.07, -0.12):
+        (mt, mx), (pt, px) = acc(52, lag), acc(200, 0.0)
+        r = estimate_offset(mt, mx, pt, px)
+        assert r["ok"] and r["events_a"] == 3 and r["events_b"] == 3
+        assert abs(r["offset_s"] - lag) < 0.005
+
+    t = np.arange(0, 10, 1 / 52)
+    still = np.stack([np.zeros_like(t), np.zeros_like(t), np.ones_like(t) + rng.normal(0, 0.005, len(t))], 1)
+    assert not estimate_offset(t, still, t, still)["ok"]

@@ -29,6 +29,7 @@ class Recorder:
         self.stopped: float | None = None
         self.files: dict[str, tuple] = {}
         self.counts: dict[str, int] = {}
+        self.syncs: list[dict] = []
         self._write_meta()
 
     def _writer(self, stream: str):
@@ -45,6 +46,10 @@ class Recorder:
         for t, row in zip(ts, rows):
             w.writerow([f"{t:.6f}", *(round(v, 6) if isinstance(v, float) else v for v in row)])
         self.counts[stream] += len(rows)
+
+    def add_sync(self, result: dict) -> None:
+        self.syncs.append(result)
+        self._write_meta()
 
     def flush(self) -> None:
         for f, _ in self.files.values():
@@ -77,9 +82,23 @@ class Recorder:
                 s: round(n / self.elapsed, 2) for s, n in self.counts.items() if STREAMS[s]["rate"] and self.stopped
             },
             "streams": {s: STREAMS[s] for s in self.counts} if self.stopped else STREAMS,
+            "sync": self.syncs,
+            "sync_drift_ms_per_hour": self._drift(),
             "timestamp": "Unix time in seconds (host clock), per sample",
+            "sensor_ns": "Polar H10 internal clock (ns) of each ECG/ACC sample, from the PMD frame timestamps",
+            "sync_note": "muse_minus_polar_s > 0: an event appears later in Muse timestamps; align with t_polar + offset",
         }
         (self.dir / "session.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    def _drift(self) -> float | None:
+        good = [s for s in self.syncs if s.get("ok")]
+        if len(good) < 2:
+            return None
+        a, b = good[0], good[-1]
+        hours = (b["start_unix"] - a["start_unix"]) / 3600
+        if hours <= 0:
+            return None
+        return round((b["muse_minus_polar_s"] - a["muse_minus_polar_s"]) * 1000 / hours, 2)
 
     def close(self) -> None:
         if self.stopped is not None:

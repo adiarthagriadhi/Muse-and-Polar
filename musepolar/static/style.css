@@ -114,8 +114,8 @@ input[type="text"], select { font: inherit; font-size: 13px; padding: 6px 8px; b
 #recTimer { font-size: 13px; }
 
 .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); gap: 16px; padding: 16px;
-  grid-template-areas: "polar muse" "markers muse"; align-items: start; }
-.polar { grid-area: polar; } .muse { grid-area: muse; } .markers { grid-area: markers; }
+  grid-template-areas: "polar muse" "sync muse" "markers muse"; align-items: start; }
+.polar { grid-area: polar; } .muse { grid-area: muse; } .markers { grid-area: markers; } .sync { grid-area: sync; }
 .panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px;
   display: grid; gap: 12px; min-width: 0; }
 .panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
@@ -151,6 +151,14 @@ canvas { width: 100%; display: block; background: var(--surface-1); border-radiu
 .band .val { text-align: right; font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .band .name { color: var(--text-secondary); }
 
+.help { margin: 0; color: var(--text-secondary); }
+#syncBtn { justify-self: start; }
+#syncBtn:disabled { cursor: default; opacity: 0.8; }
+.sync-result:empty { display: none; }
+.sync-result { background: var(--surface-2); border-radius: 10px; padding: 10px 12px; display: grid; gap: 2px; font-size: 13px; }
+.sync-result .st { font-weight: 600; }
+.sync-result .st.good { color: var(--good); } .sync-result .st.warning { color: var(--serious); } .sync-result .st.critical { color: var(--critical); }
+.sync-val b { font-size: 24px; margin-right: 6px; }
 .marker-row { display: flex; gap: 8px; }
 .marker-row input { flex: 1; min-width: 0; }
 .quick { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -168,7 +176,7 @@ canvas { width: 100%; display: block; background: var(--surface-1); border-radiu
 @media (max-width: 1100px) {
   .topbar { grid-template-columns: 1fr; }
   .devices { justify-content: flex-start; }
-  .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "polar" "muse" "markers"; }
+  .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: "polar" "muse" "sync" "markers"; }
 }
 @media (max-width: 560px) {
   .grid { padding: 16px 16px; }

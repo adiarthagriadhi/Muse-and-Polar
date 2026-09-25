@@ -70,6 +70,10 @@
       <figcaption><span>Takogram RR <span class="muted">(ms, 2 menit)</span></span><span class="rate" data-rate="polar_rr"></span></figcaption>
       <canvas id="rrChart" height="150"></canvas>
     </figure>
+    <figure class="chart-card">
+      <figcaption><span>Akselerometer Polar <span class="muted">(g)</span></span><span class="rate" data-rate="polar_acc"></span></figcaption>
+      <canvas id="polarAccChart" height="120"></canvas>
+    </figure>
   </section>
 
   <!-- Muse 2 -->
@@ -111,6 +115,16 @@
       <figcaption><span>Akselerometer <span class="muted">(g)</span></span><span class="rate" data-rate="muse_acc"></span></figcaption>
       <canvas id="accChart" height="120"></canvas>
     </figure>
+  </section>
+
+  <!-- Sync -->
+  <section class="panel sync">
+    <div class="panel-head"><h2>Sinkronisasi Muse ↔ Polar</h2></div>
+    <p class="small help">Klik tombol, lalu dalam 10 detik lakukan <b>3 loncatan kecil</b> (jeda ±2 detik)
+      dengan kedua perangkat terpasang. Selisih waktu dihitung dari lonjakan di akselerometer Muse dan Polar,
+      lalu disimpan di <span class="mono">session.json</span>. Lakukan di <b>awal dan akhir</b> rekaman agar drift jam juga terukur.</p>
+    <button class="btn" id="syncBtn">Mulai sinkronisasi (10 s)</button>
+    <div id="syncResult" class="sync-result"></div>
   </section>
 
   <!-- Markers -->

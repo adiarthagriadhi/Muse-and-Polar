@@ -34,6 +34,21 @@ class _SimDevice:
         self.hub.set_status(self.key, state="disconnected")
 
 
+SIM_MUSE_LAG = 0.060  # simulated extra latency of the Muse, recovered by the sync procedure
+
+
+def _jumps(hub, t: float, lag: float = 0.0) -> float:
+    """Extra vertical acceleration (g) from three small jumps during a sync window."""
+    sync = hub.sync
+    if not sync.get("active"):
+        return 0.0
+    v = 0.0
+    for e in (2.0, 4.5, 7.0):
+        d = t - (sync["start"] + e + lag)
+        v += 1.6 * math.exp(-(d ** 2) / (2 * 0.04 ** 2)) - 0.8 * math.exp(-((d + 0.25) ** 2) / (2 * 0.06 ** 2))
+    return v
+
+
 def _ticks(t0: float, t1: float, rate: float) -> list[float]:
     """Sample instants on a global rate grid within (t0, t1]."""
     k0 = math.floor(t0 * rate) + 1
@@ -76,7 +91,10 @@ class SimMuse(_SimDevice):
             self.hub.push("muse_ppg", ts, rows)
         ts = _ticks(t0, t1, 52)
         if ts:
-            self.hub.push("muse_acc", ts, [[0.02 * math.sin(t), -0.05 + 0.01 * math.sin(0.7 * t), 0.99] for t in ts])
+            self.hub.push("muse_acc", ts, [
+                [0.02 * math.sin(t), -0.05 + 0.01 * math.sin(0.7 * t), 0.99 + _jumps(self.hub, t, SIM_MUSE_LAG)]
+                for t in ts
+            ])
             self.hub.push("muse_gyro", ts, [[random.gauss(0, 0.5), random.gauss(0, 0.5), random.gauss(0, 0.5)] for _ in ts])
         if t1 - self._tele > 5:
             self._tele = t1
@@ -93,6 +111,10 @@ class SimPolar(_SimDevice):
         self.beats: list[float] = []
         self.pending_rr: list[float] = []
         self.last_hr_push = time.time()
+        self.t_start = time.time()
+
+    def _sensor_ns(self, t: float) -> int:
+        return int((t - self.t_start) * 1e9 * 1.00002)  # strap clock runs 20 ppm fast
 
     def _ecg(self, t: float) -> float:
         v = 0.0
@@ -116,7 +138,14 @@ class SimPolar(_SimDevice):
             self.next_beat += rr
         ts = _ticks(t0, t1, 130)
         if ts:
-            self.hub.push("polar_ecg", ts, [[round(self._ecg(t))] for t in ts])
+            self.hub.push("polar_ecg", ts, [[float(round(self._ecg(t))), self._sensor_ns(t)] for t in ts])
+        ts = _ticks(t0, t1, 200)
+        if ts:
+            self.hub.push("polar_acc", ts, [
+                [-0.98 - _jumps(self.hub, t) + random.gauss(0, 0.01), 0.05 + random.gauss(0, 0.01),
+                 0.12 + 0.02 * math.sin(2 * math.pi * 0.25 * t), self._sensor_ns(t)]
+                for t in ts
+            ])
         if t1 - self.last_hr_push >= 1.0:
             self.last_hr_push = t1
             rr = [r for r in self.pending_rr]

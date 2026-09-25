@@ -7,9 +7,10 @@ import asyncio
 import json
 import logging
 import time
+from collections import deque
 from pathlib import Path
 
-from .analysis import EegBands, Hrv
+from .analysis import EegBands, Hrv, estimate_offset
 from .recorder import Recorder
 from .streams import STREAMS
 
@@ -30,6 +31,11 @@ class Hub:
         self.latest: dict[str, list] = {}
         self._pending: dict[str, dict] = {}
         self._events: list[dict] = []
+        # recent accelerometer history for cross-device synchronisation
+        self.history = {"muse_acc": deque(maxlen=52 * 60), "polar_acc": deque(maxlen=200 * 60)}
+        self.sync: dict = {"active": False, "result": None}
+        self.syncs: list[dict] = []
+        self._sync_task: asyncio.Task | None = None
 
     # -- data in -----------------------------------------------------------
     def push(self, stream: str, ts: list[float], rows: list[list]) -> None:
@@ -42,6 +48,8 @@ class Hub:
                 self.recorder.write(stream, ts, rows)
             except Exception:  # noqa: BLE001
                 log.exception("recording write failed")
+        if stream in self.history:
+            self.history[stream].extend(zip(ts, (r[:3] for r in rows)))
         if stream == "muse_eeg":
             self.eeg.add(rows)
         elif stream == "polar_rr":
@@ -89,6 +97,49 @@ class Hub:
         t = time.time()
         self.push("marker", [t], [[label]])
 
+    # -- synchronisation ---------------------------------------------------
+    def start_sync(self, duration: float = 10.0) -> None:
+        if self._sync_task and not self._sync_task.done():
+            return
+        self._sync_task = asyncio.create_task(self._run_sync(duration))
+
+    def compute_sync(self, t0: float, t1: float) -> dict:
+        def window(stream):
+            pts = [(t, xyz) for t, xyz in self.history[stream] if t0 <= t <= t1]
+            return [p[0] for p in pts], [p[1] for p in pts]
+
+        (mt, mx), (pt, px) = window("muse_acc"), window("polar_acc")
+        if len(mt) < 20:
+            res = {"ok": False, "reason": "akselerometer Muse tidak mengirim data"}
+        elif len(pt) < 20:
+            res = {"ok": False, "reason": "akselerometer Polar tidak mengirim data"}
+        else:
+            res = estimate_offset(mt, mx, pt, px)
+        # a = Muse, b = Polar: positive offset = the same event appears later in Muse timestamps
+        if "offset_s" in res:
+            res["muse_minus_polar_s"] = res.pop("offset_s")
+        res.update(start_unix=t0, end_unix=t1)
+        return res
+
+    async def _run_sync(self, duration: float) -> None:
+        t0 = time.time()
+        self.sync = {"active": True, "start": t0, "duration": duration, "result": self.sync.get("result")}
+        self._events.append({"type": "sync", "sync": self.sync})
+        self.marker("SYNC mulai")
+        await asyncio.sleep(duration + 0.6)  # let late BLE packets arrive
+        res = self.compute_sync(t0, t0 + duration)
+        if "muse_minus_polar_s" in res:
+            label = f"SYNC selesai (Muse−Polar {res['muse_minus_polar_s'] * 1000:+.0f} ms{'' if res['ok'] else ', ragu'})"
+        else:
+            label = "SYNC gagal"
+        self.marker(label)
+        self.syncs.append(res)
+        if self.recorder:
+            self.recorder.add_sync(res)
+        self.sync = {"active": False, "result": res}
+        self._events.append({"type": "sync", "sync": self.sync})
+        log.info("sync: %s", res)
+
     # -- data out ----------------------------------------------------------
     def hello(self) -> dict:
         return {
@@ -96,6 +147,7 @@ class Hub:
             "streams": STREAMS,
             "status": self.status,
             "recording": self.recorder.info() if self.recorder else self.last_recording,
+            "sync": self.sync,
             "server_time": time.time(),
         }
 

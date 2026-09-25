@@ -57,7 +57,9 @@ def make_slots(hub: Hub, args) -> dict[str, DeviceSlot]:
 
     return {
         "muse": DeviceSlot(lambda: Muse(hub, args.muse_name, args.muse_address, ppg=not args.no_ppg)),
-        "polar": DeviceSlot(lambda: PolarH10(hub, args.polar_name, args.polar_address, ecg=not args.no_ecg)),
+        "polar": DeviceSlot(lambda: PolarH10(
+            hub, args.polar_name, args.polar_address, ecg=not args.no_ecg, acc=not args.no_polar_acc
+        )),
     }
 
 
@@ -72,6 +74,8 @@ async def handle_command(hub: Hub, slots: dict[str, DeviceSlot], msg: dict) -> N
         hub.start_recording(str(msg.get("name", "")), str(msg.get("note", "")))
     elif cmd == "record_stop":
         hub.stop_recording()
+    elif cmd == "sync":
+        hub.start_sync(float(msg.get("duration", 10)))
     elif cmd == "marker":
         hub.marker(str(msg.get("label", "")))
     else:
@@ -144,7 +148,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--polar-name", default="Polar H10", help="BLE name prefix of the Polar (default: 'Polar H10')")
     p.add_argument("--polar-address", help="exact BLE address/UUID of the Polar H10")
     p.add_argument("--no-ppg", action="store_true", help="disable Muse PPG (EEG-only preset p21)")
-    p.add_argument("--no-ecg", action="store_true", help="disable Polar ECG (HR/RR only)")
+    p.add_argument("--no-ecg", action="store_true", help="disable Polar ECG")
+    p.add_argument("--no-polar-acc", action="store_true", help="disable Polar accelerometer (needed for sync)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(

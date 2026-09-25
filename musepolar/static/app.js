@@ -71,21 +71,22 @@ function defineStream(name, rate, ncol, seconds, makeChain) {
   streams[name] = { name, rate, raw: new Ring(cap, ncol), disp: new Ring(cap, ncol), makeChain, chains: null, last: 0 };
 }
 defineStream('muse_eeg', 256, 4, 12, () => {
-  const ch = [];
+  const ch = [];  // same chain on every EEG channel
   if (settings.hpf) ch.push(highpass(256, 1));
   if (settings.notch) ch.push(notch(256, settings.notch));
   return ch;
 });
 defineStream('muse_ppg', 64, 3, 12, () => [highpass(64, 0.5)]);
 defineStream('muse_acc', 52, 3, 12, null);
-defineStream('polar_ecg', 130, 1, 12, () => [highpass(130, 0.5)]);
+defineStream('polar_ecg', 130, 2, 12, (c) => (c === 0 ? [highpass(130, 0.5)] : []));
+defineStream('polar_acc', 200, 4, 12, null);
 defineStream('polar_rr', 0, 1, 1000, null);
 defineStream('polar_hr', 0, 2, 1000, null);
 const markers = [];
 
 function filterRow(st, row) {
   if (!st.makeChain) return row;
-  if (!st.chains) st.chains = row.map(() => st.makeChain());
+  if (!st.chains) st.chains = row.map((_, c) => st.makeChain(c));
   return row.map((v, c) => st.chains[c].reduce((x, f) => f.step(x), v));
 }
 function ingest(name, t, v) {
@@ -220,12 +221,18 @@ class StripChart {
     // markers
     ctx.save(); ctx.setLineDash([4, 4]); ctx.strokeStyle = css.marker; ctx.fillStyle = css.marker;
     ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    for (const m of markers) {
+    const placed = []; // label boxes already drawn, to stack overlapping labels
+    for (let n = markers.length - 1; n >= 0; n--) {
+      const m = markers[n];
       if (m.t < t0 || m.t > t1 + 1) continue;
       const x = X(m.t);
       ctx.beginPath(); ctx.moveTo(x + 0.5, T); ctx.lineTo(x + 0.5, T + ph); ctx.stroke();
       const w = ctx.measureText(m.label).width;
-      ctx.fillText(m.label, x + 4 + w > L + pw ? x - 4 - w : x + 4, T + ph - 14);
+      const lx = x + 4 + w > L + pw ? x - 4 - w : x + 4;
+      let row = 0;
+      while (placed.some((p) => p.row === row && lx < p.r + 6 && lx + w > p.l - 6)) row++;
+      placed.push({ l: lx, r: lx + w, row });
+      ctx.fillText(m.label, lx, T + ph - 14 - row * 13);
     }
     ctx.restore();
 
@@ -299,6 +306,10 @@ function makeCharts() {
   charts.push(new StripChart($('rrChart'), {
     stream: 'polar_rr', raw: true, cols: [0], labels: ['RR'], rate: 0, window: 120, unit: 'ms', points: true,
     minRange: 100, lineWidth: 2, get colors() { return [css.s1]; },
+  }));
+  charts.push(new StripChart($('polarAccChart'), {
+    stream: 'polar_acc', raw: true, cols: [0, 1, 2], labels: ['x', 'y', 'z'], rate: 200, window: 10, unit: 'g',
+    minRange: 0.2, get colors() { return [css.s1, css.s2, css.s3]; },
   }));
   charts.push(new StripChart($('ppgChart'), {
     stream: 'muse_ppg', cols: [1], labels: ['IR'], rate: 64, window: 8, unit: '',
@@ -422,6 +433,43 @@ function onData(streamsMsg) {
   }
 }
 
+// ---------------------------------------------------------------- sync
+let syncTimer = null;
+function renderSync(sync) {
+  const btn = $('syncBtn'), box = $('syncResult');
+  clearInterval(syncTimer);
+  if (sync.active) {
+    btn.disabled = true;
+    const tick = () => {
+      const left = Math.max(0, sync.start + sync.duration - nowServer());
+      btn.textContent = left > 0 ? `Loncat sekarang… ${left.toFixed(0)} s` : 'Menghitung…';
+    };
+    tick();
+    syncTimer = setInterval(tick, 250);
+    return;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Mulai sinkronisasi (10 s)';
+  const r = sync.result;
+  if (!r) { box.innerHTML = ''; return; }
+  const when = new Date(r.start_unix * 1000).toLocaleTimeString('id-ID');
+  if (!('muse_minus_polar_s' in r)) {
+    box.innerHTML = `<span class="st critical">✕ Gagal</span> <span class="muted">(${when})</span><div class="small"></div>`;
+    box.querySelector('div').textContent = r.reason;
+    return;
+  }
+  const ms = r.muse_minus_polar_s * 1000;
+  const [cls, label] = r.ok ? ['good', '✓ Berhasil'] : ['warning', '! Ragu'];
+  box.innerHTML = `<span class="st ${cls}">${label}</span> <span class="muted">(${when})</span>
+    <div class="sync-val"><b class="mono">${ms >= 0 ? '+' : '−'}${Math.abs(ms).toFixed(0)} ms</b>
+    <span class="muted small">Muse − Polar</span></div>
+    <div class="small muted">korelasi ${r.correlation.toFixed(2)} · kejadian terdeteksi Muse ${r.events_a}, Polar ${r.events_b}</div>
+    <div class="small"></div>`;
+  box.lastElementChild.textContent = r.ok
+    ? (ms >= 0 ? 'Kejadian yang sama tercatat lebih lambat di Muse.' : 'Kejadian yang sama tercatat lebih lambat di Polar.')
+    : r.reason;
+}
+
 // ---------------------------------------------------------------- socket
 let ws = null;
 function send(obj) { if (ws && ws.readyState === 1) ws.send(JSON.stringify(obj)); }
@@ -439,11 +487,13 @@ function connect() {
       case 'hello':
         syncClock(m.server_time); status = m.status; renderStatus();
         if (m.recording) { recording = m.recording; renderRecording(); }
+        if (m.sync) renderSync(m.sync);
         break;
       case 'status': status = m.status; renderStatus(); break;
       case 'data': onData(m.streams); break;
       case 'metrics': syncClock(m.server_time); renderMetrics(m); break;
       case 'recording': recording = m.recording; renderRecording(); break;
+      case 'sync': renderSync(m.sync); break;
     }
   };
 }
@@ -474,6 +524,7 @@ document.addEventListener('keydown', (e) => {
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= QUICK_MARKERS.length) sendMarker(QUICK_MARKERS[n - 1]);
 });
+$('syncBtn').addEventListener('click', () => send({ cmd: 'sync', duration: 10 }));
 $('eegScale').addEventListener('change', (e) => { settings.eegScale = +e.target.value; });
 $('notch').addEventListener('change', (e) => { settings.notch = +e.target.value; refilter('muse_eeg'); });
 $('hpf').addEventListener('change', (e) => { settings.hpf = e.target.checked; refilter('muse_eeg'); });

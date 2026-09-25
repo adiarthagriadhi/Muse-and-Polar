@@ -15,7 +15,8 @@ STREAMS: dict[str, dict] = {
     },
     "polar_hr": {"device": "polar", "rate": 0, "unit": "bpm", "columns": ["hr_bpm", "contact"]},
     "polar_rr": {"device": "polar", "rate": 0, "unit": "ms", "columns": ["rr_ms"]},
-    "polar_ecg": {"device": "polar", "rate": 130, "unit": "uV", "columns": ["ecg_uV"]},
+    "polar_ecg": {"device": "polar", "rate": 130, "unit": "uV", "columns": ["ecg_uV", "sensor_ns"]},
+    "polar_acc": {"device": "polar", "rate": 200, "unit": "g", "columns": ["x", "y", "z", "sensor_ns"]},
     "marker": {"device": "app", "rate": 0, "unit": "", "columns": ["label"]},
 }
 
