@@ -34,8 +34,12 @@ jadi **tidak perlu** Muse Direct, BlueMuse, atau aplikasi Polar. Dashboard berja
 ```bash
 git clone https://github.com/adiarthagriadhi/Muse-and-Polar.git
 cd Muse-and-Polar
-./run_mac.command            # membuat .venv, memasang dependensi, lalu membuka dashboard
+./run_mac.command
 ```
+
+`run_mac.command` membuat `.venv`, memasang dependensi (hanya saat pertama kali), lalu membuka
+dashboard. Opsi bisa ditambahkan di belakangnya, mis. `./run_mac.command --sim --autoconnect` atau
+`./run_mac.command -v`. Hentikan dengan `Ctrl+C`.
 
 Atau secara manual:
 
