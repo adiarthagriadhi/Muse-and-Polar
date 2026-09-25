@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muse &amp; Polar Live</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Muse &amp; Polar <span class="live" id="liveDot" title="Koneksi ke server">LIVE</span></h1>
+    <p class="sub" id="serverInfo">Menghubungkan ke server…</p>
+  </div>
+
+  <div class="devices">
+    <div class="device" id="dev-muse">
+      <div class="dev-head">
+        <span class="dev-name">Muse 2</span>
+        <span class="chip" data-role="state">terputus</span>
+      </div>
+      <div class="dev-meta"><span data-role="name">—</span> · <span data-role="battery">baterai —</span></div>
+      <button class="btn" data-role="toggle" data-device="muse">Hubungkan</button>
+    </div>
+    <div class="device" id="dev-polar">
+      <div class="dev-head">
+        <span class="dev-name">Polar H10</span>
+        <span class="chip" data-role="state">terputus</span>
+      </div>
+      <div class="dev-meta"><span data-role="name">—</span> · <span data-role="battery">baterai —</span></div>
+      <button class="btn" data-role="toggle" data-device="polar">Hubungkan</button>
+    </div>
+  </div>
+
+  <div class="rec">
+    <div class="rec-row">
+      <input id="sessionName" type="text" placeholder="Nama sesi / subjek" maxlength="60">
+      <button class="btn rec-btn" id="recBtn"><span class="rec-dot"></span><span id="recLabel">Mulai rekam</span></button>
+    </div>
+    <div class="rec-row small">
+      <span id="recTimer" class="mono">00:00:00</span>
+      <span id="recPath" class="muted ellipsis" title=""></span>
+    </div>
+  </div>
+</header>
+
+<main class="grid">
+  <!-- Polar H10 -->
+  <section class="panel polar">
+    <div class="panel-head"><h2>Polar H10 — Jantung</h2></div>
+    <div class="tiles">
+      <div class="tile hero">
+        <div class="tile-label">Detak jantung</div>
+        <div class="tile-value"><span id="hrValue">—</span><span class="unit">bpm</span></div>
+        <div class="tile-foot" id="contact">kontak kulit: —</div>
+      </div>
+      <div class="tile"><div class="tile-label">RMSSD</div><div class="tile-value sm"><span id="rmssd">—</span><span class="unit">ms</span></div></div>
+      <div class="tile"><div class="tile-label">SDNN</div><div class="tile-value sm"><span id="sdnn">—</span><span class="unit">ms</span></div></div>
+      <div class="tile"><div class="tile-label">pNN50</div><div class="tile-value sm"><span id="pnn50">—</span><span class="unit">%</span></div></div>
+      <div class="tile"><div class="tile-label">RR terakhir</div><div class="tile-value sm"><span id="rrLast">—</span><span class="unit">ms</span></div></div>
+    </div>
+    <p class="note" id="hrvNote">HRV dihitung dari 60 detik RR terakhir.</p>
+
+    <figure class="chart-card">
+      <figcaption><span>EKG <span class="muted">(µV, filter 0,5 Hz)</span></span><span class="rate" data-rate="polar_ecg"></span></figcaption>
+      <canvas id="ecgChart" height="170"></canvas>
+    </figure>
+    <figure class="chart-card">
+      <figcaption><span>Takogram RR <span class="muted">(ms, 2 menit)</span></span><span class="rate" data-rate="polar_rr"></span></figcaption>
+      <canvas id="rrChart" height="150"></canvas>
+    </figure>
+  </section>
+
+  <!-- Muse 2 -->
+  <section class="panel muse">
+    <div class="panel-head">
+      <h2>Muse 2 — EEG</h2>
+      <div class="controls">
+        <label>Skala <select id="eegScale">
+          <option value="50">±50 µV</option>
+          <option value="100" selected>±100 µV</option>
+          <option value="200">±200 µV</option>
+          <option value="500">±500 µV</option>
+          <option value="2000">±2000 µV</option>
+        </select></label>
+        <label>Notch <select id="notch">
+          <option value="50" selected>50 Hz</option>
+          <option value="60">60 Hz</option>
+          <option value="0">mati</option>
+        </select></label>
+        <label><input type="checkbox" id="hpf" checked> HPF 1 Hz</label>
+      </div>
+    </div>
+    <div class="quality" id="quality"></div>
+    <figure class="chart-card">
+      <figcaption><span>EEG mentah <span class="muted">(filter hanya untuk tampilan; file CSV tetap mentah)</span></span><span class="rate" data-rate="muse_eeg"></span></figcaption>
+      <canvas id="eegChart" height="320"></canvas>
+    </figure>
+    <div class="two">
+      <figure class="chart-card">
+        <figcaption><span>Daya pita relatif <span class="muted">(rata-rata 4 kanal, 2 s)</span></span></figcaption>
+        <div id="bands" class="bands"></div>
+      </figure>
+      <figure class="chart-card">
+        <figcaption><span>PPG inframerah <span class="muted">(filter 0,5 Hz)</span></span><span class="rate" data-rate="muse_ppg"></span></figcaption>
+        <canvas id="ppgChart" height="150"></canvas>
+      </figure>
+    </div>
+    <figure class="chart-card">
+      <figcaption><span>Akselerometer <span class="muted">(g)</span></span><span class="rate" data-rate="muse_acc"></span></figcaption>
+      <canvas id="accChart" height="120"></canvas>
+    </figure>
+  </section>
+
+  <!-- Markers -->
+  <section class="panel markers">
+    <div class="panel-head"><h2>Penanda (marker)</h2><span class="muted small">Tombol angka 1–5 = penanda cepat</span></div>
+    <div class="marker-row">
+      <input id="markerInput" type="text" placeholder="Tulis penanda lalu Enter" maxlength="200">
+      <button class="btn" id="markerBtn">Tandai</button>
+    </div>
+    <div class="quick" id="quickMarkers"></div>
+    <ol class="marker-log" id="markerLog"></ol>
+  </section>
+</main>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
