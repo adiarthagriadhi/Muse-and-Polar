@@ -139,7 +139,6 @@ class StripChart {
   constructor(canvas, opt) {
     this.c = canvas; this.ctx = canvas.getContext('2d'); this.o = opt;
     this.hover = null;
-    this.h = parseInt(canvas.getAttribute('height'), 10);
     canvas.addEventListener('mousemove', (e) => { this.hover = { x: e.offsetX, cx: e.clientX, cy: e.clientY }; });
     canvas.addEventListener('mouseleave', () => { this.hover = null; tooltip.style.display = 'none'; });
   }
@@ -148,9 +147,10 @@ class StripChart {
   draw(now) {
     const { c, ctx, o } = this;
     const dpr = window.devicePixelRatio || 1;
-    const W = c.clientWidth, H = this.h;
+    const W = c.clientWidth, H = c.clientHeight;
+    if (!W || !H) return;
     if (c.width !== Math.round(W * dpr) || c.height !== Math.round(H * dpr)) {
-      c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); c.style.height = H + 'px';
+      c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, W, H);
@@ -188,7 +188,7 @@ class StripChart {
     // grid + axes
     ctx.lineWidth = 1; ctx.font = '11px -apple-system, system-ui, sans-serif';
     ctx.strokeStyle = css.grid; ctx.fillStyle = css.muted; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-    const xs = niceStep(o.window, Math.max(3, Math.min(8, pw / 80)));
+    const xs = niceStep(o.window, Math.max(2, Math.min(8, pw / 70)));
     for (let s = 0; s <= o.window + 1e-9; s += xs) {
       const x = L + pw - s / o.window * pw;
       ctx.beginPath(); ctx.moveTo(x + 0.5, T); ctx.lineTo(x + 0.5, T + ph); ctx.stroke();
@@ -227,6 +227,7 @@ class StripChart {
       if (m.t < t0 || m.t > t1 + 1) continue;
       const x = X(m.t);
       ctx.beginPath(); ctx.moveTo(x + 0.5, T); ctx.lineTo(x + 0.5, T + ph); ctx.stroke();
+      if (pw < 260 || ph < 110) continue; // small charts: line only, label lives in the marker log
       const w = ctx.measureText(m.label).width;
       const lx = x + 4 + w > L + pw ? x - 4 - w : x + 4;
       let row = 0;
@@ -287,7 +288,7 @@ class StripChart {
       tooltip.innerHTML = html;
       tooltip.style.display = 'block';
       tooltip.style.left = Math.min(window.innerWidth - 160, this.hover.cx + 14) + 'px';
-      tooltip.style.top = (this.hover.cy + 14) + 'px';
+      tooltip.style.top = Math.min(window.innerHeight - tooltip.offsetHeight - 8, this.hover.cy + 14) + 'px';
     }
   }
 }
@@ -344,7 +345,9 @@ function renderStatus() {
     chip.className = `chip ${state}`;
     chip.textContent = STATE_LABEL[state] || state;
     chip.title = s.message || '';
-    root.querySelector('[data-role=name]').textContent = s.message && s.state === 'error' ? s.message : (s.name || '—');
+    const meta = root.querySelector('[data-role=name]');
+    meta.textContent = s.message && s.state !== 'streaming' ? s.message : (s.name || '—');
+    meta.title = meta.textContent;
     root.querySelector('[data-role=battery]').textContent = s.battery != null ? `baterai ${s.battery}%` : 'baterai —';
     root.querySelector('[data-role=toggle]').textContent = s.state === 'disconnected' ? 'Hubungkan' : 'Putuskan';
   }
@@ -373,7 +376,7 @@ function renderMetrics(m) {
     $('rmssd').textContent = m.hrv.rmssd.toFixed(1);
     $('sdnn').textContent = m.hrv.sdnn.toFixed(1);
     $('pnn50').textContent = m.hrv.pnn50.toFixed(0);
-    $('hrvNote').textContent = `HRV dari ${m.hrv.n} interval RR dalam ${m.hrv.window_sec} s terakhir.`;
+    $('hrvNote').textContent = `HRV dari ${m.hrv.n} RR, ${m.hrv.window_sec} s terakhir`;
   }
   const bands = $('bands');
   if (m.eeg) {
@@ -387,8 +390,11 @@ function renderMetrics(m) {
       const col = [css.s1, css.s2, css.s3, css.s4][j];
       return `<span class="q" title="Deviasi standar 1 s: ${n.toFixed(1)} µV"><span class="sw" style="background:${col}"></span>${ch} <span class="st ${cls}">${label}</span></span>`;
     }).join('');
-  } else if (!bands.innerHTML) {
+  } else {
+    // no fresh EEG: don't leave the last values on screen
     bands.innerHTML = '<p class="muted small">Menunggu 2 detik data EEG…</p>';
+    $('quality').innerHTML = EEG_CH.map((ch, j) =>
+      `<span class="q"><span class="sw" style="background:${[css.s1, css.s2, css.s3, css.s4][j]}"></span>${ch} <span class="st muted">—</span></span>`).join('');
   }
   if (m.recording) { recording = m.recording; renderRecording(); }
 }

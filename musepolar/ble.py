@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +31,7 @@ class BleSensor:
 
     def __init__(self, hub, name_prefix: str, address: str | None = None):
         self.hub = hub
+        self.issue = ""  # last problem, shown on the dashboard while reconnecting
         self.name_prefix = name_prefix.lower()
         self.address = address.lower() if address else None
 
@@ -58,10 +60,11 @@ class BleSensor:
 
         while not stop.is_set():
             try:
-                self.hub.set_status(self.key, state="scanning")
+                self.hub.set_status(self.key, state="scanning", message=self.issue)
                 device = await BleakScanner.find_device_by_filter(self._matches, timeout=self.scan_timeout)
                 if device is None:
-                    self.hub.set_status(self.key, state="not_found")
+                    self.issue = "perangkat tidak ditemukan — nyala? terhubung ke HP/aplikasi lain?"
+                    self.hub.set_status(self.key, state="not_found", message=self.issue)
                     await wait_any(stop, timeout=2)
                     continue
                 if stop.is_set():
@@ -72,7 +75,9 @@ class BleSensor:
                 self.reset()
                 async with BleakClient(device, disconnected_callback=lambda _c: disconnected.set()) as client:
                     await self.start(client)
+                    self.issue = ""
                     self.hub.set_status(self.key, state="streaming", name=name, address=device.address)
+                    log.info("%s streaming from %s", self.key, name)
                     while not (stop.is_set() or disconnected.is_set()):
                         await wait_any(stop, disconnected, timeout=self.tick_interval)
                         if not (stop.is_set() or disconnected.is_set()):
@@ -83,12 +88,14 @@ class BleSensor:
                         except Exception as exc:  # noqa: BLE001
                             log.debug("%s stop failed: %s", self.key, exc)
                 if not stop.is_set():
+                    self.issue = f"koneksi terputus {time.strftime('%H:%M:%S')}, menyambung ulang…"
                     log.warning("%s disconnected, reconnecting", self.key)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001
                 log.exception("%s error", self.key)
-                self.hub.set_status(self.key, state="error", message=str(exc) or type(exc).__name__)
+                self.issue = f"error: {exc or type(exc).__name__}"
+                self.hub.set_status(self.key, state="error", message=self.issue)
             if not stop.is_set():
                 await wait_any(stop, timeout=2)
         self.hub.set_status(self.key, state="disconnected")
