@@ -807,6 +807,127 @@ const ENGINE = (() => {
     };
   }
 
+  // ---------------------------------------------------------------- other EEG CSV files
+  // Same rules as src/muse2_pipeline/csvload.py: Mind Monitor, muselsl, earlier app (EEG_raw.csv),
+  // OpenBCI GUI, or any CSV with a time column and 10-20 named channels.
+  const TIME_NAMES = ['timestamp', 'timestamps', 'timestamp_lsl', 'time', 'time_s', 'time (s)', 't', 'timestamp (s)'];
+  const MARKER_NAMES = ['marker', 'markers', 'label', 'event', 'events', 'annotation', 'annotations', 'elements'];
+  const IGNORED_ELEMENTS = ['/muse/elements/blink', '/muse/elements/jaw_clench', '/muse/elements/touching_forehead', '/muse/elements/horseshoe', '/muse/elements/is_good'];
+  const STANDARD_RATES = [128, 200, 250, 256, 500, 512, 1000, 1024, 2048];
+  const eegName = (col) => canonical(col.trim().replace(/^(RAW|EEG)[_ ]/i, ''));
+  const rawChannel = (col) => /^(EXG\s*Channel\s*\d+|CH(ANNEL)?[\s_]*\d+|EEG[\s_]*\d+)$/i.test(col.trim());
+  function estimateRate(t) {
+    const r = (t.length - 1) / (t[t.length - 1] - t[0]);
+    const near = STANDARD_RATES.reduce((a, b) => (Math.abs(b - r) < Math.abs(a - r) ? b : a));
+    return Math.abs(near - r) <= 0.03 * near ? near : Math.round(r);
+  }
+  function splitHeader(text) {
+    const lines = text.split(/\r?\n/); let i = 0;
+    while (i < lines.length && (lines[i].startsWith('%') || lines[i].startsWith('#') || !lines[i].trim())) i++;
+    return [lines.slice(0, i), lines.slice(i)];
+  }
+  function detectSep(line) { return [',', ';', '\t'].reduce((a, b) => (line.split(b).length > line.split(a).length ? b : a)); }
+  function splitSep(line, sep) { return sep === ',' ? splitCSV(line) : line.split(sep); }
+  function numericUnit(name, t) { // same order as csvload.numeric_unit: name, epoch size, plausible rate
+    const n = name.toLowerCase();
+    if (/(^|[^a-z])ms([^a-z]|$)|millis/.test(n)) return 1000;
+    if (/\(s\)|_s$|\bsec/.test(n)) return 1;
+    const f = t.filter(fin);
+    if (f.length < 2) return 1;
+    const big = Math.max(...f.map(Math.abs));
+    if (big > 1e11) return 1000;
+    if (big > 1e8) return 1;
+    const span = f[f.length - 1] - f[0];
+    if (span <= 0) return 1;
+    const rs = (f.length - 1) / span;
+    return rs < 50 && rs * 1000 >= 100 && rs * 1000 <= 5000 ? 1000 : 1;
+  }
+  function toSeconds(vals, name = '') {
+    const nums = vals.map((v) => (v.trim() === '' ? NaN : Number(v)));
+    if (nums.filter(fin).length > 0.9 * vals.length) {
+      const u = numericUnit(name, nums);
+      return { t: nums.map((v) => v / u), start: null };
+    }
+    const ms = vals.map((v) => { const s = v.trim(); return s ? Date.parse(s.replace(' ', 'T')) : NaN; });
+    if (ms.filter(fin).length > 0.9 * vals.length) {
+      const i0 = ms.findIndex(fin);
+      return { t: ms.map((v) => (v - ms[i0]) / 1000), start: vals[i0].trim().replace(' ', 'T').slice(0, 19) };
+    }
+    return null;
+  }
+  function recordingFromCSV(text, name, id, opt = {}) {
+    const [comments, lines] = splitHeader(text);
+    const body = lines.filter((l) => l.length);
+    if (body.length < 2) throw new Error('file CSV kosong');
+    const sep = detectSep(body[0]), cols = splitSep(body[0], sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+    const rows = body.slice(1).map((l) => splitSep(l, sep));
+    let rate = null;
+    for (const c of comments) { const m = c.match(/sample\s*rate\s*[=:]\s*([\d.]+)/i); if (m) { rate = parseFloat(m[1]); break; } }
+    const low = cols.map((c) => c.toLowerCase());
+    let ti = TIME_NAMES.map((n) => low.indexOf(n)).find((i) => i >= 0);
+    if (ti === undefined) ti = low.findIndex((c) => c.includes('timestamp') || c.startsWith('time'));
+    const eeg = []; const seen = new Set();
+    cols.forEach((c, i) => { const n = eegName(c); if (n && !seen.has(n)) { seen.add(n); eeg.push([n, i]); } });
+    if (!eeg.length) cols.forEach((c, i) => { if (rawChannel(c)) eeg.push([c.trim(), i]); });
+    if (!eeg.length) throw new Error(`${name}: tidak ada kolom EEG (nama 10-20 seperti TP9/AF7/Fp1, RAW_TP9, EEG_TP9 atau EXG Channel)`);
+    const mi = MARKER_NAMES.map((n) => low.indexOf(n)).find((i) => i >= 0);
+    const ei = cols.findIndex((c) => /ECG|EKG/i.test(c)), pi = cols.findIndex((c) => /PPG|PLETH/i.test(c));
+    const time = ti >= 0 ? toSeconds(rows.map((r) => r[ti] || ''), cols[ti]) : null;
+    const markers = [];
+    if (mi !== undefined && time) rows.forEach((r, k) => {
+      const lab = (r[mi] || '').trim().replace(/^"|"$/g, '');
+      if (lab && lab.toLowerCase() !== 'nan' && fin(time.t[k]) && !IGNORED_ELEMENTS.some((p) => lab.toLowerCase().startsWith(p))) markers.push({ t: time.t[k], label: lab });
+    });
+    const keep = [];
+    rows.forEach((r, k) => { if (eeg.every(([, i]) => r[i] !== undefined && r[i].trim() !== '' && fin(Number(r[i])))) keep.push(k); });
+    if (keep.length < 10) throw new Error(`${name}: terlalu sedikit baris EEG`);
+    const t = time ? keep.map((k) => time.t[k]) : null;
+    let fs = rate;
+    if (!fs) fs = t && t.length > 2 && t[t.length - 1] > t[0] ? estimateRate(t) : 256;
+    if (fs < 100) throw new Error(`${name}: frekuensi sampel ${fs} Hz terlalu rendah untuk analisis EEG (minimal 100 Hz); rekam dengan data mentah (mis. Mind Monitor: Recording Interval = Constant)`);
+    const n = keep.length, t0 = t ? t[0] : 0;
+    const x = eeg.map(([, i]) => Float64Array.from(keep, (k) => Number(rows[k][i])));
+    let quality = { status: 'VALID', rate_hz: fs };
+    if (t && n > 2 && t[n - 1] > t[0]) {
+      const r = (n - 1) / (t[n - 1] - t[0]), ratio = r / fs;
+      quality = { status: ratio >= 0.9 ? 'VALID' : ratio >= 0.5 ? 'WARNING' : 'INVALID', rate_hz: +r.toFixed(2) };
+    }
+    const tt = Float64Array.from({ length: n }, (_, i) => i / fs);
+    let ppg = opt.ppg || null, rr = null;
+    if (!ppg && pi >= 0) {
+      const v = [], pt = [];
+      keep.forEach((k, j) => { const val = Number(rows[k][pi]); if (fin(val)) { v.push(val); pt.push(j / fs); } });
+      if (v.length) ppg = { t: Float64Array.from(pt), v: Float64Array.from(v), fs };
+    }
+    if (ei >= 0) {
+      const raw = keep.map((k) => Number(rows[k][ei])), good = raw.filter(fin), md = good.length ? median(good) : 0;
+      const tb = ecgBeats(Float64Array.from(raw, (v) => (fin(v) ? v : md)), tt, fs);
+      if (tb.length > 1) rr = { t: Float64Array.from(tb.slice(1)), ms: Float64Array.from(tb.slice(1).map((v, i) => (v - tb[i]) * 1000)) };
+    }
+    const meta = opt.meta || {};
+    return {
+      id, kind: opt.kind || 'csv', label: opt.label || name, participant: meta.name || name.replace(/\.[^.]+$/, ''), condition: meta.note || '',
+      start: meta.start || (time && time.start) || null, channels: eeg.map(([c]) => c), fs, t: tt, x: x.map((c) => filterEEG(c, fs)),
+      ppg, rr, heartName: 'EKG (CSV)', markers: markers.map((m) => ({ t: m.t - t0, label: m.label })), syncOffset: null,
+      quality: { eeg: quality, ppg: { status: ppg ? 'VALID' : '-', rate_hz: ppg ? ppg.fs : null } },
+      nChannels: eeg.length, duration: n / fs, hasPpg: !!ppg, hasHeart: !!rr,
+    };
+  }
+  async function recordingFromLSL(files, dir, id) { // earlier app: EEG_raw.csv + PPG_raw.csv + metadata json
+    const txt = await files['EEG_raw.csv'].text();
+    let meta = {};
+    for (const nm of ['recording_metadata.json', 'baseline_metadata.json']) if (files[nm]) { try { meta = JSON.parse(await files[nm].text()); } catch { meta = {}; } break; }
+    const parts = dir.split('/'), part = parts.length > 1 ? parts[parts.length - 2] : parts[0], cond = parts[parts.length - 1];
+    let ppg = null;
+    if (files['PPG_raw.csv']) {
+      const e = parseCSV(txt), p = parseCSV(await files['PPG_raw.csv'].text());
+      const [te] = columns(e, ['Timestamp_LSL']), [tp, v2] = columns(p, ['Timestamp_LSL', 'PPG_2']);
+      if (tp.length) { const origin = te.length ? te[0] : tp[0]; ppg = { t: tp.map((x) => x - origin), v: v2, fs: 64 }; }
+    }
+    return recordingFromCSV(txt, 'EEG_raw.csv', id, { kind: 'lsl', label: `${part} / ${cond}`, ppg,
+      meta: { name: part, note: cond, start: meta.start_iso || null } });
+  }
+
   // ---------------------------------------------------------------- registry & requests
   const SESS = new Map(), RECS = [];
   let counter = 0;
@@ -842,11 +963,21 @@ const ENGINE = (() => {
       catch (e) { errors.push(`${f.name}: ${e.message}`); }
     }
     for (const [dir, files] of Object.entries(byDir)) {
-      if (!files['muse_eeg.csv']) continue;
-      try { const r = await recordingFromMusepolar(files, dir.split('/').pop() || dir, `r${++counter}`); addRecording(r); added.push(r.id); }
-      catch (e) { errors.push(`${dir}: ${e.message}`); }
+      try {
+        if (files['muse_eeg.csv']) {
+          const r = await recordingFromMusepolar(files, dir.split('/').pop() || dir, `r${++counter}`); addRecording(r); added.push(r.id);
+        } else if (files['EEG_raw.csv']) {
+          const r = await recordingFromLSL(files, dir, `r${++counter}`); addRecording(r); added.push(r.id);
+        } else {
+          for (const [nm, f] of Object.entries(files)) { // stand-alone EEG CSV files (Mind Monitor, muselsl, OpenBCI, ...)
+            if (!/\.(csv|txt)$/i.test(nm)) continue;
+            try { const r = recordingFromCSV(await f.text(), nm, `r${++counter}`); addRecording(r); added.push(r.id); }
+            catch (e) { if (!/tidak ada kolom EEG/.test(e.message)) errors.push(e.message); }
+          }
+        }
+      } catch (e) { errors.push(`${dir}: ${e.message}`); }
     }
-    if (!added.length) throw new Error(errors[0] || 'Tidak ada rekaman (folder sesi musepolar atau file EDF/BDF) di pilihan ini.');
+    if (!added.length) throw new Error(errors[0] || 'Tidak ada rekaman EEG (folder musepolar, file EDF/BDF, atau CSV dengan kolom EEG) di pilihan ini.');
     return { root: 'browser', exists: true, sessions: sessionList(), added, errors };
   }
   async function session(id) {
@@ -951,7 +1082,7 @@ const ENGINE = (() => {
   }
 
   return { handle, addFiles, exportZip, exportText, loadDemo, _internals: { butterBandSOS, notchSOS, filtfilt, filterEEG, subsegmentSpectra, windowSpectra,
-    readEDF, recordingFromEDF, Session, mwTest, kruskal, holm, findPeaks, ppgBeats, ecgBeats, cleanIbi, hrvStats, canonical, position, museSources } };
+    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, Session, mwTest, kruskal, holm, findPeaks, ppgBeats, ecgBeats, cleanIbi, hrvStats, canonical, position, museSources } };
 })();
 if (typeof window !== 'undefined') window.ENGINE = ENGINE;
 if (typeof module !== 'undefined') module.exports = ENGINE;

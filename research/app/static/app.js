@@ -3,6 +3,7 @@ import { Chart, ChartGroup, css, drawTopo, fmtNum, fmtTime, layeredCss } from '.
 const $ = (id) => document.getElementById(id);
 let CH = ['TP9', 'AF7', 'AF8', 'TP10']; // replaced by the session's channels (Muse 4, EDF 16, ...)
 const SYM = { delta: 'δ', theta: 'θ', alpha: 'α', beta: 'β' };
+const KIND_LABEL = { edf: 'EDF', csv: 'CSV', lsl: 'CSV (format lama)' };
 const mLabel = (m) => (S.res && S.res.measure_labels && S.res.measure_labels[m]) || m;
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
@@ -146,14 +147,14 @@ function applySessionList(data, preferFirst = false) {
 function sessionText(s) {
   const d = fin(s.duration) ? ` · ${fmtTime(s.duration, s.duration)}` : '';
   const date = (s.start || '').replace('T', ' ').slice(0, 16);
-  const kind = s.kind === 'edf' ? ` · EDF ${s.n_channels} kanal` : '';
-  return `${s.name}${date ? ' · ' + date : ''}${d}${kind}${s.has_polar ? (s.kind === 'edf' ? ' · EKG' : ' · Polar') : ''}`;
+  const kind = s.kind !== 'musepolar' ? ` · ${KIND_LABEL[s.kind] || s.kind.toUpperCase()} ${s.n_channels} kanal` : '';
+  return `${s.name}${date ? ' · ' + date : ''}${d}${kind}${s.has_polar ? (s.kind !== 'musepolar' ? ' · EKG' : ' · Polar') : ''}`;
 }
 function showEmpty(data) {
   $('segCards').replaceChildren(WEB
     ? h('div', { class: 'card empty', style: 'grid-column:1/-1' },
       h('p', {}, h('b', {}, 'Buka rekaman untuk mulai.')),
-      h('p', {}, 'Pilih file EDF/EDF+/BDF atau ZIP lewat “Buka EDF/ZIP”, atau folder rekaman musepolar lewat “Folder…”. '
+      h('p', {}, 'Pilih file EDF/BDF, CSV (Mind Monitor, muselsl, OpenBCI, atau CSV dengan kanal 10-20) atau ZIP lewat “Buka file”, atau folder rekaman lewat “Folder…”. '
         + 'Semua perhitungan berjalan di browser ini; data tidak dikirim ke mana pun.'),
       h('p', {}, h('button', { class: 'btn primary', onclick: loadDemo }, 'Coba data contoh')))
     : h('div', { class: 'card empty', style: 'grid-column:1/-1' },
@@ -208,7 +209,7 @@ function renderStatic() {
   const mk = (src, name, color) => (src ? {
     name, color, t: src.t, y: src.ibi.map((v, i) => (src.valid[i] ? v : null)), unit: 'ms', gap: 4,
   } : null);
-  const ppg = mk(ov.ppg && ov.ppg.t.length ? ov.ppg : null, ov.kind === 'edf' ? 'PPG' : 'PPG dahi', css('--series-1'));
+  const ppg = mk(ov.ppg && ov.ppg.t.length ? ov.ppg : null, ov.kind !== 'musepolar' ? 'PPG' : 'PPG dahi', css('--series-1'));
   const pol = mk(ov.polar, ov.heart_name, css('--series-2'));
   if (ppg) series.push(ppg);
   if (pol) series.push(pol);
@@ -233,7 +234,7 @@ function renderSourceControls() {
   const hs = $('heartSel');
   hs.querySelector('[value=ppg]').disabled = !o.ppg;
   hs.querySelector('[value=ecg]').disabled = !o.ecg;
-  const hn = S.ov.kind === 'edf' ? 'EKG' : 'Polar';
+  const hn = S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar';
   hs.querySelector('[value=all]').textContent = `PPG + ${hn}`;
   hs.querySelector('[value=ecg]').textContent = `Hanya ${hn}`;
   hs.value = S.set.heart;
@@ -336,13 +337,13 @@ function renderKpis() {
       hp.ok ? `PRV-RMSSD ${fmtNum(hp.rmssd, 2)} ms · valid ${Math.round((hp.valid_frac || 0) * 100)}%`
         : (['ecg', 'none'].includes(ov.heart) && ov.options.ppg ? 'tidak dipakai (pilihan Data jantung)'
           : q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
-    kpi(ov.kind === 'edf' ? 'Denyut EKG' : 'Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
+    kpi(ov.kind !== 'musepolar' ? 'Denyut EKG' : 'Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
       hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms`
         : (['ppg', 'none'].includes(ov.heart) && ov.options.ecg ? 'tidak dipakai (pilihan Data jantung)' : 'tidak direkam')),
-    ov.kind === 'edf'
+    ov.kind !== 'musepolar'
       ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `dari ${ov.options.n_all} @ ${fmtNum(ov.fs, 3)} Hz`)],
         ov.chans === 'muse4' && ov.options.n_all > 4
-          ? `disesuaikan Muse · ${ov.options.muse_ref ? 'ref Fpz' : 'ref asli file'}` : `EDF · pasangan frontal ${ov.pair_label}`)
+          ? `disesuaikan Muse · ${ov.options.muse_ref ? 'ref Fpz' : 'ref asli file'}` : `${KIND_LABEL[ov.kind] || ov.kind} · pasangan frontal ${ov.pair_label}`)
       : kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
         fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
     kpi('Penanda', String(mk.length), mk.length ? mk.slice(0, 3).map((m) => `${fmtTime(m.t, 100)} ${m.label}`).join(' · ') : 'tidak ada'),
@@ -433,7 +434,7 @@ function updateMap() {
 
 // --- segment cards ------------------------------------------------------------------
 function heartOf(s) {
-  if (s.polar && s.polar.ok) return { src: S.ov.kind === 'edf' ? 'EKG' : 'Polar', ...s.polar };
+  if (s.polar && s.polar.ok) return { src: S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar', ...s.polar };
   if (s.ppg && s.ppg.ok) return { src: 'PPG', ...s.ppg };
   return null;
 }
@@ -474,7 +475,7 @@ function td(v, cls) { return h('td', { class: cls || (v === '–' ? 'na' : null)
 function renderSegTable() {
   const res = S.res;
   $('segUnit').textContent = `nilai kanal = median daya ${SYM[res.band]} ${res.band} (${unitTxt()}) pada jendela bersih`;
-  const hn = S.ov.kind === 'edf' ? 'EKG' : 'Polar';
+  const hn = S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar';
   const cols = ['Ruas', 'Nama', `Jendela bersih ${res.pair_label}`, ...CH, ...(res.pair ? [`Asimetri ${res.pair_label}`] : []),
     'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Kondisi'];
   const head = h('tr', {}, ...cols.map((t, i) => h('th', { class: i === 1 || i === cols.length - 1 ? 'l' : null }, t)));

@@ -79,6 +79,23 @@ Folder default `recordings/` di akar repo (tempat musepolar menyimpan sesi), bis
 Semua stream memakai titik nol yang sama (sampel EEG pertama). Data Polar digeser dengan
 `muse_minus_polar_s` dari sinkronisasi pertama yang berhasil, bila ada.
 
+### File CSV
+
+Satu file `.csv` (atau `.txt` dari OpenBCI) bisa dibuka langsung; formatnya dikenali dari judul kolom:
+
+| Sumber | Yang dikenali |
+|---|---|
+| Mind Monitor (Muse) | `TimeStamp` tanggal-waktu, `RAW_TP9 … RAW_TP10`, penanda dari kolom `Elements` (kedip/rahang diabaikan) |
+| muselsl / Muse LSL | `timestamps, TP9, AF7, AF8, TP10` |
+| Aplikasi riset lama | folder `Pxx_Trial/experiment/` berisi `EEG_raw.csv` (`Timestamp_LSL, EEG_TP9 …`) + `PPG_raw.csv` |
+| OpenBCI GUI | header `%` dengan `Sample Rate = …`, kolom `EXG Channel 0..15` (tanpa posisi kepala) |
+| CSV umum | kolom waktu + kolom bernama 10-20/10-10 (`Fp1`, `EEG F3`, …), opsional `ECG`/`EKG`, `PPG`, `Marker`/`Event` |
+
+Pemisah `,` `;` atau tab dikenali otomatis. Nilai dianggap µV. Satuan waktu (detik, milidetik, atau tanggal-waktu)
+ditentukan dari nama kolom, besarnya angka, atau laju yang masuk akal. Frekuensi sampel diambil dari header atau
+dari rentang kolom waktu (dibulatkan ke 128/200/250/256/500/512/1000 Hz bila dekat); minimal 100 Hz, jadi rekaman
+Mind Monitor harus memakai *Recording Interval = Constant* (data mentah).
+
 ### File EDF / EDF+ / BDF (mis. 16 kanal)
 
 Letakkan file `.edf`/`.bdf` di folder rekaman (atau pilih foldernya lewat “Folder…”), atau unggah langsung
@@ -127,6 +144,7 @@ research/
   web/research-view.html   aplikasi satu file untuk browser (hasil build)
   src/muse2_pipeline/
     io.py                  baca sesi musepolar dan file EDF, sinkronisasi Polar
+    csvload.py             file CSV EEG lain (Mind Monitor, muselsl, OpenBCI, format lama, CSV umum)
     edf.py                 pembaca/penulis EDF, EDF+ (anotasi) dan BDF tanpa dependensi tambahan
     montage.py             nama & posisi elektroda 10-20/10-10, pasangan frontal, area kepala
     eeg.py                 filter, spektrum potongan & jendela (plus fungsi lama)

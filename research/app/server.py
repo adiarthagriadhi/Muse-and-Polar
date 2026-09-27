@@ -110,7 +110,7 @@ def sessions(root: str = ""):
 async def upload(file: UploadFile = File(...)):
     data = await file.read()
     name = Path(file.filename or "rekaman").name
-    if name.lower().endswith(EDF_SUFFIXES):  # a single EDF/BDF file
+    if name.lower().endswith(EDF_SUFFIXES + (".csv", ".txt")):  # a single EDF/BDF or CSV file
         root = Path(tempfile.mkdtemp(prefix="muse2_edf_"))
         (root / name).write_bytes(data)
     else:
@@ -120,7 +120,7 @@ async def upload(file: UploadFile = File(...)):
             raise HTTPException(400, f"File tidak bisa dibuka (ZIP atau EDF/BDF): {e}") from e
     found = _scan(root)
     if not found:
-        raise HTTPException(400, "Tidak ada rekaman (folder musepolar atau file EDF/BDF) di dalam file ini.")
+        raise HTTPException(400, "Tidak ada rekaman EEG (folder musepolar, file EDF/BDF atau CSV dengan kolom EEG) di dalam file ini.")
     return {"root": str(root), "exists": True, "sessions": found, "uploaded": True}
 
 

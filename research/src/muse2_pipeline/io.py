@@ -181,6 +181,7 @@ def list_recordings(root: Path) -> list[dict]:
             out.append({"kind": "musepolar", "path": r["folder"], "label": r["label"], "name": r["participant"],
                         "note": r["condition"], "start": r["start_iso"], "duration": r["duration_sec"],
                         "has_ppg": bool(r["has_ppg"]), "has_heart": bool(r["has_polar"]), "n_channels": 4})
+    out += _csv_recordings(root)
     for p in _edf_files(root):
         try:
             h = read_header(p)
@@ -201,6 +202,40 @@ def list_recordings(root: Path) -> list[dict]:
     return out
 
 
+def _csv_recordings(root: Path) -> list[dict]:
+    """Earlier-app folders (EEG_raw.csv) and stand-alone EEG CSV files (Mind Monitor, muselsl, OpenBCI, ...)."""
+    from .csvload import describe
+
+    out = []
+    files = [root] if root.is_file() else sorted([*root.rglob("*.csv"), *root.rglob("*.txt")])
+    session_dirs = {p.parent for p in files if p.name in (EEG_FILE, "EEG_raw.csv")}
+    for p in files:
+        if p.suffix.lower() not in (".csv", ".txt"):
+            continue
+        if p.name == "EEG_raw.csv":
+            meta = {}
+            for name in ("recording_metadata.json", "baseline_metadata.json"):
+                if (p.parent / name).exists():
+                    try:
+                        meta = json.loads((p.parent / name).read_text())
+                    except ValueError:
+                        meta = {}
+                    break
+            out.append({"kind": "lsl", "path": str(p.parent), "label": f"{p.parent.parent.name} / {p.parent.name}",
+                        "name": p.parent.parent.name, "note": p.parent.name, "start": meta.get("start_iso"),
+                        "duration": meta.get("duration_sec"), "has_ppg": (p.parent / "PPG_raw.csv").exists(),
+                        "has_heart": False, "n_channels": 4})
+            continue
+        if p.parent in session_dirs and not root.is_file():
+            continue  # part of a musepolar / earlier-app session folder
+        d = describe(p)
+        if d:
+            out.append({"kind": "csv", "path": str(p), "label": p.name, "name": p.stem, "note": "", "start": None,
+                        "duration": None, "has_ppg": d["has_ppg"], "has_heart": d["has_heart"],
+                        "n_channels": d["n_channels"]})
+    return out
+
+
 def _edf_patient(field: str) -> str:
     # EDF+: "code sex birthdate name" with X for unknown subfields
     parts = field.split()
@@ -218,6 +253,14 @@ def load_recording(path: Path) -> dict:
     sync_offset, meta (incl. eeg_validation / ppg_validation), label.
     """
     path = Path(path)
+    if path.is_dir() and not (path / EEG_FILE).exists() and (path / "EEG_raw.csv").exists():
+        from .csvload import load_lsl_folder
+
+        return {**load_lsl_folder(path), "folder": path}
+    if path.is_file() and path.suffix.lower() in (".csv", ".txt"):
+        from .csvload import read_csv_recording
+
+        return {**read_csv_recording(path), "folder": path}
     if path.is_dir():
         s = load_sample(path, legacy_bp=False)
         return {**s, "kind": "musepolar", "channels": list(CH), "fs": FS_EEG, "ppg_fs": FS_PPG,
