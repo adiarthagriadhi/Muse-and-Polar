@@ -8,6 +8,24 @@ tidak merekam, dan bukan alat diagnosis.
 Folder `research/` berdiri sendiri: dependensi dan virtualenv sendiri (`research/.venv`), tidak mengimpor
 paket `musepolar`, hanya membaca file CSV hasil rekamannya.
 
+## Versi browser (tanpa Python)
+
+`web/research-view.html` adalah aplikasi yang sama dalam **satu file HTML**: klik dua kali untuk membukanya di
+browser, lalu pilih file EDF/BDF, ZIP, atau folder rekaman musepolar. Semua perhitungan (filter, spektrum,
+artefak, label, uji statistik, denyut, mode 4 kanal Muse) berjalan di browser dengan hasil yang sama dengan
+versi Python (dicek oleh `tests/test_research_web.py`); data tidak dikirim ke mana pun. Tombol **Data contoh**
+memuat dua rekaman contoh. Laporan Word dan ekspor gambar hanya ada di versi Python; membuka ZIP dan ekspor
+CSV memerlukan internet sekali untuk memuat pustaka JSZip.
+
+Versi yang sama juga dipublikasikan sebagai halaman claude.ai (di sana tombol **Salin tabel** menggantikan
+unduhan CSV karena halaman itu tidak boleh mengunduh file).
+
+Membangun ulang setelah mengubah `app/static` atau `web/engine.js`:
+
+```bash
+python research/web/build.py
+```
+
 ## Menjalankan (macOS)
 
 ```bash
@@ -104,6 +122,9 @@ Dengan lebih dari 4 kanal, lajur EEG diwarnai per area kepala dan grafik daya pi
 research/
   app/server.py            server web (FastAPI) + CLI
   app/static/              halaman (HTML/CSS/JS tanpa dependensi eksternal)
+  web/engine.js            mesin analisis versi browser (port JavaScript dari src/muse2_pipeline)
+  web/build.py             menggabungkan app/static + engine.js menjadi web/research-view.html
+  web/research-view.html   aplikasi satu file untuk browser (hasil build)
   src/muse2_pipeline/
     io.py                  baca sesi musepolar dan file EDF, sinkronisasi Polar
     edf.py                 pembaca/penulis EDF, EDF+ (anotasi) dan BDF tanpa dependensi tambahan

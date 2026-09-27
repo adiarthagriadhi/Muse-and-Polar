@@ -71,9 +71,10 @@ def subsegment_spectra(eeg_f: pd.DataFrame, seg_s: float = SUB_S, hop_s: float =
     ch = list(channels or CH)
     x = eeg_f[ch].to_numpy(float)
     t = eeg_f["time_s"].to_numpy(float)
-    L, hop = int(round(seg_s * fs)), max(1, int(round(hop_s * fs)))
+    L, hop = int(round(seg_s * fs)), max(1, int(hop_s * fs + 1e-9))  # hop rounded down (same in the browser version)
     hop_s = hop / fs  # exact hop for sample rates not divisible by 4
-    f = np.fft.rfftfreq(L, 1 / fs)
+    Lp = 1 << int(np.ceil(np.log2(L)))  # FFT length: next power of 2 (same as the browser version)
+    f = np.fft.rfftfreq(Lp, 1 / fs)
     keep = (f >= 1) & (f <= PSD_FMAX)
     nf = int(keep.sum())
     if len(x) < L:
@@ -94,7 +95,7 @@ def subsegment_spectra(eeg_f: pd.DataFrame, seg_s: float = SUB_S, hop_s: float =
     for a in range(0, n, blk):
         seg = view[a:a + blk]
         seg = seg - seg.mean(axis=-1, keepdims=True)
-        p = np.abs(np.fft.rfft(seg * win, axis=-1)) ** 2 * scale
+        p = np.abs(np.fft.rfft(seg * win, n=Lp, axis=-1)) ** 2 * scale
         p[..., 1:-1] *= 2
         psd[a:a + blk] = p[..., keep]
         for b, m in band_masks.items():

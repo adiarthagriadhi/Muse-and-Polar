@@ -61,9 +61,13 @@ function toast(msg, kind = 'error') {
   t.textContent = msg; t.className = 'toast' + (kind === 'info' ? ' info' : ''); t.hidden = false;
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, kind === 'info' ? 3500 : 7000);
 }
+// Browser-only build (research/web): the engine computes everything locally, no server.
+const WEB = typeof window !== 'undefined' && !!window.ENGINE;
+const ARTIFACT = WEB && !!window.RV_ARTIFACT; // hosted page: no print dialog, no file downloads
 async function api(path, opts) {
   busy(true);
   try {
+    if (WEB) return await window.ENGINE.handle(path);
     const r = await fetch(path, opts);
     if (!r.ok) {
       let msg = r.statusText;
@@ -120,6 +124,7 @@ const loadSignal = debounce(async () => {
 async function loadSessions(root) {
   let data;
   try { data = await api(`/api/sessions?root=${encodeURIComponent(root || '')}`); } catch (e) { toast(e.message); return; }
+  if (WEB && !data.sessions.length) { loadDemo(); return; } // open in a working state with the example recordings
   applySessionList(data);
 }
 function applySessionList(data, preferFirst = false) {
@@ -145,11 +150,18 @@ function sessionText(s) {
   return `${s.name}${date ? ' · ' + date : ''}${d}${kind}${s.has_polar ? (s.kind === 'edf' ? ' · EKG' : ' · Polar') : ''}`;
 }
 function showEmpty(data) {
-  $('segCards').replaceChildren(h('div', { class: 'card empty', style: 'grid-column:1/-1' },
-    h('p', {}, h('b', {}, 'Belum ada rekaman untuk ditampilkan.')),
-    h('p', {}, `Folder: ${data.root}`),
-    h('p', {}, 'Rekam sesi dengan dashboard musepolar (python -m musepolar), pilih folder lain lewat “Folder…” (folder sesi musepolar atau file EDF), atau unggah ZIP / EDF.')));
+  $('segCards').replaceChildren(WEB
+    ? h('div', { class: 'card empty', style: 'grid-column:1/-1' },
+      h('p', {}, h('b', {}, 'Buka rekaman untuk mulai.')),
+      h('p', {}, 'Pilih file EDF/EDF+/BDF atau ZIP lewat “Buka EDF/ZIP”, atau folder rekaman musepolar lewat “Folder…”. '
+        + 'Semua perhitungan berjalan di browser ini; data tidak dikirim ke mana pun.'),
+      h('p', {}, h('button', { class: 'btn primary', onclick: loadDemo }, 'Coba data contoh')))
+    : h('div', { class: 'card empty', style: 'grid-column:1/-1' },
+      h('p', {}, h('b', {}, 'Belum ada rekaman untuk ditampilkan.')),
+      h('p', {}, `Folder: ${data.root}`),
+      h('p', {}, 'Rekam sesi dengan dashboard musepolar (python -m musepolar), pilih folder lain lewat “Folder…” (folder sesi musepolar atau file EDF), atau unggah ZIP / EDF.')));
   $('kpis').replaceChildren();
+  eegChart.opt.emptyText = 'belum ada rekaman';
   for (const c of [eegChart, bandChart, heartChart]) c.setSeries([]);
   psdChart.setSeries([]);
   for (const id of ['segTable', 'testTable', 'mapTable']) $(id).replaceChildren();
@@ -171,6 +183,7 @@ async function selectSession(sid, keep = false) {
   S.measure = null; // first measure (frontal pair) once the analysis arrives
   S.psdCh = 'PAIR';
   eegChart.opt.lanes = CH.length;
+  eegChart.opt.emptyText = 'memuat EEG…';
   $('chEeg').style.setProperty('--h', `${CH.length <= 4 ? 260 : Math.max(260, 22 * CH.length + 30)}px`);
   if (!keep) {
     const saved = store.get(`titik:${ov.folder}`);
@@ -613,13 +626,54 @@ $('zoomIn').addEventListener('click', () => { const c = (group.x0 + group.x1) / 
 $('zoomOut').addEventListener('click', () => { const c = (group.x0 + group.x1) / 2, s = group.x1 - group.x0; setView(c - s, c + s); });
 $('sessionSel').addEventListener('change', (e) => selectSession(e.target.value));
 
-$('folderBtn').addEventListener('click', () => { $('rootInput').value = S.root; $('folderDlg').showModal(); });
+$('folderBtn').addEventListener('click', () => {
+  if (WEB) { $('dirInput').click(); return; } // browser: pick a local folder
+  $('rootInput').value = S.root; $('folderDlg').showModal();
+});
+async function openLocal(files, what) {
+  if (!files || !files.length) return;
+  busy(true);
+  try {
+    const data = await window.ENGINE.addFiles(files);
+    toast(`${data.added.length} rekaman dimuat dari ${what}.` + (data.errors.length ? ` Dilewati: ${data.errors.join('; ')}` : ''), 'info');
+    applySessionList(data, true);
+    const first = data.sessions.find((x) => x.id === data.added[0]);
+    if (first) { $('sessionSel').value = first.id; selectSession(first.id); }
+  } catch (err) { toast(err.message); } finally { busy(false); }
+}
+async function loadDemo() {
+  busy(true);
+  try { const data = await window.ENGINE.loadDemo(); applySessionList(data, true); } catch (err) { toast(err.message); } finally { busy(false); }
+}
+if (WEB) {
+  document.querySelectorAll('.server-only').forEach((el) => { el.hidden = true; });
+  document.querySelectorAll('.web-only').forEach((el) => { el.hidden = false; });
+  $('zipInput').multiple = true;
+  $('dirInput').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; openLocal(f, 'folder'); });
+  $('demoBtn').addEventListener('click', loadDemo);
+  if (ARTIFACT) {
+    $('printBtn').hidden = true;
+    const b = document.querySelector('[data-export=export]');
+    b.textContent = 'Salin tabel';
+    b.title = 'Salin tabel per ruas dan hasil uji (tempel ke Excel / Google Sheets)';
+  }
+}
+function showCopyFallback(text) {
+  const box = h('div', { class: 'copy-fallback card' },
+    h('p', {}, h('b', {}, 'Salin manual: '), 'teks sudah dipilih, tekan Ctrl/⌘ + C lalu tempel ke spreadsheet.'),
+    h('textarea', { id: 'copyText', readonly: true, rows: 10 }),
+    h('div', { class: 'row end' }, h('button', { class: 'btn', onclick: () => box.remove() }, 'Tutup')));
+  box.querySelector('textarea').value = text;
+  document.body.append(box);
+  box.querySelector('textarea').select();
+}
 $('folderDlg').addEventListener('close', () => {
   const rv = $('folderDlg').returnValue;
   if (rv === 'ok') loadSessions($('rootInput').value.trim());
   else if (rv === 'default') loadSessions('');
 });
 $('zipInput').addEventListener('change', async (e) => {
+  if (WEB) { const fl = [...e.target.files]; e.target.value = ''; openLocal(fl, fl.length === 1 ? fl[0].name : `${fl.length} file`); return; }
   const f = e.target.files[0];
   e.target.value = '';
   if (!f) return;
@@ -634,6 +688,21 @@ $('zipInput').addEventListener('change', async (e) => {
 document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
   if (!S.sid) return;
   const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart });
+  if (ARTIFACT) {
+    busy(true);
+    window.ENGINE.exportText(S.sid, Object.fromEntries(q)).then(async (text) => {
+      try { await navigator.clipboard.writeText(text); toast('Tabel disalin. Tempel ke Excel atau Google Sheets.', 'info'); }
+      catch { showCopyFallback(text); }
+    }).catch((err) => toast(err.message)).finally(() => busy(false));
+    return;
+  }
+  if (WEB) {
+    busy(true);
+    window.ENGINE.exportZip(S.sid, Object.fromEntries(q)).then(({ name, blob }) => {
+      const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
+    }).catch((err) => toast(err.message)).finally(() => busy(false));
+    return;
+  }
   window.location.href = `/api/${b.dataset.export}/${S.sid}?${q}`;
 }));
 $('printBtn').addEventListener('click', () => window.print());

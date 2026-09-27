@@ -18,13 +18,15 @@
       <span>Sesi</span>
       <select id="sessionSel" aria-label="Pilih sesi"></select>
     </label>
-    <button class="btn" id="folderBtn" title="Pilih folder rekaman">Folder…</button>
-    <label class="btn" title="Unggah file EDF/EDF+/BDF, atau ZIP berisi folder sesi musepolar / file EDF">Unggah EDF/ZIP<input type="file" id="zipInput" accept=".zip,.edf,.bdf" hidden></label>
+    <button class="btn" id="folderBtn" title="Pilih folder rekaman (sesi musepolar dan/atau file EDF)">Folder…</button>
+    <input type="file" id="dirInput" webkitdirectory multiple hidden>
+    <label class="btn" title="Buka file EDF/EDF+/BDF, atau ZIP berisi folder sesi musepolar / file EDF">Buka EDF/ZIP<input type="file" id="zipInput" accept=".zip,.edf,.bdf" hidden></label>
+    <button class="btn web-only" id="demoBtn" title="Muat dua rekaman contoh (Muse 4 kanal dan EDF 16 kanal)" hidden>Data contoh</button>
   </div>
   <div class="exports" role="group" aria-label="Ekspor">
-    <button class="btn" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
+    <button class="btn server-only" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
     <button class="btn" data-export="export" title="Tabel ruas, uji, jendela & denyut (.zip berisi CSV)">Data CSV</button>
-    <button class="btn" data-export="figure" title="Gambar ringkasan (.png)">Gambar</button>
+    <button class="btn server-only" data-export="figure" title="Gambar ringkasan (.png)">Gambar</button>
     <button class="btn" id="printBtn" title="Cetak halaman atau simpan sebagai PDF">Cetak</button>
     <button class="btn icon" id="themeBtn" title="Ganti tema terang/gelap" aria-label="Ganti tema">◐</button>
   </div>

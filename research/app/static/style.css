@@ -58,6 +58,7 @@
 }
 
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { background: var(--bg); }
 body {
   margin: 0; padding: 12px 16px 28px;
@@ -232,6 +233,8 @@ dialog { border: 1px solid var(--border); border-radius: 12px; background: var(-
 dialog::backdrop { background: rgba(0,0,0,.35); }
 .dlg { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
 .dlg input { width: 100%; }
+.copy-fallback { position: fixed; z-index: 60; left: 50%; top: 12%; transform: translateX(-50%); width: min(640px, 92vw); display: grid; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+.copy-fallback textarea { width: 100%; font: 12px ui-monospace, monospace; color: var(--text-primary); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
 .empty { padding: 26px; text-align: center; color: var(--text-secondary); }
 
 @media (max-width: 1100px) {
