@@ -25,9 +25,10 @@ from pathlib import Path
 import numpy as np
 from scipy.stats import kruskal, mannwhitneyu
 
-from .eeg import BANDS, CH, subsegment_spectra, window_spectra
+from .eeg import BANDS, subsegment_spectra, window_spectra
 from .hrv import clean_ibi, hr_at, hrv_stats, ppg_beats
-from .io import load_sample, marker_titik
+from .io import load_recording, marker_titik
+from .montage import MUSE_CH, frontal_pair, positions, regions
 from .segments import parse_marks
 
 LABELS = {
@@ -36,14 +37,13 @@ LABELS = {
     "FOCUSED_ENGAGED": ("Fokus", "Otak lebih siaga, denyut biasa: nuansa memperhatikan."),
     "ACTIVATED_HIGH_AROUSAL": ("Teraktivasi", "Otak dan/atau denyut lebih kencang: nuansa terpacu."),
     "INDETERMINATE": ("Indeterminan", "Perubahan terlalu kecil atau bercampur; tidak memilih tiga label lain."),
-    "NO_DATA": ("Data kurang", "Kurang dari 3 jendela EEG bersih di dahi (AF7 & AF8)."),
+    "NO_DATA": ("Data kurang", "Kurang dari 3 jendela EEG bersih pada pasangan frontal."),
 }
 DOMAIN_TO_CODE = {"LOW_AROUSAL": "CALM_RELAXED", "ENGAGEMENT": "FOCUSED_ENGAGED", "AROUSAL": "ACTIVATED_HIGH_AROUSAL"}
 # Minimum reference SD (floors keep z finite when the reference is very steady).
 SD_FLOOR = {"alpha": 0.05, "beta": 0.05, "theta": 0.05, "tb": 0.05, "ab": 0.05, "ta": 0.05, "hr": 2.0}
 Z_MIN, Z_MARGIN = 0.5, 0.25
 MIN_N_TEST = 5
-MEASURES = ["AF", "AF7", "AF8", "TP9", "TP10", "Asimetri AF"]
 
 
 # --- small helpers ------------------------------------------------------------------
@@ -109,21 +109,45 @@ def cliff_word(d: float | None) -> str:
 # --- session ------------------------------------------------------------------------
 
 class Session:
-    def __init__(self, folder: Path):
-        self.folder = Path(folder)
-        self.sample = load_sample(self.folder, legacy_bp=False)
+    """One recording: a musepolar session folder (Muse 2, 4 channels) or an EDF/BDF file (any montage)."""
+
+    def __init__(self, path: Path):
+        self.folder = Path(path)
+        self.sample = load_recording(self.folder)
+        self.ch: list[str] = list(self.sample["channels"])
+        self.nch = len(self.ch)
+        self.fs = float(self.sample["fs"])
         eeg = self.sample["eeg_f"]
         self.tmax = float(eeg["time_s"].iloc[-1])
-        self.sub = subsegment_spectra(eeg)
+        self.sub = subsegment_spectra(eeg, fs=self.fs, channels=self.ch)
         self._specs: dict[float, dict] = {}
         self.grid = self.spec(100.0)
         ppg = self.sample["ppg"]
-        self.ppg = clean_ibi(ppg_beats(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float)))
+        self.ppg = clean_ibi(ppg_beats(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float),
+                                       fs=float(self.sample.get("ppg_fs", 64.0))))
         rr = self.sample["rr"]
         self.polar = clean_ibi(rr["time_s"].to_numpy(float), rr["rr_ms"].to_numpy(float) / 1000.0)
         self.has_polar = int(self.polar["valid"].sum()) >= 20
+        self.heart_name = self.sample.get("heart_name", "Polar RR")
         self._eeg_t = eeg["time_s"].to_numpy(float)
-        self._eeg_x = eeg[CH].to_numpy(float)
+        self._eeg_x = eeg[self.ch].to_numpy(float)
+        # frontal pair for asymmetry and condition features (AF7/AF8 on Muse, F3/F4 on 10-20 caps)
+        self.pair = frontal_pair(self.ch)
+        if self.pair:
+            self.pair_idx = [self.ch.index(self.pair[0]), self.ch.index(self.pair[1])]
+            muse = set(self.pair) == {"AF7", "AF8"} and set(self.ch) <= set(MUSE_CH)
+            self.pair_label = "AF" if muse else f"{self.pair[0]}/{self.pair[1]}"
+            self.m_pair = "AF" if muse else f"{self.pair[0]}+{self.pair[1]}"
+            self.m_asym = f"Asimetri {self.pair_label}"
+        else:
+            self.pair_idx = list(range(self.nch))
+            self.pair_label = "semua kanal"
+            self.m_pair, self.m_asym = "Rata-rata", None
+        self.measures = [self.m_pair, *self.ch] + ([self.m_asym] if self.m_asym else [])
+        self.measure_labels = {self.m_pair: ("AF rata-rata" if self.m_pair == "AF" else
+                                             f"{self.m_pair} rata-rata" if self.pair else "Rata-rata semua kanal")}
+        if self.m_asym:
+            self.measure_labels[self.m_asym] = self.m_asym
 
     def spec(self, art_uv: float) -> dict:
         key = round(float(art_uv), 1)
@@ -144,9 +168,16 @@ class Session:
             "note": s["condition"],
             "folder": str(self.folder),
             "label": self.folder.name,
+            "kind": s.get("kind", "musepolar"),
+            "fs": self.fs,
             "start": meta.get("start_local"),
             "duration": _num(self.tmax, 6),
-            "channels": CH,
+            "channels": self.ch,
+            "positions": {c: list(p) for c, p in positions(self.ch).items()},
+            "regions": regions(self.ch),
+            "pair": list(self.pair) if self.pair else None,
+            "pair_label": self.pair_label,
+            "heart_name": self.heart_name,
             "bands": {k: list(v) for k, v in BANDS.items()},
             "quality": {"eeg": meta.get("eeg_validation"), "ppg": meta.get("ppg_validation")},
             "sync_offset_ms": _num(s["sync_offset"] * 1000, 4) if s["sync_offset"] is not None else None,
@@ -174,14 +205,14 @@ class Session:
         tt, xx = t[i0:i1], x[i0:i1]
         n = max(50, min(int(n), 5000))
         if len(tt) <= 2 * n:
-            return {"kind": "raw", "t": _arr(tt, 7), "y": [_arr(xx[:, c], 4) for c in range(len(CH))]}
+            return {"kind": "raw", "t": _arr(tt, 7), "y": [_arr(xx[:, c], 4) for c in range(self.nch)]}
         size = len(tt) // n
         m = size * n
         tb = tt[:m].reshape(n, size).mean(axis=1)
-        xb = xx[:m].reshape(n, size, len(CH))
+        xb = xx[:m].reshape(n, size, self.nch)
         return {"kind": "env", "t": _arr(tb, 7),
-                "lo": [_arr(xb[:, :, c].min(axis=1), 4) for c in range(len(CH))],
-                "hi": [_arr(xb[:, :, c].max(axis=1), 4) for c in range(len(CH))]}
+                "lo": [_arr(xb[:, :, c].min(axis=1), 4) for c in range(self.nch)],
+                "hi": [_arr(xb[:, :, c].max(axis=1), 4) for c in range(self.nch)]}
 
     # analysis for one set of settings -----------------------------------------
     def window_values(self, spec: dict, band: str, metric: str) -> np.ndarray:
@@ -205,14 +236,14 @@ class Session:
         tmid = spec["t_mid"]
         seg_of = np.searchsorted(edges, tmid, side="right") - 1
         seg_of[seg_of >= nseg] = nseg - 1
-        af = [CH.index("AF7"), CH.index("AF8")]
+        af = self.pair_idx
         af_clean = ~bad[:, af].any(axis=1)
 
         # map/change values: log10 for absolute power, percent for relative power
         mvals = np.log10(np.where(vals > 0, vals, np.nan)) if metric == "abs" else vals
         ref_mask = seg_of == ref
         ref_mean, ref_sd = [], []
-        for c in range(len(CH)):
+        for c in range(self.nch):
             v = mvals[ref_mask & ~bad[:, c], c]
             v = v[np.isfinite(v)]
             ref_mean.append(float(np.median(v)) if len(v) >= 3 else np.nan)
@@ -227,13 +258,15 @@ class Session:
         for i, (a, b) in enumerate(zip(edges[:-1], edges[1:])):
             m = seg_of == i
             ch_vals, ch_z, ch_clean = [], [], []
-            for c in range(len(CH)):
+            for c in range(self.nch):
                 v = vals[m & ~bad[:, c], c]
                 ch_vals.append(_med(v))
                 ch_z.append((_med(mvals[m & ~bad[:, c], c]) - ref_mean[c]) / ref_sd[c])
                 ch_clean.append(int(len(v)))
-            l, r = ch_vals[af[0]], ch_vals[af[1]]
-            asym = (r - l) / (r + l) if np.isfinite(l) and np.isfinite(r) and (r + l) else np.nan
+            asym = np.nan
+            if self.pair:
+                l, r = ch_vals[af[0]], ch_vals[af[1]]
+                asym = (r - l) / (r + l) if np.isfinite(l) and np.isfinite(r) and (r + l) else np.nan
             n_af = int((m & af_clean).sum())
             z = {k: (_med(feats[k][m & af_clean]) - zref[k][0]) / zref[k][1] for k in feats}
             code, scores = self._classify(z, n_af, i == ref)
@@ -243,24 +276,28 @@ class Session:
                     name = str(lab)
             segs.append({
                 "i": i, "t0": _num(a, 6), "t1": _num(b, 6), "name": name,
-                "n_win": int(m.sum()), "n_clean": ch_clean, "n_af": n_af,
+                "n_win": int(m.sum()), "n_clean": ch_clean, "n_pair": n_af,
                 "values": _arr(ch_vals), "z": _arr(ch_z, 3), "asym": _num(asym, 3),
                 "ppg": hrv_stats(self.ppg, a, b),
                 "polar": hrv_stats(self.polar, a, b) if self.has_polar else None,
-                "code": code, "label": LABELS[code][0], "arti": LABELS[code][1],
+                "code": code, "label": LABELS[code][0],
+                "arti": LABELS[code][1] if code != "NO_DATA" else f"Kurang dari 3 jendela EEG bersih pada {self.pair_label}.",
                 "feat_z": {k: _num(v, 3) for k, v in z.items()},
                 "scores": {k: _num(v, 3) for k, v in scores.items()},
-                "psd": [_arr(self._mean_psd(spec, a, b, c), 4) for c in range(len(CH))],
+                "psd": [_arr(self._mean_psd(spec, a, b, c), 4) for c in range(self.nch)],
             })
 
         return {
             "band": band, "metric": metric, "ref": ref, "art_uv": art_uv,
+            "channels": self.ch, "pair": list(self.pair) if self.pair else None, "pair_label": self.pair_label,
+            "measures": self.measures, "measure_labels": self.measure_labels,
             "unit": "%" if metric == "rel" else "µV²",
             "edges": _arr(edges, 6),
-            "bad": [int(sum(1 << c for c in range(len(CH)) if bad[w, c])) for w in range(len(bad))],
-            "clean_frac": _arr(spec["clean"].mean(axis=0), 3) if len(spec["clean"]) else [None] * len(CH),
-            "windows": {"power": {bn: [_arr(spec["power"][bn][:, c]) for c in range(len(CH))] for bn in BANDS},
-                        "total": [_arr(spec["total"][:, c]) for c in range(len(CH))]},
+            # artifact flags per window as a string of '0'/'1' per channel (works for any channel count)
+            "bad": ["".join("1" if bad[w, c] else "0" for c in range(self.nch)) for w in range(len(bad))],
+            "clean_frac": _arr(spec["clean"].mean(axis=0), 3) if len(spec["clean"]) else [None] * self.nch,
+            "windows": {"power": {bn: [_arr(spec["power"][bn][:, c]) for c in range(self.nch)] for bn in BANDS},
+                        "total": [_arr(spec["total"][:, c]) for c in range(self.nch)]},
             "ref_mean": _arr(ref_mean), "ref_sd": _arr(ref_sd),
             "hr_source": hr_source,
             "freqs": _arr(self.sub["freqs"], 4),
@@ -270,10 +307,11 @@ class Session:
 
     def _features(self, spec, af_clean):
         p = spec["power"]
+        idx = self.pair_idx
         with np.errstate(divide="ignore", invalid="ignore"):
-            al = np.log10(p["alpha"][:, 1:3].mean(axis=1))
-            be = np.log10(p["beta"][:, 1:3].mean(axis=1))
-            th = np.log10(p["theta"][:, 1:3].mean(axis=1))
+            al = np.log10(p["alpha"][:, idx].mean(axis=1))
+            be = np.log10(p["beta"][:, idx].mean(axis=1))
+            th = np.log10(p["theta"][:, idx].mean(axis=1))
         src, ser = ("polar", self.polar) if self.has_polar else ("ppg", self.ppg)
         hr = hr_at(ser, spec["t_mid"], spec["win_s"] / 2)
         if not np.isfinite(hr).any():
@@ -323,17 +361,20 @@ class Session:
         k = max(1, int(round(spec["win_s"] / spec["step_s"])))
         keep = np.zeros(len(vals), bool)
         keep[::k] = True  # non-overlapping windows only
-        i7, i8 = CH.index("AF7"), CH.index("AF8")
+        idx = self.pair_idx
         per = {}
-        for meas in MEASURES:
-            if meas in CH:
-                c = CH.index(meas)
+        for meas in self.measures:
+            if meas in self.ch:
+                c = self.ch.index(meas)
                 v, ok = vals[:, c], ~bad[:, c]
             else:
-                ok = ~bad[:, i7] & ~bad[:, i8]
-                l, r = vals[:, i7], vals[:, i8]
+                ok = ~bad[:, idx].any(axis=1)
                 with np.errstate(divide="ignore", invalid="ignore"):
-                    v = (l + r) / 2 if meas == "AF" else (r - l) / (r + l)
+                    if meas == self.m_asym:
+                        l, r = vals[:, idx[0]], vals[:, idx[1]]
+                        v = (r - l) / (r + l)
+                    else:
+                        v = vals[:, idx].mean(axis=1)
             per[meas] = [v[keep & ok & (seg_of == i)] for i in range(nseg)]
         names = [f"{a:.0f}–{b:.0f} s" for a, b in zip(edges[:-1], edges[1:])]
         pairs, omnibus = [], []

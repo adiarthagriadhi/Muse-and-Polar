@@ -1,5 +1,7 @@
 """Muse 2 Research View: local web app for analysing musepolar recordings.
 
+Reads musepolar session folders and EDF/EDF+/BDF files (any 10-20 / 10-10 montage).
+
 Run from the research/ folder:
 
     PYTHONPATH=src python app/server.py            # opens http://127.0.0.1:8600
@@ -11,6 +13,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import sys
+import tempfile
 import threading
 import webbrowser
 from collections import OrderedDict
@@ -24,7 +27,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 from muse2_pipeline.analysis import Session  # noqa: E402
-from muse2_pipeline.io import DEFAULT_RECORDINGS, list_samples, unpack_zip  # noqa: E402
+from muse2_pipeline.io import DEFAULT_RECORDINGS, EDF_SUFFIXES, list_recordings, unpack_zip  # noqa: E402
 from muse2_pipeline import report  # noqa: E402
 
 STATIC = Path(__file__).with_name("static")
@@ -46,19 +49,16 @@ def _sid(folder: Path) -> str:
 
 def _scan(root: Path) -> list[dict]:
     ROOTS.add(Path(root))
-    inv = list_samples(root)
     out = []
-    if inv is None or inv.empty:
-        return out
-    for r in inv.to_dict("records"):
-        sid = _sid(r["folder"])
-        FOLDERS[sid] = Path(r["folder"])
+    for r in list_recordings(root):
+        sid = _sid(r["path"])
+        FOLDERS[sid] = Path(r["path"])
         out.append({
-            "id": sid, "label": r["label"], "name": r["participant"], "note": r["condition"],
-            "start": r["start_iso"], "duration": r["duration_sec"],
-            "has_ppg": bool(r["has_ppg"]), "has_polar": bool(r["has_polar"]),
+            "id": sid, "label": r["label"], "name": r["name"], "note": r["note"], "start": r["start"],
+            "duration": r["duration"], "has_ppg": r["has_ppg"], "has_polar": r["has_heart"],
+            "kind": r["kind"], "n_channels": r["n_channels"],
         })
-    out.sort(key=lambda s: s["label"], reverse=True)  # newest first (folder names start with the date)
+    out.sort(key=lambda s: (s["start"] or "", s["label"]), reverse=True)  # newest first
     return out
 
 
@@ -69,9 +69,10 @@ def session(sid: str) -> Session:
             if Path(root).exists():
                 _scan(root)
         folder = FOLDERS.get(sid)
-    if folder is None or not (folder / "muse_eeg.csv").exists():
+    data_file = folder / "muse_eeg.csv" if folder is not None and folder.is_dir() else folder
+    if data_file is None or not data_file.exists():
         raise HTTPException(404, "Sesi tidak ditemukan. Muat ulang daftar sesi.")
-    mtime = (folder / "muse_eeg.csv").stat().st_mtime
+    mtime = data_file.stat().st_mtime
     with LOCK:
         hit = CACHE.get(sid)
         if hit and hit[0] == mtime:
@@ -107,13 +108,19 @@ def sessions(root: str = ""):
 
 @app.post("/api/upload")
 async def upload(file: UploadFile = File(...)):
-    try:
-        root = unpack_zip(await file.read())
-    except Exception as e:
-        raise HTTPException(400, f"ZIP tidak bisa dibuka: {e}") from e
+    data = await file.read()
+    name = Path(file.filename or "rekaman").name
+    if name.lower().endswith(EDF_SUFFIXES):  # a single EDF/BDF file
+        root = Path(tempfile.mkdtemp(prefix="muse2_edf_"))
+        (root / name).write_bytes(data)
+    else:
+        try:
+            root = unpack_zip(data)
+        except Exception as e:
+            raise HTTPException(400, f"File tidak bisa dibuka (ZIP atau EDF/BDF): {e}") from e
     found = _scan(root)
     if not found:
-        raise HTTPException(400, "Tidak ada folder sesi (muse_eeg.csv) di dalam ZIP.")
+        raise HTTPException(400, "Tidak ada rekaman (folder musepolar atau file EDF/BDF) di dalam file ini.")
     return {"root": str(root), "exists": True, "sessions": found, "uploaded": True}
 
 

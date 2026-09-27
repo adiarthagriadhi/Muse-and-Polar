@@ -154,3 +154,139 @@ def load_sample(folder: Path, legacy_bp: bool = True) -> dict:
         "meta": meta,
         "folder": folder,
     }
+
+
+# --- any recording: musepolar session folder or EDF / EDF+ / BDF file -------------------
+
+EDF_SUFFIXES = (".edf", ".bdf")
+
+
+def _edf_files(root: Path) -> list[Path]:
+    if root.is_file():
+        return [root] if root.suffix.lower() in EDF_SUFFIXES else []
+    return sorted(p for p in root.rglob("*") if p.suffix.lower() in EDF_SUFFIXES and p.is_file())
+
+
+def list_recordings(root: Path) -> list[dict]:
+    """musepolar session folders and EDF/BDF files under ``root`` (or ``root`` itself)."""
+    from .edf import read_header
+    from .montage import canonical
+
+    root = Path(root)
+    if not root.exists():
+        return []
+    out = []
+    if root.is_dir():
+        for r in list_samples(root).to_dict("records"):
+            out.append({"kind": "musepolar", "path": r["folder"], "label": r["label"], "name": r["participant"],
+                        "note": r["condition"], "start": r["start_iso"], "duration": r["duration_sec"],
+                        "has_ppg": bool(r["has_ppg"]), "has_heart": bool(r["has_polar"]), "n_channels": 4})
+    for p in _edf_files(root):
+        try:
+            h = read_header(p)
+        except (OSError, ValueError):
+            continue
+        labels = h["labels"]
+        n_eeg = len({c for c in (canonical(l) for l in labels) if c})
+        up = [l.upper() for l in labels]
+        out.append({
+            "kind": "edf", "path": str(p), "label": p.name, "name": _edf_patient(h["patient"]) or p.stem,
+            "note": h["recording"] if h["recording"] and not h["recording"].startswith("Startdate") else "",
+            "start": h["start"].isoformat(timespec="seconds") if h["start"] else None,
+            "duration": h["n_records"] * h["record_s"] if h["n_records"] > 0 else None,
+            "has_ppg": any("PPG" in l or "PLETH" in l for l in up),
+            "has_heart": any("ECG" in l or "EKG" in l for l in up),
+            "n_channels": n_eeg,
+        })
+    return out
+
+
+def _edf_patient(field: str) -> str:
+    # EDF+: "code sex birthdate name" with X for unknown subfields
+    parts = field.split()
+    if len(parts) >= 4 and parts[1] in ("M", "F", "X"):
+        name = " ".join(parts[3:]).replace("_", " ")
+        return "" if name == "X" else name
+    return field if field not in ("X", "") else ""
+
+
+def load_recording(path: Path) -> dict:
+    """Load a musepolar folder or an EDF/BDF file into one common structure.
+
+    Keys: kind, participant, condition, channels, fs, eeg_f (time_s + filtered channels),
+    ppg (time_s, PPG2), ppg_fs, rr (time_s, rr_ms), heart_name, markers (time_s, label),
+    sync_offset, meta (incl. eeg_validation / ppg_validation), label.
+    """
+    path = Path(path)
+    if path.is_dir():
+        s = load_sample(path, legacy_bp=False)
+        return {**s, "kind": "musepolar", "channels": list(CH), "fs": FS_EEG, "ppg_fs": FS_PPG,
+                "heart_name": "Polar RR", "label": path.name}
+    return _load_edf(path)
+
+
+def _load_edf(path: Path) -> dict:
+    from scipy.signal import resample_poly
+
+    from .edf import read_edf, to_microvolt
+    from .hrv import ecg_beats
+    from .montage import canonical
+
+    d = read_edf(path)
+    eeg_sig, ecg, ppg = {}, None, None
+    for lab, (fs, v) in d["signals"].items():
+        c = canonical(lab)
+        dim = d["dims"][d["labels"].index(lab)]
+        up = lab.upper()
+        if c and c not in eeg_sig:
+            eeg_sig[c] = (fs, v * to_microvolt(dim))
+        elif ecg is None and ("ECG" in up or "EKG" in up):
+            ecg = (fs, v)
+        elif ppg is None and ("PPG" in up or "PLETH" in up):
+            ppg = (fs, v)
+    if not eeg_sig:  # no 10-20 names: use every signal measured in (micro)volts
+        for lab, (fs, v) in d["signals"].items():
+            dim = d["dims"][d["labels"].index(lab)].upper()
+            if dim in ("UV", "µV", "ΜV", "MV", "V") and lab not in eeg_sig:
+                eeg_sig[lab.strip()] = (fs, v * to_microvolt(dim))
+    if not eeg_sig:
+        raise ValueError("tidak ada kanal EEG di file EDF ini")
+    rates = [fs for fs, _ in eeg_sig.values()]
+    fs = max(set(rates), key=rates.count)
+    channels = list(eeg_sig)
+    n = min(len(v) if f == fs else int(len(v) * fs / f) for f, v in eeg_sig.values())
+    cols = {}
+    for c, (f, v) in eeg_sig.items():
+        if f != fs:
+            up_, down = int(round(fs * 1000)), int(round(f * 1000))
+            g = np.gcd(up_, down)
+            v = resample_poly(v, up_ // g, down // g)
+        cols[c] = v[:n]
+    eeg = pd.DataFrame({"time_s": np.arange(n) / fs, **cols})
+    eeg_f = filter_eeg(eeg, fs, channels)
+
+    if ppg is not None:
+        pfs, pv = ppg
+        ppg_df = pd.DataFrame({"time_s": np.arange(len(pv)) / pfs, "PPG2": pv})
+    else:
+        pfs, ppg_df = FS_PPG, pd.DataFrame({"time_s": [], "PPG2": []})
+    rr = pd.DataFrame({"time_s": [], "rr_ms": []})
+    if ecg is not None:
+        efs, ev = ecg
+        tb = ecg_beats(ev, np.arange(len(ev)) / efs, efs)
+        if len(tb) > 1:
+            rr = pd.DataFrame({"time_s": tb[1:], "rr_ms": np.diff(tb) * 1000})
+    markers = pd.DataFrame(d["annotations"], columns=["time_s", "label"]) if d["annotations"] \
+        else pd.DataFrame({"time_s": [], "label": []})
+    start = d["start"].isoformat(timespec="seconds") if d["start"] else None
+    meta = {
+        "name": _edf_patient(d["patient"]) or path.stem, "note": "", "start_local": start, "start_iso": start,
+        "duration_sec": n / fs, "eeg_validation": {"status": "VALID", "rate_hz": fs},
+        "ppg_validation": {"status": "VALID" if ppg is not None else "-", "rate_hz": pfs if ppg is not None else None},
+        "edf": {"labels": d["labels"], "edfplus": d["edfplus"], "discontinuous": d["discontinuous"]},
+    }
+    return {
+        "kind": "edf", "label": path.name, "participant": meta["name"], "condition": "",
+        "channels": channels, "fs": fs, "eeg_f": eeg_f, "ppg": ppg_df, "ppg_fs": pfs, "rr": rr,
+        "heart_name": "EKG (EDF)", "markers": markers, "sync_offset": None, "meta": meta, "folder": path,
+    }

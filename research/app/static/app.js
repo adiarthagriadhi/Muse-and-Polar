@@ -1,10 +1,9 @@
 import { Chart, ChartGroup, css, drawTopo, fmtNum, fmtTime, layeredCss } from './charts.js';
 
 const $ = (id) => document.getElementById(id);
-const CH = ['TP9', 'AF7', 'AF8', 'TP10'];
+let CH = ['TP9', 'AF7', 'AF8', 'TP10']; // replaced by the session's channels (Muse 4, EDF 16, ...)
 const SYM = { delta: 'δ', theta: 'θ', alpha: 'α', beta: 'β' };
-const MEASURES = ['AF', 'AF7', 'AF8', 'TP9', 'TP10', 'Asimetri AF'];
-const MEASURE_LABEL = { AF: 'AF rata-rata', 'Asimetri AF': 'Asimetri AF' };
+const mLabel = (m) => (S.res && S.res.measure_labels && S.res.measure_labels[m]) || m;
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
@@ -30,7 +29,15 @@ function h(tag, attrs = {}, ...kids) {
   for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
   return el;
 }
-const chColor = (i) => css(`--series-${i + 1}`);
+// Muse: one colour per channel. Many channels: colour by scalp region (at most 5 hues).
+const regionOf = (c) => { const r = S.ov && S.ov.regions; if (!r) return null; return Object.keys(r).find((k) => r[k].includes(c)) || null; };
+const chColor = (i) => {
+  if (CH.length <= 4) return css(`--series-${i + 1}`);
+  const keys = S.ov ? Object.keys(S.ov.regions) : [];
+  const k = keys.indexOf(regionOf(CH[i]));
+  return k >= 0 && k < 5 ? css(`--series-${k + 1}`) : css('--text-secondary');
+};
+const pairIdx = () => (S.res && S.res.pair ? S.res.pair.map((c) => CH.indexOf(c)) : CH.map((_, i) => i));
 const fin = (v) => v !== null && v !== undefined && Number.isFinite(v);
 const median = (a) => {
   const x = a.filter(fin).sort((p, q) => p - q);
@@ -134,13 +141,14 @@ function applySessionList(data, preferFirst = false) {
 function sessionText(s) {
   const d = fin(s.duration) ? ` · ${fmtTime(s.duration, s.duration)}` : '';
   const date = (s.start || '').replace('T', ' ').slice(0, 16);
-  return `${s.name}${date ? ' · ' + date : ''}${d}${s.has_polar ? ' · Polar' : ''}`;
+  const kind = s.kind === 'edf' ? ` · EDF ${s.n_channels} kanal` : '';
+  return `${s.name}${date ? ' · ' + date : ''}${d}${kind}${s.has_polar ? (s.kind === 'edf' ? ' · EKG' : ' · Polar') : ''}`;
 }
 function showEmpty(data) {
   $('segCards').replaceChildren(h('div', { class: 'card empty', style: 'grid-column:1/-1' },
     h('p', {}, h('b', {}, 'Belum ada rekaman untuk ditampilkan.')),
     h('p', {}, `Folder: ${data.root}`),
-    h('p', {}, 'Rekam sesi dengan dashboard musepolar (python -m musepolar), pilih folder lain lewat “Folder…”, atau unggah ZIP berisi folder sesi.')));
+    h('p', {}, 'Rekam sesi dengan dashboard musepolar (python -m musepolar), pilih folder lain lewat “Folder…” (folder sesi musepolar atau file EDF), atau unggah ZIP / EDF.')));
   $('kpis').replaceChildren();
   for (const c of [eegChart, bandChart, heartChart]) c.setSeries([]);
   psdChart.setSeries([]);
@@ -156,6 +164,11 @@ async function selectSession(sid) {
   try { ov = await api(`/api/session/${sid}`); } catch (e) { toast(e.message); return; }
   if (S.sid !== sid) return;
   S.ov = ov;
+  CH = ov.channels;
+  S.measure = null; // first measure (frontal pair) once the analysis arrives
+  S.psdCh = 'PAIR';
+  eegChart.opt.lanes = CH.length;
+  $('chEeg').style.setProperty('--h', `${CH.length <= 4 ? 260 : Math.max(260, 22 * CH.length + 30)}px`);
   const saved = store.get(`titik:${ov.folder}`);
   S.set.titik = saved !== null ? saved : (ov.marker_titik || '');
   S.set.ref = 0;
@@ -177,8 +190,8 @@ function renderStatic() {
   const mk = (src, name, color) => (src ? {
     name, color, t: src.t, y: src.ibi.map((v, i) => (src.valid[i] ? v : null)), unit: 'ms', gap: 4,
   } : null);
-  const ppg = mk(ov.ppg && ov.ppg.t.length ? ov.ppg : null, 'PPG dahi', chColor(0));
-  const pol = mk(ov.polar, 'Polar RR', chColor(1));
+  const ppg = mk(ov.ppg && ov.ppg.t.length ? ov.ppg : null, ov.kind === 'edf' ? 'PPG' : 'PPG dahi', css('--series-1'));
+  const pol = mk(ov.polar, ov.heart_name, css('--series-2'));
   if (ppg) series.push(ppg);
   if (pol) series.push(pol);
   heartChart.setSeries(series);
@@ -199,7 +212,7 @@ const runAnalysis = debounce(async () => {
   } catch (e) { toast(e.message); }
 }, 200);
 
-const isBad = (w, c) => (S.res.bad[w] >> c) & 1;
+const isBad = (w, c) => S.res.bad[w].charCodeAt(c) === 49; // '1'
 function windowValue(w, c) {
   const W = S.res.windows, p = W.power[S.res.band][c][w];
   if (!fin(p)) return null;
@@ -224,10 +237,17 @@ function renderAnalysis() {
   bandChart.opt.title = `Daya ${SYM[res.band]} ${res.band} (${unitTxt()}${res.metric === 'abs' ? ', log' : ''})`;
   bandChart.opt.yFmt = (v) => fmtNum(v, 3);
   const nW = S.ov.windows.t_mid.length;
-  bandChart.setSeries(CH.map((c, i) => ({
-    name: c, color: chColor(i), t: S.ov.windows.t_mid, unit: unitTxt(),
-    y: Array.from({ length: nW }, (_, w) => (isBad(w, i) ? null : windowValue(w, i))),
+  // Muse: one line per channel; many channels: mean of the clean channels in each scalp region
+  const groups = CH.length <= 4 ? CH.map((c, i) => [c, [i]])
+    : Object.entries(S.ov.regions).slice(0, 5).map(([r, cs]) => [r, cs.map((c) => CH.indexOf(c))]);
+  bandChart.setSeries(groups.map(([name, idx], k) => ({
+    name, color: css(`--series-${k + 1}`), t: S.ov.windows.t_mid, unit: unitTxt(),
+    y: Array.from({ length: nW }, (_, w) => {
+      const v = idx.filter((i) => !isBad(w, i)).map((i) => windowValue(w, i)).filter(fin);
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    }),
   })));
+  if (CH.length > 4) bandChart.opt.title += ' · rata-rata per area';
 
   renderKpis();
   syncMapSlider();
@@ -247,7 +267,12 @@ function kpi(k, v, d) { return h('div', { class: 'card kpi' }, h('div', { class:
 function renderKpis() {
   const ov = S.ov, res = S.res, q = ov.quality;
   const hp = ov.hrv.ppg, hpo = ov.hrv.polar;
-  const clean = res.clean_frac.map((f, i) => `${CH[i]} ${fin(f) ? Math.round(f * 100) : '–'}%`).join(' · ');
+  let clean = res.clean_frac.map((f, i) => `${CH[i]} ${fin(f) ? Math.round(f * 100) : '–'}%`).join(' · ');
+  if (CH.length > 4) {
+    const fr = res.clean_frac.map((f) => (fin(f) ? f : 0));
+    const worst = fr.indexOf(Math.min(...fr));
+    clean = `rata-rata ${Math.round((fr.reduce((a, b) => a + b, 0) / fr.length) * 100)}% · terendah ${CH[worst]} ${Math.round(fr[worst] * 100)}%`;
+  }
   const mk = ov.markers.filter((m) => !String(m.label).startsWith('SYNC'));
   $('kpis').replaceChildren(
     kpi('Durasi', fmtTime(ov.duration, ov.duration), ov.start ? `mulai ${ov.start.replace('T', ' ')}` : ov.label),
@@ -255,10 +280,12 @@ function renderKpis() {
     kpi('Denyut dahi (PPG)', hp.ok ? [Math.round(hp.hr), h('small', {}, 'bpm')] : '–',
       hp.ok ? `PRV-RMSSD ${fmtNum(hp.rmssd, 2)} ms · valid ${Math.round((hp.valid_frac || 0) * 100)}%`
         : (q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
-    kpi('Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
+    kpi(ov.kind === 'edf' ? 'Denyut EKG' : 'Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
       hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms` : 'tidak direkam'),
-    kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
-      fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
+    ov.kind === 'edf'
+      ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `@ ${fmtNum(ov.fs, 3)} Hz`)], `EDF · pasangan frontal ${ov.pair_label}`)
+      : kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
+        fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
     kpi('Penanda', String(mk.length), mk.length ? mk.slice(0, 3).map((m) => `${fmtTime(m.t, 100)} ${m.label}`).join(' · ') : 'tidak ada'),
   );
 }
@@ -320,12 +347,12 @@ function updateMap() {
     : mapInput(Object.fromEntries(CH.map((c, i) => [c, s.values[i]])))));
   const sc = mapScale(drawn);
   const fmt = labelFmt();
-  drawTopo($('mapBig'), drawn, { ...sc, showValues: true, fmt });
+  drawTopo($('mapBig'), drawn, { ...sc, showValues: true, fmt, pos: S.ov.positions });
   const T1 = Math.min(dur(), S.mapT + S.mapWin);
   $('mapTLabel').textContent = `Mulai jendela: ${fmtTime(S.mapT, 100)}`;
   const seg = segAt(S.mapT + S.mapWin / 2);
   $('mapTitle').textContent = `${fmtRange(S.mapT, T1)} · ${SYM[res.band]} ${res.band}`
-    + (seg ? ` · Ruas ${seg.i + 1}` : '') + ` · ${Math.min(n[1], n[2])} jendela bersih AF`;
+    + (seg ? ` · Ruas ${seg.i + 1}` : '') + ` · ${Math.min(...pairIdx().map((i) => n[i]))} jendela bersih ${res.pair_label}`;
   for (const c of [eegChart, bandChart, heartChart]) c.setOverlays({ window: { a: S.mapT, b: T1 } });
 
   const cb = $('colorbar');
@@ -338,7 +365,7 @@ function updateMap() {
 
   const rows = [h('tr', {}, h('th', {}, 'Kanal'), h('th', { style: 'text-align:right' }, unitTxt()), h('th', { style: 'text-align:right' }, 'z vs acuan'), h('th', { style: 'text-align:right' }, 'jendela'))];
   CH.forEach((c, i) => rows.push(h('tr', {},
-    h('th', {}, h('i', { class: 'sw', style: `background:${chColor(i)}` }), c),
+    h('th', {}, CH.length <= 4 ? h('i', { class: 'sw', style: `background:${chColor(i)}` }) : null, c),
     h('td', {}, valFmt(values[c])), h('td', {}, signed(zOf(values[c], c), 2)), h('td', {}, String(n[i])))));
   $('mapTable').replaceChildren(...rows);
 
@@ -347,16 +374,16 @@ function updateMap() {
 
 // --- segment cards ------------------------------------------------------------------
 function heartOf(s) {
-  if (s.polar && s.polar.ok) return { src: 'Polar', ...s.polar };
+  if (s.polar && s.polar.ok) return { src: S.ov.kind === 'edf' ? 'EKG' : 'Polar', ...s.polar };
   if (s.ppg && s.ppg.ok) return { src: 'PPG', ...s.ppg };
   return null;
 }
 function renderSegCards(segDrawn, sc, fmt) {
   const res = S.res;
   const cards = res.segments.map((s, k) => {
-    const v = [s.values[1], s.values[2]].filter(fin);
+    const v = pairIdx().map((i) => s.values[i]).filter(fin);
     const af = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
-    const zz = [s.z[1], s.z[2]].filter(fin);
+    const zz = pairIdx().map((i) => s.z[i]).filter(fin);
     const zaf = zz.length ? zz.reduce((a, b) => a + b, 0) / zz.length : null;
     const hr = heartOf(s);
     const cv = h('canvas', { width: 84, height: 84, 'aria-label': `Peta ruas ${s.i + 1}` });
@@ -366,9 +393,9 @@ function renderSegCards(segDrawn, sc, fmt) {
       s.name ? h('div', { class: 'nm', title: s.name }, s.name) : null,
       h('div', {}, h('span', { class: `label-chip ${s.code}` }, h('i'), s.label)),
       h('div', { class: 'facts' },
-        `${SYM[res.band]} AF `, h('b', {}, `${valFmt(af)} ${unitTxt()}`), isRef ? '' : ` (z ${signed(zaf, 1)})`, h('br'),
+        `${SYM[res.band]} ${res.pair_label} `, h('b', {}, `${valFmt(af)} ${unitTxt()}`), isRef ? '' : ` (z ${signed(zaf, 1)})`, h('br'),
         hr ? ['Denyut ', h('b', {}, Math.round(hr.hr)), ` (${hr.src})`, fin(hr.rmssd) ? [' · RMSSD ', h('b', {}, Math.round(hr.rmssd)), ' ms'] : ''] : 'Denyut –',
-        h('br'), `${s.n_af}/${s.n_win} jendela bersih AF`,
+        h('br'), `${s.n_pair}/${s.n_win} jendela bersih ${res.pair_label}`,
         isRef ? '' : [' · ', h('button', { class: 'btn sm', style: 'min-height:22px;padding:0 7px;font-size:11px', onclick: (e) => { e.stopPropagation(); setRef(s.i); } }, 'jadikan acuan')]),
       cv,
       h('div', { class: 'arti' }, s.arti));
@@ -376,7 +403,7 @@ function renderSegCards(segDrawn, sc, fmt) {
       setView(s.t0, s.t1);
       S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
     });
-    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...mapScale(segDrawn[k]), labels: false, fmt }));
+    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...mapScale(segDrawn[k]), labels: false, fmt, pos: S.ov.positions }));
     return card;
   });
   $('segCards').replaceChildren(...cards);
@@ -388,14 +415,16 @@ function td(v, cls) { return h('td', { class: cls || (v === '–' ? 'na' : null)
 function renderSegTable() {
   const res = S.res;
   $('segUnit').textContent = `nilai kanal = median daya ${SYM[res.band]} ${res.band} (${unitTxt()}) pada jendela bersih`;
-  const head = h('tr', {}, ...['Ruas', 'Nama', 'Jendela bersih AF', 'TP9', 'AF7', 'AF8', 'TP10', 'Asimetri AF', 'Denyut PPG', 'PRV-RMSSD', 'Denyut Polar', 'HRV-RMSSD', 'Kondisi']
-    .map((t, i) => h('th', { class: i === 1 || i === 12 ? 'l' : null }, t)));
+  const hn = S.ov.kind === 'edf' ? 'EKG' : 'Polar';
+  const cols = ['Ruas', 'Nama', `Jendela bersih ${res.pair_label}`, ...CH, ...(res.pair ? [`Asimetri ${res.pair_label}`] : []),
+    'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Kondisi'];
+  const head = h('tr', {}, ...cols.map((t, i) => h('th', { class: i === 1 || i === cols.length - 1 ? 'l' : null }, t)));
   const rows = res.segments.map((s) => h('tr', { class: s.i === res.ref ? 'ref' : null },
     td(`${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
     td(s.name || '–', 'l'),
-    td(`${s.n_af}/${s.n_win}`),
+    td(`${s.n_pair}/${s.n_win}`),
     ...s.values.map((v) => td(fin(v) ? valFmt(v) : '–')),
-    td(fin(s.asym) ? signed(s.asym, 3) : '–'),
+    res.pair ? td(fin(s.asym) ? signed(s.asym, 3) : '–') : null,
     td(s.ppg && s.ppg.ok ? Math.round(s.ppg.hr) : '–'),
     td(s.ppg && fin(s.ppg.rmssd) ? Math.round(s.ppg.rmssd) : '–'),
     td(s.polar && s.polar.ok ? Math.round(s.polar.hr) : '–'),
@@ -406,7 +435,18 @@ function renderSegTable() {
 
 function renderMeasureSeg() {
   const seg = $('measureSeg');
-  seg.replaceChildren(...['Semua', ...MEASURES].map((m) => h('button', { 'data-v': m, class: m === S.measure ? 'on' : null }, MEASURE_LABEL[m] || m)));
+  const list = ['Semua', ...S.res.measures];
+  if (!list.includes(S.measure)) S.measure = S.res.measures[0];
+  if (list.length > 8) { // many channels: a drop-down instead of a long row of buttons
+    const sel = h('select', { 'aria-label': 'Ukuran uji', onchange: (e) => { S.measure = e.target.value; renderTests(); } },
+      ...list.map((m) => h('option', { value: m }, m === 'Semua' ? 'Semua ukuran' : mLabel(m))));
+    sel.value = S.measure;
+    seg.className = 'measure-pick';
+    seg.replaceChildren(sel);
+    return;
+  }
+  seg.className = 'seg sm';
+  seg.replaceChildren(...list.map((m) => h('button', { 'data-v': m, class: m === S.measure ? 'on' : null }, mLabel(m))));
 }
 function renderTests() {
   const res = S.res, t = res.tests;
@@ -423,13 +463,13 @@ function renderTests() {
   const head = h('tr', {}, ...[all ? 'Ukuran' : null, 'Perbandingan', 'n', 'Median', 'Perubahan', 'p', 'p Holm', 'δ Cliff', 'Hasil'].filter(Boolean)
     .map((x, i) => h('th', { class: i === 0 || (all && i === 1) ? 'l' : null }, x)));
   const body = rows.map((r) => {
-    const asym = r.measure === 'Asimetri AF';
+    const asym = r.measure.startsWith('Asimetri');
     const change = fin(r.med_a) && fin(r.med_b)
       ? (asym ? signed(r.med_b - r.med_a, 3) : (r.med_a !== 0 ? `${signed(((r.med_b - r.med_a) / Math.abs(r.med_a)) * 100, 0)}%` : '–')) : '–';
     const result = r.p === null ? h('span', { class: 'badge' }, 'data kurang')
       : r.sig ? h('span', { class: 'badge sig' }, 'berbeda') : h('span', { class: 'badge' }, 'tidak berbeda');
     return h('tr', {},
-      all ? td(MEASURE_LABEL[r.measure] || r.measure, 'l') : null,
+      all ? td(mLabel(r.measure), 'l') : null,
       td(r.pair, all ? 'l' : null),
       td(`${r.n_a} / ${r.n_b}`),
       td(`${asym ? signed(r.med_a, 3) : valFmt(r.med_a)} → ${asym ? signed(r.med_b, 3) : valFmt(r.med_b)}`),
@@ -442,16 +482,34 @@ function renderTests() {
   $('testTable').replaceChildren(h('thead', {}, head), h('tbody', {}, ...body));
   const om = t.omnibus.filter((o) => all || o.measure === S.measure);
   $('omnibus').textContent = om.length
-    ? 'Kruskal–Wallis (semua ruas): ' + om.map((o) => `${MEASURE_LABEL[o.measure] || o.measure} ${pStr(o.p)}`).join(' · ')
+    ? 'Kruskal–Wallis (semua ruas): ' + om.map((o) => `${mLabel(o.measure)} ${pStr(o.p)}`).join(' · ')
     : '';
 }
 const fmtP = (p) => (p < 0.001 ? '< 0,001' : p.toFixed(3).replace('.', ','));
 const pStr = (p) => (p < 0.001 ? 'p < 0,001' : `p = ${fmtP(p)}`);
 
 // --- spectrum -----------------------------------------------------------------------
+function fillPsdSelect() {
+  const sel = $('psdCh');
+  const key = S.ov.label + '|' + CH.length;
+  if (sel.dataset.key !== key) {
+    const muse = CH.length <= 4;
+    const opts = [h('option', { value: 'PAIR' }, muse ? 'AF7 + AF8 (dahi)' : `${S.res.pair_label} (frontal)`)];
+    if (muse) opts.push(h('option', { value: 'R:Temporal' }, 'TP9 + TP10 (telinga)'));
+    else for (const r of Object.keys(S.ov.regions)) opts.push(h('option', { value: `R:${r}` }, `Area ${r.toLowerCase()}`));
+    for (const c of CH) opts.push(h('option', { value: c }, c));
+    sel.replaceChildren(...opts);
+    sel.dataset.key = key;
+  }
+  if (![...sel.options].some((o) => o.value === S.psdCh)) S.psdCh = 'PAIR';
+  sel.value = S.psdCh;
+}
 function renderPsd() {
   const res = S.res;
-  const idx = S.psdCh === 'AF' ? [1, 2] : S.psdCh === 'TP' ? [0, 3] : [CH.indexOf(S.psdCh)];
+  fillPsdSelect();
+  const idx = S.psdCh === 'PAIR' ? pairIdx()
+    : S.psdCh.startsWith('R:') ? (S.ov.regions[S.psdCh.slice(2)] || []).map((c) => CH.indexOf(c))
+      : [CH.indexOf(S.psdCh)];
   const f = res.freqs;
   const series = res.segments.slice(0, 8).map((s, k) => ({
     name: `Ruas ${s.i + 1}`, color: css(`--series-${k + 1}`), t: f, unit: 'µV²/Hz',
@@ -523,7 +581,7 @@ $('zipInput').addEventListener('change', async (e) => {
   fd.append('file', f);
   try {
     const data = await api('/api/upload', { method: 'POST', body: fd });
-    toast(`${data.sessions.length} sesi dari ${f.name} dimuat.`, 'info');
+    toast(`${data.sessions.length} rekaman dari ${f.name} dimuat.`, 'info');
     applySessionList(data, true);
   } catch (err) { toast(err.message); }
 });

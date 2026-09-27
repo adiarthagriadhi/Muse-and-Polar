@@ -9,13 +9,18 @@ CH = ["TP9", "AF7", "AF8", "TP10"]
 BANDS = {"delta": (1, 4), "theta": (4, 8), "alpha": (8, 13), "beta": (13, 30)}
 
 
-def filter_eeg(eeg: pd.DataFrame) -> pd.DataFrame:
-    x = eeg[CH].to_numpy(float)
-    b, a = iirnotch(50.0, 30.0, FS_EEG)
-    x = sosfiltfilt(tf2sos(b, a), x, axis=0)
-    x = sosfiltfilt(butter(4, [1, 40], btype="bandpass", fs=FS_EEG, output="sos"), x, axis=0)
+def filter_eeg(eeg: pd.DataFrame, fs: float = FS_EEG, channels: list[str] | None = None,
+               notch: float = 50.0) -> pd.DataFrame:
+    """Notch (mains) + 1–40 Hz band-pass, zero phase. Defaults: Muse 2 (256 Hz, 4 channels)."""
+    ch = list(channels or CH)
+    x = eeg[ch].to_numpy(float)
+    if notch and notch < fs / 2:
+        b, a = iirnotch(notch, 30.0, fs)
+        x = sosfiltfilt(tf2sos(b, a), x, axis=0)
+    hi = min(40.0, 0.45 * fs)
+    x = sosfiltfilt(butter(4, [1, hi], btype="bandpass", fs=fs, output="sos"), x, axis=0)
     out = eeg.copy()
-    out[CH] = x
+    out[ch] = x
     out["artifact_amp"] = np.abs(x).max(axis=1) > 80
     return out
 
@@ -54,7 +59,8 @@ PSD_FMAX = 40.0
 SUB_S, HOP_S = 2.0, 0.25
 
 
-def subsegment_spectra(eeg_f: pd.DataFrame, seg_s: float = SUB_S, hop_s: float = HOP_S) -> dict:
+def subsegment_spectra(eeg_f: pd.DataFrame, seg_s: float = SUB_S, hop_s: float = HOP_S,
+                       fs: float = FS_EEG, channels: list[str] | None = None) -> dict:
     """Periodograms of overlapping sub-segments of the filtered EEG.
 
     Returns ``t0`` (n,), ``psd`` (n, 4, nf) in µV²/Hz for 1–40 Hz, ``freqs`` (nf,),
@@ -62,35 +68,38 @@ def subsegment_spectra(eeg_f: pd.DataFrame, seg_s: float = SUB_S, hop_s: float =
     """
     from numpy.lib.stride_tricks import sliding_window_view
 
-    x = eeg_f[CH].to_numpy(float)
+    ch = list(channels or CH)
+    x = eeg_f[ch].to_numpy(float)
     t = eeg_f["time_s"].to_numpy(float)
-    L, hop = int(seg_s * FS_EEG), int(hop_s * FS_EEG)
-    f = np.fft.rfftfreq(L, 1 / FS_EEG)
+    L, hop = int(round(seg_s * fs)), max(1, int(round(hop_s * fs)))
+    hop_s = hop / fs  # exact hop for sample rates not divisible by 4
+    f = np.fft.rfftfreq(L, 1 / fs)
     keep = (f >= 1) & (f <= PSD_FMAX)
     nf = int(keep.sum())
     if len(x) < L:
-        z = np.zeros((0, len(CH)))
-        return {"t0": np.zeros(0), "psd": np.zeros((0, len(CH), nf), np.float32), "freqs": f[keep],
+        z = np.zeros((0, len(ch)))
+        return {"t0": np.zeros(0), "psd": np.zeros((0, len(ch), nf), np.float32), "freqs": f[keep],
                 "power": {b: z for b in BANDS}, "total": z, "max_abs": z, "std": z, "seg_s": seg_s, "hop_s": hop_s}
     view = sliding_window_view(x, L, axis=0)[::hop]  # (n, 4, L), no copy
     n = view.shape[0]
     win = np.hanning(L)
-    scale = 1.0 / (FS_EEG * (win ** 2).sum())
+    scale = 1.0 / (fs * (win ** 2).sum())
     df = f[1] - f[0]
-    psd = np.empty((n, len(CH), nf), np.float32)
-    power = {b: np.empty((n, len(CH))) for b in BANDS}
-    total = np.empty((n, len(CH)))
+    psd = np.empty((n, len(ch), nf), np.float32)
+    power = {b: np.empty((n, len(ch))) for b in BANDS}
+    total = np.empty((n, len(ch)))
     band_masks = {b: (f >= lo) & (f < hi) for b, (lo, hi) in BANDS.items()}
     tot_mask = (f >= 1) & (f < PSD_FMAX)
-    for a in range(0, n, 1024):
-        seg = view[a:a + 1024]
+    blk = max(64, int(4096 // max(1, len(ch))))  # bound memory for many channels
+    for a in range(0, n, blk):
+        seg = view[a:a + blk]
         seg = seg - seg.mean(axis=-1, keepdims=True)
         p = np.abs(np.fft.rfft(seg * win, axis=-1)) ** 2 * scale
         p[..., 1:-1] *= 2
-        psd[a:a + 1024] = p[..., keep]
+        psd[a:a + blk] = p[..., keep]
         for b, m in band_masks.items():
-            power[b][a:a + 1024] = p[..., m].sum(axis=-1) * df
-        total[a:a + 1024] = p[..., tot_mask].sum(axis=-1) * df
+            power[b][a:a + blk] = p[..., m].sum(axis=-1) * df
+        total[a:a + blk] = p[..., tot_mask].sum(axis=-1) * df
     return {
         "t0": t[np.arange(n) * hop],
         "psd": psd, "freqs": f[keep], "power": power, "total": total,

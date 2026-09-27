@@ -450,7 +450,7 @@ export const POS = { AF7: [-0.5, 0.48], AF8: [0.5, 0.48], TP9: [-0.82, -0.2], TP
 // Layered head map: inverse-distance interpolation of the electrodes (power 3, as the
 // original), cut into `levels` equal RdYlBu_r colour bands between vmin and vmax, with
 // thin contour lines between bands.
-export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues = false, fmt = fmtNum, levels = LEVELS } = {}) {
+export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues = false, fmt = fmtNum, levels = LEVELS, pos = POS } = {}) {
   const d = window.devicePixelRatio || 1;
   const size = canvas.getBoundingClientRect().width || canvas.width;
   const px = Math.max(40, Math.round(size * d));
@@ -460,7 +460,8 @@ export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues
   ctx.clearRect(0, 0, px, px);
   const pad = px * (labels ? 0.1 : 0.07), R = px / 2 - pad, cx = px / 2, cy = px / 2 + (labels ? px * 0.02 : 0);
   const toPx = ([x, y]) => [cx + x * R, cy - y * R];
-  const pts = Object.entries(POS).filter(([c]) => values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]));
+  const pts = Object.entries(pos).filter(([c]) => values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]));
+  const many = Object.keys(pos).length > 6; // dense caps: smaller dots, names only
   const lw = Math.max(1, px / 160);
   if (pts.length >= 2 && Number.isFinite(vmin) && Number.isFinite(vmax)) {
     const span = vmax - vmin || 1;
@@ -510,17 +511,17 @@ export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues
     ctx.beginPath(); ctx.ellipse(cx + s * R * 1.03, cy, R * 0.05, R * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
   }
   // electrodes
-  const fs = Math.max(9, Math.min(13 * d, px / 22));
+  const fs = many ? Math.max(8, Math.min(10 * d, px / 30)) : Math.max(9, Math.min(13 * d, px / 22));
   ctx.font = `600 ${fs}px system-ui, sans-serif`; ctx.textAlign = 'center';
-  for (const [c, p] of Object.entries(POS)) {
+  for (const [c, p] of Object.entries(pos)) {
     const [x, y] = toPx(p);
     const has = values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]);
     ctx.fillStyle = has ? css('--text-primary') : css('--surface-1');
     ctx.strokeStyle = css('--surface-1'); ctx.lineWidth = Math.max(1.5, px / 120);
-    ctx.beginPath(); ctx.arc(x, y, Math.max(2.5, px / 55), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, y, Math.max(2, px / (many ? 90 : 55)), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     if (!has) { ctx.strokeStyle = css('--text-muted'); ctx.lineWidth = 1; ctx.stroke(); }
     if (labels) {
-      const txt = showValues && has ? `${c} ${fmt(values[c])}` : c;
+      const txt = showValues && has && !many ? `${c} ${fmt(values[c])}` : c;
       ctx.textBaseline = 'top';
       const w = ctx.measureText(txt).width;
       const lx = Math.max(w / 2 + 4, Math.min(px - w / 2 - 4, x));

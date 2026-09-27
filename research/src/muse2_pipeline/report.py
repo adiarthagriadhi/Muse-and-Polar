@@ -10,8 +10,9 @@ import numpy as np
 import pandas as pd
 
 from .analysis import LABELS, Session
-from .eeg import BANDS, CH
-from .maps import BRAIN_MAP_POSITIONS, interpolate_brain_activity_idw
+from .eeg import BANDS
+from .maps import interpolate_brain_activity_idw
+from .montage import positions as montage_positions, regions as montage_regions
 
 
 def _fmt(v, d=2):
@@ -22,12 +23,12 @@ def segment_table(res: dict) -> pd.DataFrame:
     rows = []
     for s in res["segments"]:
         r = {"ruas": f"{s['t0']:.0f}–{s['t1']:.0f} s", "nama": s["name"], "t0_s": s["t0"], "t1_s": s["t1"],
-             "jendela": s["n_win"], "jendela_bersih_AF": s["n_af"]}
-        for c, v, z, n in zip(CH, s["values"], s["z"], s["n_clean"]):
+             "jendela": s["n_win"], f"jendela_bersih_{res['pair_label']}": s["n_pair"]}
+        for c, v, z, n in zip(res["channels"], s["values"], s["z"], s["n_clean"]):
             r[f"{c}_{res['band']}_{res['metric']}"] = v
             r[f"{c}_z_vs_acuan"] = z
             r[f"{c}_jendela_bersih"] = n
-        r["asimetri_AF"] = s["asym"]
+        r[f"asimetri_{res['pair_label']}"] = s["asym"]
         r["kondisi"] = s["label"]
         for src in ("ppg", "polar"):
             st = s.get(src) or {}
@@ -41,14 +42,15 @@ def segment_table(res: dict) -> pd.DataFrame:
 
 def export_zip(sess: Session, res: dict, settings: dict) -> bytes:
     spec = sess.spec(res["art_uv"])
-    win = pd.DataFrame({"t_start_s": spec["t_start"], "t_mid_s": spec["t_mid"]})
-    bad = np.array([[(b >> c) & 1 for c in range(len(CH))] for b in res["bad"]], bool).reshape(-1, len(CH))
-    for c_i, c in enumerate(CH):
+    cols = {"t_start_s": spec["t_start"], "t_mid_s": spec["t_mid"]}
+    bad = _bad(res, sess.nch)
+    for c_i, c in enumerate(sess.ch):
         for b in BANDS:
-            win[f"{c}_{b}_uV2"] = spec["power"][b][:, c_i]
-        win[f"{c}_total_uV2"] = spec["total"][:, c_i]
-        win[f"{c}_subseg_bersih"] = spec["n_clean"][:, c_i]
-        win[f"{c}_artefak"] = bad[:, c_i] if len(bad) else []
+            cols[f"{c}_{b}_uV2"] = spec["power"][b][:, c_i]
+        cols[f"{c}_total_uV2"] = spec["total"][:, c_i]
+        cols[f"{c}_subseg_bersih"] = spec["n_clean"][:, c_i]
+        cols[f"{c}_artefak"] = bad[:, c_i]
+    win = pd.DataFrame(cols)
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
         zf.writestr("ruas.csv", segment_table(res).to_csv(index=False))
@@ -63,11 +65,17 @@ def export_zip(sess: Session, res: dict, settings: dict) -> bytes:
     return buf.getvalue()
 
 
-def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
+def _bad(res: dict, nch: int) -> np.ndarray:
+    """(n_windows, n_channels) artifact mask from the analysis result."""
+    return np.array([[ch == "1" for ch in b] for b in res["bad"]], bool).reshape(-1, nch)
+
+
+def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}", pos=None):
     """Layered head map: 12 thin filled RdYlBu_r levels with subtle contour lines (as the web view)."""
     from matplotlib.patches import Circle, Ellipse, Polygon
 
-    xs, ys, grid = interpolate_brain_activity_idw(scores, grid_size=140)
+    pos = pos or montage_positions(list(scores))
+    xs, ys, grid = interpolate_brain_activity_idw(scores, positions=pos, grid_size=140)
     xx, yy = np.meshgrid(xs, ys)
     if vmax - vmin < 1e-9:
         vmin, vmax = vmin - 0.5, vmax + 0.5
@@ -78,9 +86,11 @@ def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
     ax.add_patch(Polygon([(-0.1, 0.995), (0, 1.1), (0.1, 0.995)], closed=False, fill=False, lw=0.8, color="#333"))
     for sx in (-1, 1):
         ax.add_patch(Ellipse((sx * 1.03, 0), 0.1, 0.32, fill=False, lw=0.8, color="#333"))
-    for ch, (x, y) in BRAIN_MAP_POSITIONS.items():
-        ax.scatter(x, y, s=10, c="k", zorder=3)
-        ax.text(x, y + 0.13, f"{ch}\n{fmt(scores[ch])}", ha="center", va="bottom", fontsize=5.5, zorder=4)
+    many = len(pos) > 6
+    for ch, (x, y) in pos.items():
+        ax.scatter(x, y, s=6 if many else 10, c="k", zorder=3)
+        txt = ch if many else f"{ch}\n{fmt(scores[ch])}"
+        ax.text(x, y + (0.06 if many else 0.13), txt, ha="center", va="bottom", fontsize=4 if many else 5.5, zorder=4)
     ax.set_xlim(-1.18, 1.18)
     ax.set_ylim(-1.18, 1.18)
     ax.set_aspect("equal")
@@ -102,10 +112,18 @@ def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
     ax = fig.add_subplot(gs[0, :])
     spec = sess.spec(res["art_uv"])
     vals = sess.window_values(spec, res["band"], res["metric"])
-    bad = np.array([[(b >> c) & 1 for c in range(len(CH))] for b in res["bad"]], bool)
-    for c_i, c in enumerate(CH):
-        y = np.where(bad[:, c_i], np.nan, vals[:, c_i]) if len(bad) else vals[:, c_i]
-        ax.plot(spec["t_mid"], y, lw=1, color=colors[c_i], label=c)
+    colors += ["#e87ba4"]
+    bad = _bad(res, sess.nch)
+    clean_vals = np.where(bad, np.nan, vals) if len(bad) else vals
+    if sess.nch <= 4:  # Muse: one line per channel
+        groups = {c: [i] for i, c in enumerate(sess.ch)}
+    else:  # many channels: one line per scalp region
+        groups = {r: [sess.ch.index(c) for c in cs] for r, cs in montage_regions(sess.ch).items()} \
+            or {"Rata-rata": list(range(sess.nch))}
+    for k, (name, idx) in enumerate(list(groups.items())[:5]):
+        with np.errstate(invalid="ignore"):
+            y = np.nanmean(clean_vals[:, idx], axis=1)
+        ax.plot(spec["t_mid"], y, lw=1, color=colors[k], label=name)
     if res["metric"] == "abs":
         ax.set_yscale("log")
     ax.set_ylabel(f"{res['band']} ({res['unit']})", fontsize=7)
@@ -137,7 +155,8 @@ def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
         vals = [tf(v) if v is not None else None for v in s["values"]]
         if all(v is not None for v in vals):
             lo, hi = (min(vals), max(vals)) if scale == "map" else (vmin, vmax)
-            _topo(a, dict(zip(CH, vals)), lo, hi, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}", lab)
+            _topo(a, dict(zip(sess.ch, vals)), lo, hi, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}", lab,
+                  pos=montage_positions(sess.ch))
         else:
             a.axis("off")
             a.set_title(f"{s['t0']:.0f}–{s['t1']:.0f} s · data kurang", fontsize=7)
@@ -168,13 +187,13 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     hp, hpo = ov["hrv"]["ppg"], ov["hrv"]["polar"]
     lines = [
         f"Mutu EEG: {q['eeg']['status']} ({q['eeg']['rate_hz']} Hz); jendela bersih per kanal: "
-        + ", ".join(f"{c} {100 * (f or 0):.0f}%" for c, f in zip(CH, res["clean_frac"])),
+        + ", ".join(f"{c} {100 * (f or 0):.0f}%" for c, f in zip(sess.ch, res["clean_frac"])),
         f"Mutu PPG: {q['ppg']['status']}",
         f"Denyut dahi (PPG): {_fmt(hp['hr'], 0)} /menit · PRV-RMSSD {_fmt(hp['rmssd'], 0)} ms · "
         f"SDNN {_fmt(hp['sdnn'], 0)} ms · interval valid {100 * (hp['valid_frac'] or 0):.0f}%",
     ]
     if hpo:
-        lines.append(f"Polar H10: {_fmt(hpo['hr'], 0)} /menit · HRV-RMSSD {_fmt(hpo['rmssd'], 0)} ms · "
+        lines.append(f"{sess.heart_name}: {_fmt(hpo['hr'], 0)} /menit · HRV-RMSSD {_fmt(hpo['rmssd'], 0)} ms · "
                      f"SDNN {_fmt(hpo['sdnn'], 0)} ms · pNN50 {_fmt(hpo['pnn50'], 0)} %")
     if ov["sync_offset_ms"] is not None:
         lines.append(f"Sinkronisasi Muse−Polar: {ov['sync_offset_ms']:+.0f} ms (diterapkan ke data Polar)")
@@ -188,21 +207,25 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     )
 
     doc.add_heading("Per ruas", level=2)
-    t = doc.add_table(rows=1, cols=10)
+    segs = res["segments"]
+    heart = sess.heart_name.split()[0]
+    t = doc.add_table(rows=1, cols=1 + len(segs))
     t.style = "Table Grid"
-    hdr = ["Ruas", "Jendela bersih", "TP9", "AF7", "AF8", "TP10", "Asimetri AF", "Denyut PPG", "RMSSD Polar", "Kondisi"]
-    for i, h in enumerate(hdr):
-        t.rows[0].cells[i].text = h
-    for s in res["segments"]:
+    t.rows[0].cells[0].text = f"{res['band']} ({res['unit']})"
+    for j, s in enumerate(segs):
+        t.rows[0].cells[1 + j].text = f"Ruas {s['i'] + 1}: {s['t0']:.0f}–{s['t1']:.0f} s" + (f"\n{s['name']}" if s["name"] else "")
+    rows = [(f"Jendela bersih {res['pair_label']}", [f"{s['n_pair']}/{s['n_win']}" for s in segs])]
+    rows += [(c, [_fmt(s["values"][k], 1) for s in segs]) for k, c in enumerate(sess.ch)]
+    if res["pair"]:
+        rows.append((f"Asimetri {res['pair_label']}", [_fmt(s["asym"], 3) for s in segs]))
+    rows += [("Denyut PPG", [_fmt((s["ppg"] or {}).get("hr"), 0) for s in segs]),
+             (f"RMSSD {heart}", [_fmt((s["polar"] or {}).get("rmssd"), 0) for s in segs]),
+             ("Kondisi", [s["label"] for s in segs])]
+    for name, vals_ in rows:  # one row per measure, one column per segment (fits any channel count)
         c = t.add_row().cells
-        c[0].text = f"{s['t0']:.0f}–{s['t1']:.0f} s" + (f"\n{s['name']}" if s["name"] else "")
-        c[1].text = f"{s['n_af']}/{s['n_win']}"
-        for j, v in enumerate(s["values"]):
-            c[2 + j].text = _fmt(v, 1)
-        c[6].text = _fmt(s["asym"], 3)
-        c[7].text = _fmt((s["ppg"] or {}).get("hr"), 0)
-        c[8].text = _fmt((s["polar"] or {}).get("rmssd"), 0)
-        c[9].text = s["label"]
+        c[0].text = name
+        for j, v in enumerate(vals_):
+            c[1 + j].text = v
 
     doc.add_heading("Uji antar ruas", level=2)
     doc.add_paragraph(
@@ -232,8 +255,9 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
         doc.add_paragraph(f"{LABELS[code][0]}: {LABELS[code][1]}", style="List Bullet")
     doc.add_paragraph(
         "Label adalah hipotesis tampilan dari perubahan relatif terhadap ruas acuan (satuan z), bukan diagnosis. "
-        "PRV dahi (PPG Muse) tidak sama dengan HRV sabuk dada (Polar H10). Empat elektroda kering Muse: "
-        "peta kepala adalah interpolasi kasar."
+        "PRV dahi (PPG) tidak sama dengan HRV dari EKG/sabuk dada. "
+        + (f"Empat elektroda kering Muse: peta kepala adalah interpolasi kasar." if sess.nch <= 4 else
+           f"Peta kepala diinterpolasi dari {sess.nch} elektroda (posisi 10-20/10-10), gambaran kasar.")
     )
     out = io.BytesIO()
     doc.save(out)

@@ -19,7 +19,7 @@
       <select id="sessionSel" aria-label="Pilih sesi"></select>
     </label>
     <button class="btn" id="folderBtn" title="Pilih folder rekaman">Folder…</button>
-    <label class="btn" title="Unggah ZIP berisi folder sesi">Unggah ZIP<input type="file" id="zipInput" accept=".zip" hidden></label>
+    <label class="btn" title="Unggah file EDF/EDF+/BDF, atau ZIP berisi folder sesi musepolar / file EDF">Unggah EDF/ZIP<input type="file" id="zipInput" accept=".zip,.edf,.bdf" hidden></label>
   </div>
   <div class="exports" role="group" aria-label="Ekspor">
     <button class="btn" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
@@ -154,6 +154,10 @@
       <p><b>Jantung.</b> PRV dahi: puncak PPG inframerah (kolom <code>ir</code>) setelah filter 0,5–3,5 Hz. Polar: interval RR H10,
         digeser dengan hasil sinkronisasi gerak bila ada. Interval di luar 35–180 bpm atau berbeda &gt; 25 % dari median sekitarnya
         dianggap tidak valid. PRV dahi ≠ HRV Polar.</p>
+      <p><b>EDF / banyak kanal.</b> File EDF, EDF+ atau BDF dibaca langsung. Kanal dikenali dari namanya menurut sistem 10-20/10-10
+        (mis. <code>EEG Fp1-REF</code>, T3 = T7); kanal EKG dipakai untuk denyut dan anotasi EDF+ menjadi penanda.
+        Pasangan frontal untuk asimetri dan label dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
+        Dengan banyak kanal, grafik daya menampilkan rata-rata per area kepala.</p>
       <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
         Peta dibuat berlapis (12 pita warna tipis). Setiap peta memakai skala warnanya sendiri, seperti tampilan lama:
         biru = nilai terendah, merah = tertinggi di peta itu. Bandingkan antar peta lewat angka di elektroda.</p>
@@ -164,7 +168,7 @@
 <dialog id="folderDlg">
   <form method="dialog" class="dlg">
     <h2>Folder rekaman</h2>
-    <p class="hint">Folder berisi sesi musepolar (<code>recordings/</code>) atau satu folder sesi.</p>
+    <p class="hint">Folder berisi sesi musepolar (<code>recordings/</code>) dan/atau file EDF/BDF, satu folder sesi, atau satu file EDF.</p>
     <input id="rootInput" type="text" spellcheck="false">
     <div class="row end">
       <button class="btn" value="default" id="rootDefault">Default</button>

@@ -1,7 +1,8 @@
 # Muse 2 Research View
 
-Aplikasi web lokal untuk **menganalisis rekaman** yang dibuat dashboard live [`musepolar`](../README.md):
-EEG Muse 2, pulsa dahi (PPG), dan bila ada, interval RR Polar H10. Aplikasi ini hanya membaca rekaman,
+Aplikasi web lokal untuk **menganalisis rekaman** EEG: sesi dari dashboard live [`musepolar`](../README.md)
+(EEG Muse 2, pulsa dahi/PPG, interval RR Polar H10) dan file **EDF / EDF+ / BDF** dengan berapa pun kanal
+(mis. 16 kanal sistem 10-20). Aplikasi ini hanya membaca rekaman,
 tidak merekam, dan bukan alat diagnosis.
 
 Folder `research/` berdiri sendiri: dependensi dan virtualenv sendiri (`research/.venv`), tidak mengimpor
@@ -58,6 +59,25 @@ Folder default `recordings/` di akar repo (tempat musepolar menyimpan sesi), bis
 Semua stream memakai titik nol yang sama (sampel EEG pertama). Data Polar digeser dengan
 `muse_minus_polar_s` dari sinkronisasi pertama yang berhasil, bila ada.
 
+### File EDF / EDF+ / BDF (mis. 16 kanal)
+
+Letakkan file `.edf`/`.bdf` di folder rekaman (atau pilih foldernya lewat “Folder…”), atau unggah langsung
+dengan tombol **Unggah EDF/ZIP**. Setiap file menjadi satu sesi.
+
+| Isi file | Dipakai sebagai |
+|---|---|
+| kanal bernama 10-20 / 10-10 (`Fp1`, `EEG F3-REF`, `T3`→`T7`, `T5`→`P7`, …) | kanal EEG + posisinya di peta kepala; satuan (µV/mV/V) dikonversi ke µV |
+| kanal `ECG`/`EKG` | deteksi puncak R → interval RR, denyut & HRV |
+| kanal `PPG`/`Pleth` | denyut & PRV |
+| anotasi EDF+ | penanda (garis di grafik, nama ruas, tombol **Pakai penanda**) |
+| nama pasien di header | nama sesi |
+
+Kanal bipolar (mis. `Fp1-F7`) dilewati karena tidak punya satu posisi di kepala. Bila tidak ada nama 10-20 sama sekali,
+semua kanal bersatuan volt dianalisis dengan nama aslinya (tanpa peta kepala).
+Pasangan frontal untuk asimetri dan label kondisi dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
+Dengan lebih dari 4 kanal, lajur EEG diwarnai per area kepala dan grafik daya pita menampilkan rata-rata per area
+(frontal, sentral, temporal, parietal, oksipital); tabel dan uji tetap per kanal.
+
 ## Metode
 
 - **EEG.** Notch 50 Hz + bandpass 1–40 Hz. Spektrum dihitung pada potongan 2 s (Hann, geser 0,25 s).
@@ -83,9 +103,11 @@ research/
   app/server.py            server web (FastAPI) + CLI
   app/static/              halaman (HTML/CSS/JS tanpa dependensi eksternal)
   src/muse2_pipeline/
-    io.py                  baca sesi musepolar, sinkronisasi Polar
+    io.py                  baca sesi musepolar dan file EDF, sinkronisasi Polar
+    edf.py                 pembaca/penulis EDF, EDF+ (anotasi) dan BDF tanpa dependensi tambahan
+    montage.py             nama & posisi elektroda 10-20/10-10, pasangan frontal, area kepala
     eeg.py                 filter, spektrum potongan & jendela (plus fungsi lama)
-    hrv.py                 deteksi denyut PPG, pembersihan interval, HRV/PRV
+    hrv.py                 deteksi denyut PPG dan puncak R EKG, pembersihan interval, HRV/PRV
     analysis.py            analisis per sesi/ruas, label, uji statistik
     report.py              ekspor CSV (ZIP), gambar PNG, laporan Word
     prv09.py, segments.py, maps.py   metode lama (dipakai legacy/)

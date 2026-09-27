@@ -101,3 +101,21 @@ def hr_at(series: dict, t_centers, half_width: float) -> np.ndarray:
         if b > a:
             out[i] = 60.0 / ibi[a:b].mean()
     return out
+
+
+def ecg_beats(sig, time_s, fs: float) -> np.ndarray:
+    """Times (s) of R peaks in an ECG channel (e.g. from an EDF file)."""
+    x = np.asarray(sig, float)
+    t = np.asarray(time_s, float)
+    if len(x) < int(4 * fs) or fs < 50:
+        return np.array([])
+    hi = min(25.0, 0.45 * fs)
+    y = sosfiltfilt(butter(2, [5.0, hi], btype="bandpass", fs=fs, output="sos"), x - np.median(x))
+    e = np.convolve(y ** 2, np.ones(max(1, int(0.08 * fs))) / max(1, int(0.08 * fs)), mode="same")
+    blk = int(10 * fs)
+    lv = [np.percentile(e[i:i + blk], 98) for i in range(0, len(e) - blk + 1, blk)] or [np.percentile(e, 98)]
+    pk, _ = find_peaks(e, distance=max(1, int(IBI_MIN * fs)), height=0.3 * float(np.median(lv)))
+    # refine to the largest deflection of the filtered ECG near each energy peak
+    w = max(1, int(0.06 * fs))
+    ref = [max(0, p - w) + int(np.argmax(np.abs(y[max(0, p - w):p + w + 1]))) for p in pk]
+    return t[np.unique(ref)] if len(ref) else np.array([])

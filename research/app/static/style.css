@@ -197,6 +197,7 @@ table.data tr.ref td { background: var(--ref-fill); }
 table.data td.na { color: var(--text-muted); }
 .badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--text-secondary); }
 .badge.sig { border-color: var(--accent); color: var(--accent); }
+.measure-pick select { min-width: 200px; }
 .omnibus { margin: 8px 0 0; font-size: 12px; color: var(--text-secondary); }
 .notes summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
 .notes summary::before { content: "▸"; color: var(--text-muted); }
