@@ -1,8 +1,6 @@
 """Satu layar. PYTHONPATH=src streamlit run app/dashboard_riset.py --server.port 8502"""
 from __future__ import annotations
 import sys
-import tempfile
-import zipfile
 from pathlib import Path
 import numpy as np
 import matplotlib.pyplot as plt
@@ -12,7 +10,7 @@ import streamlit as st
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from muse2_pipeline.io import list_samples, load_sample
+from muse2_pipeline.io import list_samples, load_sample, unpack_zip, marker_titik, DEFAULT_RECORDINGS
 from muse2_pipeline.prv09 import compute_prv_09
 from muse2_pipeline.maps import interpolate_brain_activity_idw, BRAIN_MAP_POSITIONS
 from muse2_pipeline.segments import parse_marks, ruas_stats
@@ -50,18 +48,6 @@ ARTI = {
     "ACTIVATED_HIGH_AROUSAL": "Otak dan/atau denyut lebih kencang — nuansa terpacu.",
     "INDETERMINATE": "Perubahan terlalu kecil atau campur; tidak memilih tiga label lain.",
 }
-
-
-def unpack_zip(upload) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="muse2_"))
-    zpath = tmp / "data.zip"
-    zpath.write_bytes(upload.getbuffer())
-    with zipfile.ZipFile(zpath) as zf:
-        zf.extractall(tmp / "unzip")
-    hits = list((tmp / "unzip").rglob("EEG_raw.csv"))
-    if not hits:
-        return tmp / "unzip"
-    return hits[0].parents[2] if hits[0].parent.name in ("experiment", "baseline") else tmp / "unzip"
 
 
 def draw_map(ax, scores, title):
@@ -166,12 +152,9 @@ def uji_delta(bp, edges, band="alpha"):
     return out
 
 
-default = Path.home() / "muse2-research" / "data" / "raw" / "trials"
-processed = Path.home() / "muse2-research" / "data" / "processed"
-
 r1 = st.columns([1.7, 0.85, 0.55, 1.35, 1.55])
 with r1[0]:
-    path = st.text_input("Folder trials", str(default))
+    path = st.text_input("Folder recordings", str(DEFAULT_RECORDINGS))
 with r1[1]:
     with st.expander("ZIP", expanded=False):
         up = st.file_uploader("Unggah", type=["zip"], label_visibility="collapsed")
@@ -179,16 +162,16 @@ with r1[2]:
     titik = st.text_input("Titik", "60")
 with r1[3]:
     band = st.radio("Pita", ["delta", "theta", "alpha", "beta"], index=2, horizontal=True, label_visibility="collapsed")
-trials = unpack_zip(up) if up is not None else Path(path)
+trials = unpack_zip(up.getvalue()) if up is not None else Path(path)
 inv = list_samples(trials) if Path(trials).exists() else None
 if inv is None or inv.empty:
-    st.error("Tidak ada EEG_raw + PPG_raw.")
+    st.error("Tidak ada sesi (muse_eeg.csv) di folder ini.")
     st.stop()
 with r1[4]:
     label = st.selectbox("Sampel", inv["label"].tolist())
 
 row = inv[inv["label"] == label].iloc[0]
-data = load_sample(row["folder"], processed if processed.exists() else None)
+data = load_sample(row["folder"])
 eeg_f, ppg, bp, meta = data["eeg_f"], data["ppg"], data["bp"], data["meta"]
 tmax = float(eeg_f["time_s"].iloc[-1])
 edges = parse_marks(titik, tmax)
@@ -254,7 +237,7 @@ with left:
         ax.axvspan(t0, t1v, color="C0", alpha=0.10)
         ax.tick_params(labelsize=7)
         ax.grid(True, alpha=0.25)
-    st.pyplot(fig, clear_figure=True, use_container_width=True)
+    st.pyplot(fig, clear_figure=True)
 with right:
     nmini = max(len(tab), 1) if bp is not None else 1
     fig2 = plt.figure(figsize=(4.4, 3.35), layout="constrained")
@@ -272,7 +255,7 @@ with right:
             if r.get("n_win", 0) > 0:
                 lab = states[i]["lab"] if i < len(states) else ""
                 draw_map(ax, {c: float(r[c]) for c in CH}, f"{r['ruas']} · {lab}")
-    st.pyplot(fig2, clear_figure=True, use_container_width=True)
+    st.pyplot(fig2, clear_figure=True)
 
 if bp is not None:
     tes = uji_delta(bp, edges, band)
@@ -282,4 +265,5 @@ st.caption(
     "Tenang = otak lebih pelan, denyut tidak naik. Fokus = otak lebih siaga, denyut biasa. "
     "Teraktivasi = otak/denyut lebih kencang. Indeterminan = terlalu kecil atau campur. "
     "PRV dahi ≠ HRV Polar. Acuan kondisi = ruas pertama. Hipotesis tampilan."
+    + (f"  Penanda sesi (detik): {marker_titik(data['markers'])}" if marker_titik(data["markers"]) else "")
 )

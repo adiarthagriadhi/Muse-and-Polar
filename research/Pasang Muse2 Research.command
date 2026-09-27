@@ -1,19 +1,26 @@
 #!/bin/bash
+# Membuat ikon "Muse2 Research.app" di Desktop yang menjalankan run_mac.command di latar belakang.
 set -e
 PROJ="$(cd "$(dirname "$0")" && pwd)"
 APP="$HOME/Desktop/Muse2 Research.app"
-SCRIPT="/tmp/muse2_research_launcher.applescript"
+SCRIPT="$(mktemp -t muse2_research_launcher).applescript"
 
-cat > "$SCRIPT" <<EOF
+if [ ! -d "$PROJ/.venv" ]; then
+  echo "Memasang dependensi pertama kali ..."
+  python3 -m venv "$PROJ/.venv"
+  "$PROJ/.venv/bin/pip" install --upgrade pip >/dev/null
+  "$PROJ/.venv/bin/pip" install -r "$PROJ/requirements.txt"
+fi
+
+cat > "$SCRIPT" <<APPLESCRIPT
 set proj to "$PROJ"
-do shell script "source " & quoted form of "$HOME/muse2-env/bin/activate" & " && cd " & quoted form of proj & " && PYTHONPATH=src /usr/bin/env streamlit run app/streamlit_app.py --server.headless true >/tmp/muse2-streamlit.log 2>&1 &"
+do shell script "cd " & quoted form of proj & " && ./run_mac.command --server.headless true >/tmp/muse2-streamlit.log 2>&1 &"
 delay 2.5
 open location "http://localhost:8501"
-EOF
+APPLESCRIPT
 
 osacompile -o "$APP" "$SCRIPT"
 echo "Aplikasi terpasang di: $APP"
-echo "Klik dua kali ikon di Desktop. Jangan hapus folder:"
+echo "Klik dua kali ikon di Desktop. Jangan pindahkan folder:"
 echo "  $PROJ"
 open "$HOME/Desktop"
-EOF

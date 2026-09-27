@@ -3,8 +3,6 @@ from __future__ import annotations
 import sys
 from io import BytesIO
 from pathlib import Path
-import tempfile
-import zipfile
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -16,7 +14,7 @@ from docx.shared import Pt, Inches
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from muse2_pipeline.io import list_samples, load_sample
+from muse2_pipeline.io import list_samples, load_sample, unpack_zip, marker_titik, DEFAULT_RECORDINGS
 from muse2_pipeline.prv09 import compute_prv_09
 from muse2_pipeline.maps import interpolate_brain_activity_idw, BRAIN_MAP_POSITIONS
 from muse2_pipeline.segments import parse_marks, ruas_stats
@@ -24,7 +22,7 @@ from muse2_pipeline.eeg import CH
 
 st.set_page_config(page_title="Muse 2 Research View", layout="wide")
 st.title("Muse 2 — tampilan riset")
-st.caption("Unggah folder trial (zip) atau pakai folder lokal. Bukan aplikasi klien / bukan HRV Polar.")
+st.caption("Membaca rekaman musepolar (folder recordings/ atau ZIP sesi). Bukan aplikasi klien / bukan HRV Polar.")
 
 
 def draw_map(ax, scores, title):
@@ -46,14 +44,14 @@ def draw_map(ax, scores, title):
 def laporan_docx(row, meta, edges, band, tab, cmp_, prv, png_bytes, tmax):
     doc = Document()
     doc.add_heading("Laporan riset Muse 2", level=1)
-    doc.add_paragraph(f"Partisipan: {row['participant']}  |  Kondisi: {row['condition']}")
+    doc.add_paragraph(f"Sesi: {row['participant']}  |  Catatan: {row['condition'] or '-'}")
     doc.add_paragraph(f"Mulai: {row.get('start_iso') or meta.get('start_iso') or '-'}  |  Durasi: {tmax:.0f} s")
     doc.add_paragraph(f"Titik pengamatan: {edges}  |  Pita: {band}")
     doc.add_paragraph("Bukan diagnosis dan bukan HRV Polar. PRV = variabilitas pulsa dahi.")
     doc.add_heading("Denyut dan pulsa dahi (PPG2)", level=2)
     doc.add_paragraph(
         "Gelombang PPG mentah tidak ditampilkan di laporan. "
-        "Yang dipakai: interval antar-puncak (IBI) dari saluran infrared PPG2, metode 09-lite."
+        "Yang dipakai: interval antar-puncak (IBI) dari saluran infrared PPG2 (kolom ir di muse_ppg.csv), metode 09-lite."
     )
     if prv.get("ok"):
         doc.add_paragraph(
@@ -110,52 +108,39 @@ def laporan_docx(row, meta, edges, band, tab, cmp_, prv, png_bytes, tmax):
     return out.getvalue()
 
 
-def unpack_zip(upload) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="muse2_"))
-    zpath = tmp / "data.zip"
-    zpath.write_bytes(upload.getbuffer())
-    with zipfile.ZipFile(zpath) as zf:
-        zf.extractall(tmp / "unzip")
-    unzip = tmp / "unzip"
-    hits = list(unzip.rglob("EEG_raw.csv"))
-    if not hits:
-        return unzip
-    return hits[0].parents[2] if hits[0].parent.name in ("experiment", "baseline") else unzip
-
-
 with st.sidebar:
     st.header("Data")
     mode = st.radio("Sumber", ["Folder lokal", "Unggah ZIP"])
     trials = None
     if mode == "Folder lokal":
-        default = str(Path.home() / "muse2-research" / "data" / "raw" / "trials")
-        path = st.text_input("Folder trials", default)
+        path = st.text_input("Folder recordings", str(DEFAULT_RECORDINGS))
         p = Path(path)
         if p.exists():
             trials = p
         else:
             st.warning("Folder tidak ditemukan.")
     else:
-        up = st.file_uploader("ZIP berisi Pxx_Trial/experiment/EEG_raw.csv", type=["zip"])
+        up = st.file_uploader("ZIP berisi folder sesi (muse_eeg.csv, muse_ppg.csv, ...)", type=["zip"])
         if up is not None:
-            trials = unpack_zip(up)
+            trials = unpack_zip(up.getvalue())
 
-    processed = Path.home() / "muse2-research" / "data" / "processed"
     titik = st.text_input("Titik pengamatan (detik)", "60")
     band = st.radio("Pita", ["delta", "theta", "alpha", "beta"], index=2, horizontal=True)
 
 if trials is None:
-    st.info("Pilih folder trials atau unggah ZIP.")
+    st.info("Pilih folder recordings atau unggah ZIP.")
     st.stop()
 
 inv = list_samples(trials)
 if inv.empty:
-    st.error("Tidak ada pasangan EEG_raw.csv + PPG_raw.csv.")
+    st.error("Tidak ada sesi (muse_eeg.csv) di folder ini.")
     st.stop()
 
 label = st.selectbox("Sampel", inv["label"].tolist())
 row = inv[inv["label"] == label].iloc[0]
-data = load_sample(row["folder"], processed if processed.exists() else None)
+data = load_sample(row["folder"])
+if marker_titik(data["markers"]):
+    st.sidebar.caption(f"Penanda sesi (detik): {marker_titik(data['markers'])} — salin ke Titik bila perlu.")
 
 eeg_f, ppg, bp, meta = data["eeg_f"], data["ppg"], data["bp"], data["meta"]
 tmax = float(eeg_f["time_s"].iloc[-1])

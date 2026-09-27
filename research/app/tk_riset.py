@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-ROOT = Path.home() / "muse2-research" / "app-standalone" / "muse2-research-app"
+ROOT = Path.home() / "Muse-and-Polar" / "research"  # lokasi clone repo
 sys.path.insert(0, str(ROOT / "src"))
 sys.path.insert(0, str(ROOT / "app"))
 from tk_riset import launch
@@ -23,7 +23,7 @@ from matplotlib.patches import Circle
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from muse2_pipeline.io import list_samples, load_sample
+from muse2_pipeline.io import list_samples, load_sample, unpack_zip, DEFAULT_RECORDINGS
 from muse2_pipeline.prv09 import compute_prv_09
 from muse2_pipeline.maps import interpolate_brain_activity_idw, BRAIN_MAP_POSITIONS
 from muse2_pipeline.segments import parse_marks, ruas_stats
@@ -43,8 +43,7 @@ ARTI = {
     "ACTIVATED_HIGH_AROUSAL": "Otak/denyut lebih kencang.",
     "INDETERMINATE": "Perubahan terlalu kecil atau campur.",
 }
-DEFAULT = Path.home() / "muse2-research" / "data" / "raw" / "trials"
-PROCESSED = Path.home() / "muse2-research" / "data" / "processed"
+DEFAULT = DEFAULT_RECORDINGS
 
 
 def feat_of(w, hr):
@@ -171,7 +170,7 @@ class RisetApp:
         self.scale.pack(side="left", padx=6)
 
     def pick_folder(self):
-        p = filedialog.askdirectory(initialdir=str(self.trials))
+        p = filedialog.askdirectory(initialdir=str(self.trials if self.trials.exists() else Path.home()))
         if p:
             self.trials = Path(p)
             self.refresh_samples()
@@ -180,12 +179,7 @@ class RisetApp:
         z = filedialog.askopenfilename(filetypes=[("ZIP", "*.zip")])
         if not z:
             return
-        import zipfile, tempfile
-        dest = Path(tempfile.mkdtemp(prefix="muse2_")) / "u"
-        dest.mkdir()
-        with zipfile.ZipFile(z) as zf:
-            zf.extractall(dest)
-        self.trials = dest
+        self.trials = unpack_zip(Path(z).read_bytes())
         self.refresh_samples()
 
     def refresh_samples(self):
@@ -194,7 +188,7 @@ class RisetApp:
         self.inv = inv
         self.cb["values"] = labs
         if labs:
-            self.cb.set(labs[0] if "P02_Trial / experiment" not in labs else "P02_Trial / experiment")
+            self.cb.set(labs[-1])  # sesi terbaru (nama folder diawali tanggal)
             self.compute()
 
     def compute(self):
@@ -202,7 +196,7 @@ class RisetApp:
             return
         try:
             row = self.inv[self.inv["label"] == self.cb.get()].iloc[0]
-            data = load_sample(row["folder"], PROCESSED if PROCESSED.exists() else None)
+            data = load_sample(row["folder"])
         except Exception as e:
             messagebox.showerror("Baca data", str(e))
             return

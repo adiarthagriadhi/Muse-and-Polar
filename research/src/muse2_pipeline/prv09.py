@@ -33,6 +33,12 @@ def prv_from_ibi(nn):
 
 
 def compute_prv_09(ppg2, time_s, t0=None, t1=None):
+    time_s = np.asarray(time_s, float)
+    if len(time_s) == 0:  # session recorded without PPG (--no-ppg)
+        out = prv_from_ibi([])
+        out.update({"t0": np.nan if t0 is None else float(t0),
+                    "t1": np.nan if t1 is None else float(t1), "tp": np.array([])})
+        return out
     pk = detect_ppg_peaks_168r4(ppg2)
     tp = time_s[pk]
     ibi = np.diff(tp) if len(pk) >= 2 else np.array([])

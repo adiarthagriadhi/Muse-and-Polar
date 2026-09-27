@@ -1,10 +1,11 @@
 """
 pip install nicegui
-cd ~/muse2-research/app-standalone/muse2-research-app
+cd research
 PYTHONPATH=src python app/nicegui_dashboard.py
 """
 from __future__ import annotations
 import sys
+import tempfile
 from pathlib import Path
 import numpy as np
 import matplotlib
@@ -15,7 +16,7 @@ from matplotlib.patches import Circle
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from muse2_pipeline.io import list_samples, load_sample
+from muse2_pipeline.io import list_samples, load_sample, DEFAULT_RECORDINGS
 from muse2_pipeline.prv09 import compute_prv_09
 from muse2_pipeline.maps import interpolate_brain_activity_idw, BRAIN_MAP_POSITIONS
 from muse2_pipeline.segments import parse_marks, ruas_stats
@@ -37,8 +38,7 @@ ARTI = {
     "ACTIVATED_HIGH_AROUSAL": "Otak dan/atau denyut lebih kencang — nuansa terpacu.",
     "INDETERMINATE": "Perubahan terlalu kecil atau campur; tidak memilih tiga label lain.",
 }
-DEFAULT = Path.home() / "muse2-research" / "data" / "raw" / "trials"
-PROCESSED = Path.home() / "muse2-research" / "data" / "processed"
+DEFAULT = DEFAULT_RECORDINGS
 
 
 def draw_map(ax, scores, title):
@@ -157,7 +157,7 @@ def refresh():
     if row.empty:
         return
     row = row.iloc[0]
-    data = load_sample(row["folder"], PROCESSED if PROCESSED.exists() else None)
+    data = load_sample(row["folder"])
     eeg_f, ppg, bp, meta = data["eeg_f"], data["ppg"], data["bp"], data["meta"]
     tmax = float(eeg_f["time_s"].iloc[-1])
     edges = parse_marks(state["titik"], tmax)
@@ -249,13 +249,13 @@ def refresh():
 
 
 def tempfile_fig(name):
-    d = Path.home() / "muse2-research" / "outputs" / "figures"
+    d = Path(tempfile.gettempdir()) / "muse2_figures"
     d.mkdir(parents=True, exist_ok=True)
     return d / name
 
 
 with ui.row().classes("w-full items-end gap-3"):
-    folder = ui.input("Folder trials", value=str(DEFAULT)).classes("w-80")
+    folder = ui.input("Folder recordings", value=str(DEFAULT)).classes("w-80")
     ui.button("Muat folder", on_click=inventory)
     sample_sel = ui.select([], label="Sampel", on_change=lambda e: (state.update(label=e.value), refresh()))
     titik_in = ui.input("Titik", value="60").classes("w-24")

@@ -188,6 +188,13 @@ markers = pd.read_csv(f"{d}/marker.csv")
 | Sinkronisasi *gagal* / *ragu* | Pastikan kedua akselerometer tampil di dashboard, lalu loncat lebih tegas dan beri jeda jelas antar-loncatan. Diam sebelum dan sesudah setiap loncatan. |
 | Laju efektif jauh di bawah nominal | Dekatkan perangkat ke Mac, kurangi perangkat Bluetooth lain (mis. headphone), atau matikan PPG dengan `--no-ppg`. |
 
+## Analisis rekaman (Muse 2 Research View)
+
+Folder [`research/`](research/README.md) berisi penampil riset offline yang membaca sesi di
+`recordings/` (daya pita EEG per ruas, peta, PRV dahi, uji antar ruas, laporan Word). Aplikasi ini
+terpisah dari dashboard live, dengan dependensi dan virtualenv sendiri:
+`cd research && ./run_mac.command`.
+
 ## Struktur kode
 
 ```

@@ -1,10 +1,12 @@
-"""Jalankan dari folder app-standalone/muse2-research-app:
+"""Jalankan dari folder research/:
 PYTHONPATH=src uvicorn app.api:app --port 8000
 Lalu buka http://127.0.0.1:8000/
 """
 from __future__ import annotations
+import html
 import io
 import sys
+from urllib.parse import urlencode
 from pathlib import Path
 
 import numpy as np
@@ -12,8 +14,6 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle
-import zipfile
-import tempfile
 from fastapi import FastAPI, Query, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, Response, RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -21,7 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from muse2_pipeline.io import list_samples, load_sample
+from muse2_pipeline.io import list_samples, load_sample, unpack_zip, DEFAULT_RECORDINGS
 from muse2_pipeline.prv09 import compute_prv_09
 from muse2_pipeline.maps import interpolate_brain_activity_idw, BRAIN_MAP_POSITIONS
 from muse2_pipeline.segments import parse_marks, ruas_stats
@@ -41,8 +41,7 @@ ARTI = {
     "ACTIVATED_HIGH_AROUSAL": "Otak dan/atau denyut lebih kencang — nuansa terpacu.",
     "INDETERMINATE": "Perubahan terlalu kecil atau campur; tidak memilih tiga label lain.",
 }
-DEFAULT = Path.home() / "muse2-research" / "data" / "raw" / "trials"
-PROCESSED = Path.home() / "muse2-research" / "data" / "processed"
+DEFAULT = DEFAULT_RECORDINGS
 HTML = Path(__file__).with_name("dashboard.html")
 
 app = FastAPI(title="Muse2 Research API")
@@ -112,15 +111,19 @@ BUNDLE_CACHE = {}
 
 
 def bundle(trials: Path, label: str, titik: str, band: str, t0: int):
+    inv = list_samples(trials)
+    if inv is None or inv.empty:
+        raise FileNotFoundError(f"Tidak ada sesi (muse_eeg.csv) di {trials}")
+    if label not in inv["label"].values:
+        label = inv["label"].iloc[-1]  # sesi terbaru (nama folder diawali tanggal)
     key = (str(trials), label, titik, band)
     if key in BUNDLE_CACHE:
         out = dict(BUNDLE_CACHE[key])
         out["t0"] = int(t0)
         out["t1v"] = min(int(t0) + 20, out["tmax"])
         return out
-    inv = list_samples(trials)
     row = inv[inv["label"] == label].iloc[0]
-    data = load_sample(row["folder"], PROCESSED if PROCESSED.exists() else None)
+    data = load_sample(row["folder"])
     eeg_f, ppg, bp, meta = data["eeg_f"], data["ppg"], data["bp"], data["meta"]
     tmax = float(eeg_f["time_s"].iloc[-1])
     edges = parse_marks(titik, tmax)
@@ -169,7 +172,7 @@ def bundle(trials: Path, label: str, titik: str, band: str, t0: int):
     out = {
         "eeg_f": eeg_f, "ppg": ppg, "bp": bp, "tab": tab, "edges": edges,
         "tmax": tmax, "t0": t0, "t1v": t1v, "ses": ses, "states": states,
-        "tests": tests, "ev": ev, "pv": pv, "frac": frac, "band": band,
+        "tests": tests, "ev": ev, "pv": pv, "frac": frac, "band": band, "label": label,
     }
     BUNDLE_CACHE[key] = out
     return out
@@ -185,27 +188,15 @@ def fig_png(fig) -> bytes:
 LAST_UPLOAD = {"root": None}
 
 
-def unpack_zip_bytes(data: bytes) -> Path:
-    tmp = Path(tempfile.mkdtemp(prefix="muse2_zip_"))
-    zpath = tmp / "data.zip"
-    zpath.write_bytes(data)
-    dest = tmp / "unzip"
-    dest.mkdir()
-    with zipfile.ZipFile(zpath) as zf:
-        zf.extractall(dest)
-    hits = list(dest.rglob("EEG_raw.csv"))
-    if hits and hits[0].parent.name in ("experiment", "baseline"):
-        return hits[0].parents[2] if hits[0].parents[1].name.startswith("P") else dest
-    return dest
-
-
-def filled_dashboard(label="P02_Trial / experiment", titik="60", band="alpha", t0=0, trials=None, uji=""):
+def filled_dashboard(label="", titik="60", band="alpha", t0=0, trials=None, uji=""):
     root = Path(trials) if trials else (LAST_UPLOAD["root"] or DEFAULT)
     b = bundle(root, label, titik, band, t0)
+    label = b["label"]
     ses = b["ses"]
     raw = HTML.read_text(encoding="utf-8")
     css = raw.split("</style>", 1)[0] + "</style>"
-    qs = f"label={label.replace(' ', '%20')}&titik={titik}&band={band}&t0={t0}"
+    # trials ikut dikirim agar gambar memakai folder yang sama (mis. hasil unggah ZIP).
+    qs = html.escape(urlencode({"trials": str(root), "label": label, "titik": titik, "band": band, "t0": t0}))
     states = "".join(
         f"<div class='card st'><h3>{s['t0']:.0f}–{s['t1']:.0f} s · "
         f"<span>{s['label']}</span></h3><p>{s['arti']}</p></div>"
@@ -238,7 +229,7 @@ def filled_dashboard(label="P02_Trial / experiment", titik="60", band="alpha", t
     if inv is not None and not inv.empty:
         for lab in inv["label"].tolist():
             sel = " selected" if lab == label else ""
-            opts += f"<option{sel}>{lab}</option>"
+            opts += f"<option{sel}>{html.escape(lab)}</option>"
     bandsel = "".join(
         f"<option value='{x}'{' selected' if x==band else ''}>{x}</option>"
         for x in ("delta", "theta", "alpha", "beta")
@@ -278,7 +269,8 @@ def filled_dashboard(label="P02_Trial / experiment", titik="60", band="alpha", t
     <div class="card grow"><label>Sampel</label>
       <select name="label" onchange="this.form.submit()">{opts}</select></div>
     <div class="card"><label>Titik observasi</label>
-      <input name="titik" value="{titik}" /></div>
+      <input name="titik" value="{html.escape(titik)}" /></div>
+    <input type="hidden" name="trials" value="{html.escape(str(root))}" />
     <div class="card grow"><label>Pita</label>
       <div class="seg">
         <button type="submit" name="band" value="delta" class="{'on' if band=='delta' else ''}">delta</button>
@@ -341,26 +333,26 @@ if (sl) sl.addEventListener('change', () => {{
 
 
 @app.get("/")
-def home(label: str = "P02_Trial / experiment", trials: str = "", titik: str = "60", band: str = "alpha", t0: int = 0, uji: str = ""):
+def home(label: str = "", trials: str = "", titik: str = "60", band: str = "alpha", t0: int = 0, uji: str = ""):
     try:
-        html = filled_dashboard(label, titik=titik, band=band, t0=t0, trials=trials or None, uji=uji)
+        page = filled_dashboard(label, titik=titik, band=band, t0=t0, trials=trials or None, uji=uji)
     except Exception as e:
-        return HTMLResponse(f"<pre>ERROR {e}</pre>")
-    return HTMLResponse(html, headers={"Cache-Control": "no-store"})
+        return HTMLResponse(f"<pre>ERROR {html.escape(str(e))}</pre>")
+    return HTMLResponse(page, headers={"Cache-Control": "no-store"})
 
 
 @app.post("/upload")
 async def upload(file: UploadFile = File(...)):
     raw = await file.read()
-    root = unpack_zip_bytes(raw)
+    root = unpack_zip(raw)
     LAST_UPLOAD["root"] = root
     inv = list_samples(root)
-    label = inv["label"].iloc[0] if inv is not None and not inv.empty else "P02_Trial / experiment"
-    return RedirectResponse(url=f"/?label={label}", status_code=303)
+    label = inv["label"].iloc[-1] if inv is not None and not inv.empty else ""
+    return RedirectResponse(url="/?" + urlencode({"label": label, "trials": str(root)}), status_code=303)
 
 
 @app.get("/simple")
-def simple(label: str = "P02_Trial / experiment"):
+def simple(label: str = ""):
     try:
         b = bundle(DEFAULT, label, "60", "alpha", 0)
     except Exception as e:
@@ -372,7 +364,7 @@ def simple(label: str = "P02_Trial / experiment"):
     )
     tes = b["tests"][:1]
     return HTMLResponse(
-        f"<h2>{label}</h2><p>Denyut {ses.get('hr')} RMSSD {ses.get('prv_rmssd')}</p>"
+        f"<h2>{html.escape(b['label'])}</h2><p>Denyut {ses.get('hr')} RMSSD {ses.get('prv_rmssd')}</p>"
         f"<ul>{rows}</ul><pre>{tes}</pre>"
         f"<p><a href='/'>Dashboard</a></p>"
     )
@@ -386,12 +378,9 @@ def trials_path(trials: str | None) -> Path:
 
 @app.get("/api/samples")
 def samples(trials: str = Query(default="")):
-    candidates = [
-        trials_path(trials),
-        DEFAULT,
-        Path.home() / "muse2-research" / "data" / "raw" / "trials",
-        Path.home() / "Library/CloudStorage/OneDrive-Personal/2. PROJECT/0. LPPM 2026/2. HRP/DATA PENELITIAN/Raw Data",
-    ]
+    candidates = [trials_path(trials), DEFAULT]
+    if LAST_UPLOAD["root"] is not None:
+        candidates.append(LAST_UPLOAD["root"])
     debug = []
     seen = set()
     for root in candidates:
@@ -409,8 +398,8 @@ def samples(trials: str = Query(default="")):
 
 @app.get("/api/view")
 def view(
-    trials: str = Query(default=str(DEFAULT)),
-    label: str = "P02_Trial / experiment",
+    trials: str = Query(default=""),
+    label: str = "",
     titik: str = "60",
     band: str = "alpha",
     t0: int = 0,
@@ -442,8 +431,8 @@ def view(
 
 @app.get("/api/fig/traces.png")
 def traces(
-    trials: str = Query(default=str(DEFAULT)),
-    label: str = "P02_Trial / experiment",
+    trials: str = Query(default=""),
+    label: str = "",
     titik: str = "60",
     band: str = "alpha",
     t0: int = 0,
@@ -470,8 +459,8 @@ def traces(
 
 @app.get("/api/fig/maps.png")
 def maps(
-    trials: str = Query(default=str(DEFAULT)),
-    label: str = "P02_Trial / experiment",
+    trials: str = Query(default=""),
+    label: str = "",
     titik: str = "60",
     band: str = "alpha",
     t0: int = 0,
