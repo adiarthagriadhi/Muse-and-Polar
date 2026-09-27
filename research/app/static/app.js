@@ -13,7 +13,7 @@ const store = {
 const S = {
   root: '', sessions: [], sid: null, ov: null, res: null,
   set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100 },
-  mapT: 0, mapWin: 20, mapMode: 'value', topoScale: 'map', measure: 'AF', psdCh: 'AF',
+  mapT: 0, mapWin: 20, mapMode: 'value', measure: 'AF', psdCh: 'AF',
   anaReq: 0, sigReq: 0,
 };
 
@@ -290,18 +290,19 @@ function zOf(v, c) {
   return fin(tv) && fin(m) && fin(sd) ? (tv - m) / sd : null;
 }
 
-// Colour range for a set of drawn maps. 'map' = each map uses its own range (maximum
-// contrast, like the original figures); 'shared' = one range for all maps (comparable).
-function rangeOf(list) {
-  const all = list.flatMap((m) => Object.values(m)).filter(fin);
-  if (!all.length) return { vmin: 0, vmax: 1 };
-  if (S.mapMode === 'change' && S.topoScale === 'shared') {
-    const m = Math.max(1, ...all.map(Math.abs)); // symmetric: yellow = no change
-    return { vmin: -m, vmax: m };
+function mapScale(extra) {
+  const res = S.res;
+  if (S.mapMode === 'change') {
+    const all = [...res.segments.flatMap((s) => s.z), ...extra].filter(fin).map(Math.abs);
+    const m = Math.max(1, Math.ceil(Math.max(0, ...all) * 2) / 2);
+    return { vmin: -m, vmax: m, scheme: 'div' };
   }
+  const tf = res.metric === 'abs' ? toLog : (v) => v;
+  const all = [...res.segments.flatMap((s) => s.values), ...extra].map(tf).filter(fin);
+  if (!all.length) return { vmin: 0, vmax: 1, scheme: 'seq' };
   let lo = Math.min(...all), hi = Math.max(...all);
-  if (hi - lo < 1e-6) { const pad = S.mapMode === 'change' ? 0.25 : 0.5; lo -= pad; hi += pad; }
-  return { vmin: lo, vmax: hi };
+  if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
+  return { vmin: lo, vmax: hi, scheme: 'seq' };
 }
 function mapInput(valuesByCh) {
   // values as drawn: z (change), log10 power (absolute) or percent (relative)
@@ -322,11 +323,10 @@ function updateMap() {
   const segDrawn = res.segments.map((s) => (S.mapMode === 'change'
     ? Object.fromEntries(CH.map((c, i) => [c, s.z[i]]))
     : mapInput(Object.fromEntries(CH.map((c, i) => [c, s.values[i]])))));
-  const shared = rangeOf([drawn, ...segDrawn]);
-  const perMap = S.topoScale === 'map';
-  const scBig = perMap ? rangeOf([drawn]) : shared;
+  const extra = S.mapMode === 'change' ? Object.values(drawn) : Object.values(values);
+  const sc = mapScale(extra);
   const fmt = labelFmt();
-  drawTopo($('mapBig'), drawn, { ...scBig, showValues: true, fmt });
+  drawTopo($('mapBig'), drawn, { ...sc, showValues: true, fmt });
   const T1 = Math.min(dur(), S.mapT + S.mapWin);
   $('mapTLabel').textContent = `Mulai jendela: ${fmtTime(S.mapT, 100)}`;
   const seg = segAt(S.mapT + S.mapWin / 2);
@@ -337,11 +337,10 @@ function updateMap() {
   const cb = $('colorbar');
   cb.querySelector('.bar').style.background = layeredCss();
   const ticks = cb.querySelectorAll('.ticks span');
-  [scBig.vmin, (scBig.vmin + scBig.vmax) / 2, scBig.vmax].forEach((v, i) => { ticks[i].textContent = fmt(v); });
-  cb.querySelector('.cap').textContent = (S.mapMode === 'change'
-    ? (perMap ? 'z terhadap ruas acuan · warna relatif di dalam peta, lihat angka' : 'z terhadap ruas acuan · biru = turun, kuning = tetap, merah = naik')
-    : `${res.band} (${unitTxt()})${res.metric === 'abs' ? ' · lapisan pada skala log' : ''} · biru = rendah, merah = tinggi`)
-    + (perMap ? ' · skala per peta' : ' · skala sama untuk semua peta');
+  [sc.vmin, (sc.vmin + sc.vmax) / 2, sc.vmax].forEach((v, i) => { ticks[i].textContent = fmt(v); });
+  cb.querySelector('.cap').textContent = S.mapMode === 'change'
+    ? 'z terhadap ruas acuan · biru = turun, kuning = tetap, merah = naik · skala sama untuk semua peta'
+    : `${res.band} (${unitTxt()})${res.metric === 'abs' ? ' · lapisan pada skala log' : ''} · biru = rendah, merah = tinggi · skala sama untuk semua peta`;
 
   const rows = [h('tr', {}, h('th', {}, 'Kanal'), h('th', { style: 'text-align:right' }, unitTxt()), h('th', { style: 'text-align:right' }, 'z vs acuan'), h('th', { style: 'text-align:right' }, 'jendela'))];
   CH.forEach((c, i) => rows.push(h('tr', {},
@@ -349,35 +348,7 @@ function updateMap() {
     h('td', {}, valFmt(values[c])), h('td', {}, signed(zOf(values[c], c), 2)), h('td', {}, String(n[i])))));
   $('mapTable').replaceChildren(...rows);
 
-  renderSegCards();
-  renderTopoGrid(segDrawn, shared, fmt);
-}
-
-// --- topography per segment -------------------------------------------------------------
-function focusSeg(s) {
-  setView(s.t0, s.t1);
-  S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
-}
-function renderTopoGrid(segDrawn, shared, fmt) {
-  const res = S.res;
-  const perMap = S.topoScale === 'map';
-  $('topoInfo').textContent = `${SYM[res.band]} ${res.band} · `
-    + (S.mapMode === 'change' ? 'perubahan (z) vs ruas acuan' : `nilai ${res.metric === 'rel' ? 'relatif (%)' : 'absolut (µV²)'}`)
-    + (perMap ? ' · skala per peta' : ` · skala sama: ${fmt(shared.vmin)} – ${fmt(shared.vmax)}`);
-  const items = res.segments.map((s, k) => {
-    const sc = perMap ? rangeOf([segDrawn[k]]) : shared;
-    const cv = h('canvas', { 'aria-label': `Topografi ruas ${s.i + 1}` });
-    const item = h('div', { class: `topo-item${s.i === res.ref ? ' ref' : ''}`, title: 'Klik untuk memperbesar ruas ini di grafik' },
-      h('div', { class: 'tt' }, `Ruas ${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
-      h('div', { class: 'nm', title: s.name || '' }, s.name || '\u00a0'),
-      h('span', { class: `label-chip ${s.code}` }, h('i'), s.label),
-      cv,
-      h('div', { class: 'rng' }, perMap ? `${fmt(sc.vmin)} – ${fmt(sc.vmax)}` : `${s.n_af}/${s.n_win} jendela bersih AF`));
-    item.addEventListener('click', () => focusSeg(s));
-    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...sc, showValues: true, fmt }));
-    return item;
-  });
-  $('topoGrid').replaceChildren(...items);
+  renderSegCards(segDrawn, sc, fmt);
 }
 
 // --- segment cards ------------------------------------------------------------------
@@ -386,14 +357,15 @@ function heartOf(s) {
   if (s.ppg && s.ppg.ok) return { src: 'PPG', ...s.ppg };
   return null;
 }
-function renderSegCards() {
+function renderSegCards(segDrawn, sc, fmt) {
   const res = S.res;
-  const cards = res.segments.map((s) => {
+  const cards = res.segments.map((s, k) => {
     const v = [s.values[1], s.values[2]].filter(fin);
     const af = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
     const zz = [s.z[1], s.z[2]].filter(fin);
     const zaf = zz.length ? zz.reduce((a, b) => a + b, 0) / zz.length : null;
     const hr = heartOf(s);
+    const cv = h('canvas', { width: 84, height: 84, 'aria-label': `Peta ruas ${s.i + 1}` });
     const isRef = s.i === res.ref;
     const card = h('div', { class: `card seg-card${isRef ? ' ref' : ''}`, title: 'Klik untuk memperbesar ruas ini di grafik' },
       h('div', { class: 't' }, `Ruas ${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
@@ -404,8 +376,13 @@ function renderSegCards() {
         hr ? ['Denyut ', h('b', {}, Math.round(hr.hr)), ` (${hr.src})`, fin(hr.rmssd) ? [' · RMSSD ', h('b', {}, Math.round(hr.rmssd)), ' ms'] : ''] : 'Denyut –',
         h('br'), `${s.n_af}/${s.n_win} jendela bersih AF`,
         isRef ? '' : [' · ', h('button', { class: 'btn sm', style: 'min-height:22px;padding:0 7px;font-size:11px', onclick: (e) => { e.stopPropagation(); setRef(s.i); } }, 'jadikan acuan')]),
+      cv,
       h('div', { class: 'arti' }, s.arti));
-    card.addEventListener('click', () => focusSeg(s));
+    card.addEventListener('click', () => {
+      setView(s.t0, s.t1);
+      S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
+    });
+    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...sc, labels: false, fmt }));
     return card;
   });
   $('segCards').replaceChildren(...cards);
@@ -507,21 +484,7 @@ function segControl(id, onPick) {
 }
 segControl('bandSeg', (v) => { S.set.band = v; runAnalysis(); });
 segControl('metricSeg', (v) => { S.set.metric = v; runAnalysis(); });
-// map mode and colour scale have a control in the head-map card and in the topography card
-function mapControls() {
-  document.querySelectorAll('.mapModeSeg button').forEach((b) => b.classList.toggle('on', b.dataset.v === S.mapMode));
-  document.querySelectorAll('.topoScaleSel').forEach((el) => { el.value = S.topoScale; });
-}
-document.querySelectorAll('.mapModeSeg').forEach((el) => el.addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-v]');
-  if (!b) return;
-  S.mapMode = b.dataset.v; mapControls(); updateMap();
-}));
-document.querySelectorAll('.topoScaleSel').forEach((el) => el.addEventListener('change', (e) => {
-  S.topoScale = e.target.value; store.set('topoScale', S.topoScale); mapControls(); updateMap();
-}));
-S.topoScale = store.get('topoScale') === 'shared' ? 'shared' : 'map';
-mapControls();
+segControl('mapModeSeg', (v) => { S.mapMode = v; updateMap(); });
 segControl('measureSeg', (v) => { S.measure = v; renderTests(); });
 
 function applyTitik() {
@@ -572,7 +535,7 @@ $('zipInput').addEventListener('change', async (e) => {
 });
 document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
   if (!S.sid) return;
-  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, scale: S.topoScale });
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art });
   window.location.href = `/api/${b.dataset.export}/${S.sid}?${q}`;
 }));
 $('printBtn').addEventListener('click', () => window.print());

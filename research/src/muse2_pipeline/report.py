@@ -64,16 +64,16 @@ def export_zip(sess: Session, res: dict, settings: dict) -> bytes:
 
 
 def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
-    """Layered head map as in the original app: 7 filled RdYlBu_r levels with contour lines."""
+    """Layered head map: 12 thin filled RdYlBu_r levels with subtle contour lines (as the web view)."""
     from matplotlib.patches import Circle, Ellipse, Polygon
 
     xs, ys, grid = interpolate_brain_activity_idw(scores, grid_size=140)
     xx, yy = np.meshgrid(xs, ys)
     if vmax - vmin < 1e-9:
         vmin, vmax = vmin - 0.5, vmax + 0.5
-    levels = np.linspace(vmin, vmax, 8)
+    levels = np.linspace(vmin, vmax, 13)
     ax.contourf(xx, yy, grid, levels=levels, cmap="RdYlBu_r", extend="both")
-    ax.contour(xx, yy, grid, levels=levels, colors="k", linewidths=0.25, alpha=0.35)
+    ax.contour(xx, yy, grid, levels=levels, colors="k", linewidths=0.2, alpha=0.25)
     ax.add_patch(Circle((0, 0), 1.0, fill=False, lw=0.8, color="#333"))
     ax.add_patch(Polygon([(-0.1, 0.995), (0, 1.1), (0.1, 0.995)], closed=False, fill=False, lw=0.8, color="#333"))
     for sx in (-1, 1):
@@ -88,7 +88,7 @@ def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
     ax.set_title(title, fontsize=7)
 
 
-def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
+def figure_png(sess: Session, res: dict, scale: str = "shared") -> bytes:
     """Summary figure; ``scale`` = 'map' (own colour range per head map) or 'shared'."""
     import matplotlib
     matplotlib.use("Agg")
@@ -147,7 +147,7 @@ def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
     return out.getvalue()
 
 
-def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
+def report_docx(sess: Session, res: dict, scale: str = "shared") -> bytes:
     from docx import Document
     from docx.shared import Inches, Pt
 
@@ -182,7 +182,7 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
         doc.add_paragraph(ln, style="List Bullet")
     doc.add_picture(io.BytesIO(figure_png(sess, res, scale)), width=Inches(6.4))
     doc.add_paragraph(
-        "Peta kepala berlapis (7 pita, biru = rendah, merah = tinggi); "
+        "Peta kepala berlapis (12 pita, biru = rendah, merah = tinggi); "
         + ("skala warna per peta (kontras maksimum, bandingkan lewat angka)." if scale == "map"
            else "skala warna sama untuk semua ruas.")
     )

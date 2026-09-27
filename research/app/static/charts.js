@@ -428,7 +428,7 @@ export class Chart {
 
 // matplotlib "RdYlBu_r": blue = low, yellow = middle, red = high
 const RDYLBU_R = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'];
-export const LEVELS = 7;
+export const LEVELS = 12; // thin bands: fine gradation that still reads as layers
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 function colorAt(u, stops) {
   u = Math.max(0, Math.min(1, u));
@@ -448,8 +448,8 @@ export function layeredCss(n = LEVELS) {
 export const POS = { AF7: [-0.5, 0.48], AF8: [0.5, 0.48], TP9: [-0.82, -0.2], TP10: [0.82, -0.2] };
 
 // Layered head map: inverse-distance interpolation of the electrodes (power 3, as the
-// original), cut into `levels` equal colour bands between vmin and vmax, with thin
-// contour lines between bands.
+// original), cut into `levels` equal RdYlBu_r colour bands between vmin and vmax, with
+// thin contour lines between bands.
 export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues = false, fmt = fmtNum, levels = LEVELS } = {}) {
   const d = window.devicePixelRatio || 1;
   const size = canvas.getBoundingClientRect().width || canvas.width;
@@ -482,7 +482,7 @@ export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues
       }
     }
     const img = ctx.createImageData(px, px);
-    const edge = isDark() ? 1.6 : 0.62; // contour lines: darker (light theme) / lighter (dark theme)
+    const edge = isDark() ? 1.3 : 0.8; // subtle contour lines: slightly darker (light) / lighter (dark)
     for (let j = y0; j < y1; j++) {
       for (let i = x0; i < x1; i++) {
         const q = j * px + i, k = lev[q];
