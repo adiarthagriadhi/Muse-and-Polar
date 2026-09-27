@@ -145,6 +145,31 @@
       padding: 4px 6px;
     }
     .mark .del { padding: 2px 8px; font-size: 12px; }
+    .mark.active { border-color: var(--accent2); }
+    .likert {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .mark .likert { grid-column: 1 / -1; }
+    .likert .lk-title { font-size: 11px; color: var(--muted); margin-right: 2px; }
+    .likert button {
+      width: 28px;
+      padding: 3px 0;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .likert button.on { color: #061018; }
+    .likert button.on[data-v="1"] { background: #e74c3c; border-color: #e74c3c; }
+    .likert button.on[data-v="2"] { background: #f0a030; border-color: #f0a030; }
+    .likert button.on[data-v="3"] { background: #f1c40f; border-color: #f1c40f; }
+    .likert button.on[data-v="4"] { background: #8bd346; border-color: #8bd346; }
+    .likert button.on[data-v="5"] { background: #2ecc71; border-color: #2ecc71; }
+    .likert .lk-desc { font-size: 11px; color: var(--muted); margin-left: 4px; }
+    .likert-head { margin-top: 10px; }
+    .summary { font-size: 12px; color: var(--muted); width: 100%; }
     .empty { color: var(--muted); font-size: 13px; padding: 16px; text-align: center; }
     .aside-foot {
       padding: 10px 12px;
@@ -201,6 +226,7 @@
             <option value="1.5">1.5×</option>
           </select>
           <button class="primary" id="btnMark">Tandai sekarang <kbd>M</kbd></button>
+          <span class="likert" id="quickScore" title="Tandai sekarang + kualitas gerak"><span class="lk-title">Tandai + kualitas:</span><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></span>
         </div>
       </div>
     </div>
@@ -219,17 +245,30 @@
           <button data-l="akhir gerakan">akhir gerakan</button>
           <button data-l="sinkron EEG">sinkron EEG</button>
         </div>
+        <h2 class="likert-head">Kualitas gerak (Likert 1–5) — diinput saat menandai</h2>
+        <div class="likert" id="nextScore">
+          <button data-v="1" title="1 – Sangat kurang">1</button>
+          <button data-v="2" title="2 – Kurang">2</button>
+          <button data-v="3" title="3 – Cukup">3</button>
+          <button data-v="4" title="4 – Baik">4</button>
+          <button data-v="5" title="5 – Sangat baik">5</button>
+          <span class="lk-desc" id="nextScoreDesc">belum dinilai</span>
+        </div>
         <div class="help">
-          <kbd>M</kbd> tandai waktu saat ini ·
+          Skala: 1 Sangat kurang · 2 Kurang · 3 Cukup · 4 Baik · 5 Sangat baik<br />
+          <kbd>1</kbd>–<kbd>5</kbd> tandai waktu saat ini <b>sekaligus</b> nilai kualitas gerak ·
+          <kbd>M</kbd> tandai dengan nilai terpilih di atas ·
+          <kbd>0</kbd> hapus nilai tanda aktif (hijau) ·
           <kbd>←</kbd><kbd>→</kbd> geser 1 dtk ·
           <kbd>,</kbd><kbd>.</kbd> frame ·
           klik baris untuk loncat ke waktu itu
         </div>
       </div>
       <div class="list" id="list">
-        <div class="empty" id="empty">Belum ada tanda. Putar video, lalu tekan M atau klik “Tandai sekarang”.</div>
+        <div class="empty" id="empty">Belum ada tanda. Putar video, lalu tekan 1–5 (kualitas gerak) atau M.</div>
       </div>
       <div class="aside-foot">
+        <div class="summary" id="summary"></div>
         <button class="good" id="btnCsv">Unduh CSV</button>
         <button id="btnJson">Unduh JSON</button>
         <button class="warn" id="btnLoad">Muat CSV</button>
@@ -253,9 +292,47 @@
   const nextLabel = document.getElementById("nextLabel");
   const speed = document.getElementById("speed");
 
-  let marks = []; // {id, t, label}
+  const nextScoreEl = document.getElementById("nextScore");
+  const nextScoreDesc = document.getElementById("nextScoreDesc");
+  const summaryEl = document.getElementById("summary");
+
+  let marks = []; // {id, t, label, score}  score: 1–5 atau null
   let videoName = "";
+  let nextScore = null;
+  let activeId = null; // tanda yang menerima nilai dari tombol 1–5
   const FPS_FALLBACK = 30;
+  const LIKERT = { 1: "Sangat kurang", 2: "Kurang", 3: "Cukup", 4: "Baik", 5: "Sangat baik" };
+
+  function scoreText(s) { return s ? `${s} – ${LIKERT[s]}` : "belum dinilai"; }
+
+  function parseScore(v) {
+    const n = parseInt(v, 10);
+    return n >= 1 && n <= 5 ? n : null;
+  }
+
+  function renderNextScore() {
+    nextScoreEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === nextScore));
+    nextScoreDesc.textContent = scoreText(nextScore);
+  }
+
+  nextScoreEl.querySelectorAll("button").forEach(b => {
+    b.onclick = () => {
+      const v = +b.dataset.v;
+      nextScore = nextScore === v ? null : v; // klik ulang untuk membatalkan
+      renderNextScore();
+    };
+  });
+
+  document.querySelectorAll("#quickScore button").forEach(b => {
+    b.onclick = () => addMark(vid.currentTime, nextLabel.value, +b.dataset.v);
+  });
+
+  function setScore(id, v) {
+    const m = marks.find(x => x.id === id);
+    if (!m) return;
+    m.score = v;
+    render();
+  }
 
   function fmt(t) {
     if (!isFinite(t) || t < 0) t = 0;
@@ -312,10 +389,11 @@
     b.onclick = () => { nextLabel.value = b.dataset.l; nextLabel.focus(); };
   });
 
-  function addMark(t, label) {
+  function addMark(t, label, score = nextScore) {
     const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
-    marks.push({ id, t: +t.toFixed(3), label: label || nextLabel.value || "" });
+    marks.push({ id, t: +t.toFixed(3), label: label || nextLabel.value || "", score });
     marks.sort((a,b) => a.t - b.t);
+    activeId = id;
     render();
   }
 
@@ -324,14 +402,35 @@
   function render() {
     listEl.querySelectorAll(".mark").forEach(n => n.remove());
     emptyEl.style.display = marks.length ? "none" : "block";
+    if (!marks.some(m => m.id === activeId)) activeId = marks.length ? marks[marks.length - 1].id : null;
     marks.forEach(m => {
       const row = document.createElement("div");
-      row.className = "mark";
+      row.className = "mark" + (m.id === activeId ? " active" : "");
+      const lk = [1,2,3,4,5].map(v =>
+        `<button data-v="${v}" class="${m.score === v ? "on" : ""}" title="${v} – ${LIKERT[v]}">${v}</button>`
+      ).join("");
       row.innerHTML = `
         <span class="t">${fmt(m.t)}</span>
-        <input value="${m.label.replace(/"/g,"&quot;")}" />
-        <button class="del danger">×</button>`;
+        <input type="text" value="${m.label.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" />
+        <button class="del danger">×</button>
+        <div class="likert">
+          <span class="lk-title">Kualitas gerak</span>${lk}
+          <span class="lk-desc">${scoreText(m.score)}</span>
+        </div>`;
       row.querySelector("input").addEventListener("change", e => { m.label = e.target.value; });
+      row.querySelector("input").addEventListener("focus", () => {
+        activeId = m.id;
+        listEl.querySelectorAll(".mark").forEach(n => n.classList.remove("active"));
+        row.classList.add("active");
+      });
+      row.querySelectorAll(".likert button").forEach(b => {
+        b.onclick = ev => {
+          ev.stopPropagation();
+          const v = +b.dataset.v;
+          activeId = m.id;
+          setScore(m.id, m.score === v ? null : v);
+        };
+      });
       row.querySelector(".del").onclick = ev => {
         ev.stopPropagation();
         marks = marks.filter(x => x.id !== m.id);
@@ -340,9 +439,22 @@
       row.addEventListener("click", ev => {
         if (ev.target.tagName === "INPUT" || ev.target.tagName === "BUTTON") return;
         vid.currentTime = m.t;
+        activeId = m.id;
+        render();
       });
       listEl.appendChild(row);
     });
+    renderSummary();
+  }
+
+  function renderSummary() {
+    const scored = marks.filter(m => m.score);
+    if (!marks.length) { summaryEl.textContent = ""; return; }
+    if (!scored.length) { summaryEl.textContent = `${marks.length} tanda · belum ada nilai kualitas gerak`; return; }
+    const mean = scored.reduce((s, m) => s + m.score, 0) / scored.length;
+    const dist = [1,2,3,4,5].map(v => `${v}:${scored.filter(m => m.score === v).length}`).join(" ");
+    summaryEl.textContent =
+      `${marks.length} tanda · ${scored.length} dinilai · rata-rata ${mean.toFixed(2)} · sebaran ${dist}`;
   }
 
   function csvEscape(s) {
@@ -352,9 +464,10 @@
   }
 
   document.getElementById("btnCsv").onclick = () => {
-    const header = "urutan,waktu_detik,waktu_hhmmss,label,nama_video";
+    const header = "urutan,waktu_detik,waktu_hhmmss,label,kualitas_gerak,kategori_kualitas,nama_video";
     const rows = marks.map((m,i) =>
-      [i+1, m.t.toFixed(3), fmt(m.t), csvEscape(m.label), csvEscape(videoName)].join(",")
+      [i+1, m.t.toFixed(3), fmt(m.t), csvEscape(m.label),
+       m.score ?? "", m.score ? LIKERT[m.score] : "", csvEscape(videoName)].join(",")
     );
     download((videoName || "tanda") + "_timestamps.csv", [header, ...rows].join("\n"));
   };
@@ -363,7 +476,12 @@
     const payload = {
       video: videoName,
       duration_s: vid.duration || null,
-      marks: marks.map(m => ({ time_s: m.t, time_fmt: fmt(m.t), label: m.label }))
+      movement_quality_scale: { type: "likert", min: 1, max: 5, labels: LIKERT },
+      marks: marks.map(m => ({
+        time_s: m.t, time_fmt: fmt(m.t), label: m.label,
+        movement_quality: m.score ?? null,
+        movement_quality_label: m.score ? LIKERT[m.score] : null
+      }))
     };
     download((videoName || "tanda") + "_timestamps.json", JSON.stringify(payload, null, 2));
   };
@@ -387,17 +505,22 @@
     const reader = new FileReader();
     reader.onload = () => {
       const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
-      const start = lines[0].toLowerCase().includes("waktu") ? 1 : 0;
+      if (!lines.length) return;
+      const hasHeader = lines[0].toLowerCase().includes("waktu");
+      const head = hasHeader ? parseCsvLine(lines[0]).map(h => h.trim().toLowerCase()) : [];
+      // cari kolom berdasarkan nama; fallback ke urutan lama (tanpa kualitas_gerak)
+      const col = (name, fallback) => { const k = head.indexOf(name); return k >= 0 ? k : fallback; };
+      const cT = col("waktu_detik", 1), cL = col("label", 3), cS = col("kualitas_gerak", col("nilai_gerak", -1));
       const loaded = [];
-      for (let i = start; i < lines.length; i++) {
+      for (let i = hasHeader ? 1 : 0; i < lines.length; i++) {
         const cols = parseCsvLine(lines[i]);
-        // expect: urutan, waktu_detik, waktu_hhmmss, label, nama_video
-        const t = parseFloat(cols[1]);
+        const t = parseFloat(cols[cT]);
         if (!isFinite(t)) continue;
         loaded.push({
           id: "load-" + i,
           t: +t.toFixed(3),
-          label: cols[3] || ""
+          label: cols[cL] || "",
+          score: cS >= 0 ? parseScore(cols[cS]) : null
         });
       }
       marks = loaded.sort((a,b) => a.t - b.t);
@@ -433,6 +556,13 @@
     if (e.key === "ArrowRight") { e.preventDefault(); vid.currentTime += (e.shiftKey ? 5 : 1); }
     if (e.key === ",") { e.preventDefault(); vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); }
     if (e.key === ".") { e.preventDefault(); vid.pause(); vid.currentTime += 1/FPS_FALLBACK; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[1-5]$/.test(e.key)) {
+      // tandai waktu saat ini sekaligus menilai kualitas gerak
+      e.preventDefault();
+      addMark(vid.currentTime, nextLabel.value, parseScore(e.key));
+    }
+    if (e.key === "0" && activeId) { e.preventDefault(); setScore(activeId, null); }
   });
 })();
 </script>
