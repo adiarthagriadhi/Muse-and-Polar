@@ -83,7 +83,7 @@ const heartChart = group.add(new Chart($('chHeart'), {
 }));
 const psdChart = new Chart($('chPsd'), {
   interactive: false, yLog: true, title: 'Daya spektral (µV²/Hz)', xFmt: (f) => `${+f.toFixed(1)} Hz`,
-  xStep: (span) => (span > 20 ? 5 : 2), padL: 52, padR: 18,
+  xStep: (span) => ($('chPsd').clientWidth < 520 ? 10 : span > 20 ? 5 : 2), padL: 52, padR: 18,
 });
 psdChart.ownX = [1, 40];
 

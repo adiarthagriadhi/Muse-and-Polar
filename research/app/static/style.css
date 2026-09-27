@@ -166,7 +166,8 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; color: var(-
 .chart { position: relative; height: var(--h, 160px); margin-top: 6px; touch-action: none; }
 .chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
 .charts .hint { margin: -2px 0 2px; }
-.side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.col, .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.side { position: sticky; top: 8px; }
 .mapcard { display: flex; flex-direction: column; gap: 8px; }
 .map-title { margin: 0; font-size: 12px; color: var(--text-secondary); min-height: 17px; }
 .topo-wrap { display: flex; justify-content: center; }
@@ -233,7 +234,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 
 @media (max-width: 1100px) {
   .main { grid-template-columns: 1fr; }
-  .side { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); align-items: start; }
+  .side { position: static; }
 }
 @media (max-width: 640px) {
   body { padding: 10px 12px 24px; }
@@ -245,6 +246,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   .exports, .source .btn, .controls .btn, .tools, .charts .hint, .map-ctrl, .busy, .toast, #themeBtn { display: none !important; }
   .card { box-shadow: none; break-inside: avoid; }
   .main { grid-template-columns: 1.8fr 1fr; }
+  .side { position: static; }
   .notes { display: block; }
   .notes-body { display: block; }
 }

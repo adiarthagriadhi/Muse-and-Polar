@@ -67,6 +67,7 @@
 <section class="segments" id="segCards" aria-label="Ruas"></section>
 
 <section class="main">
+  <div class="col">
   <div class="card charts">
     <div class="card-head">
       <h2>Sinyal <span class="muted" id="viewInfo"></span></h2>
@@ -83,6 +84,17 @@
     <div class="chart" id="chEeg" style="--h:260px"></div>
     <div class="chart" id="chBand" style="--h:220px"></div>
     <div class="chart" id="chHeart" style="--h:190px"></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Spektrum per ruas</h2>
+      <select id="psdCh" aria-label="Kanal spektrum">
+        <option value="AF">AF7 + AF8 (dahi)</option><option value="TP">TP9 + TP10 (telinga)</option>
+        <option value="TP9">TP9</option><option value="AF7">AF7</option><option value="AF8">AF8</option><option value="TP10">TP10</option>
+      </select>
+    </div>
+    <div class="chart" id="chPsd" style="--h:240px"></div>
+  </div>
   </div>
 
   <div class="side">
@@ -104,16 +116,6 @@
       </label>
     </div>
     <table class="mini-table" id="mapTable" aria-label="Nilai per kanal"></table>
-  </div>
-  <div class="card">
-    <div class="card-head">
-      <h2>Spektrum per ruas</h2>
-      <select id="psdCh" aria-label="Kanal spektrum">
-        <option value="AF">AF7 + AF8 (dahi)</option><option value="TP">TP9 + TP10 (telinga)</option>
-        <option value="TP9">TP9</option><option value="AF7">AF7</option><option value="AF8">AF8</option><option value="TP10">TP10</option>
-      </select>
-    </div>
-    <div class="chart" id="chPsd" style="--h:210px"></div>
   </div>
   </div>
 </section>
