@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Penanda Waktu Tari → EEG</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2a3a4f;
+      --text: #e8eef6;
+      --muted: #8fa3b8;
+      --accent: #3d9cf0;
+      --accent2: #2ecc71;
+      --warn: #f0a030;
+      --danger: #e74c3c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+    header h1 span { color: var(--accent); }
+    .file-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    button, .file-btn, select, input[type="text"] {
+      background: #243044;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover, .file-btn:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #061018; font-weight: 600; }
+    button.good { background: #1e6b3a; border-color: #2ecc71; }
+    button.warn { background: #5a3a10; border-color: var(--warn); }
+    button.danger { background: #5a1e18; border-color: var(--danger); }
+    .meta { color: var(--muted); font-size: 12px; }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      min-height: 0;
+    }
+    .player-wrap {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #000;
+    }
+    video {
+      width: 100%;
+      flex: 1;
+      max-height: calc(100vh - 180px);
+      background: #000;
+      outline: none;
+    }
+    .controls {
+      padding: 8px 12px 12px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+    }
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    #clock {
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      font-weight: 600;
+      min-width: 140px;
+    }
+    input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .speed { width: 72px; }
+    aside {
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .aside-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .aside-head h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+    .label-row { display: flex; gap: 6px; }
+    .label-row input { flex: 1; }
+    .presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .presets button { padding: 4px 8px; font-size: 12px; }
+    .list {
+      flex: 1;
+      overflow: auto;
+      padding: 8px;
+    }
+    .mark {
+      display: grid;
+      grid-template-columns: 88px 1fr auto;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mark:hover { border-color: var(--accent); }
+    .mark .t {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .mark input {
+      width: 100%;
+      padding: 4px 6px;
+    }
+    .mark .del { padding: 2px 8px; font-size: 12px; }
+    .empty { color: var(--muted); font-size: 13px; padding: 16px; text-align: center; }
+    .aside-foot {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    kbd {
+      background: #0f1419;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+    }
+    .help { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      aside { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Penanda Waktu <span>Tari → EEG</span></h1>
+    <label class="file-btn">
+      Pilih video…
+      <input type="file" id="file" accept="video/*" />
+    </label>
+    <span class="meta" id="filename">Belum ada video</span>
+    <span class="meta" id="duration"></span>
+  </header>
+  <main>
+    <div class="player-wrap">
+      <video id="vid" playsinline></video>
+      <div class="controls">
+        <div class="time-row">
+          <span id="clock">00:00.000</span>
+          <input type="range" id="seek" min="0" max="0" step="0.001" value="0" />
+          <span class="meta" id="durLabel">00:00.000</span>
+        </div>
+        <div class="btn-row">
+          <button id="btnPlay">Putar / Jeda <kbd>Spasi</kbd></button>
+          <button id="btnBack">−1s</button>
+          <button id="btnFwd">+1s</button>
+          <button id="btnFrameB">−frame</button>
+          <button id="btnFrameF">+frame</button>
+          <select id="speed" class="speed" title="Kecepatan">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+          </select>
+          <button class="primary" id="btnMark">Tandai sekarang <kbd>M</kbd></button>
+        </div>
+      </div>
+    </div>
+    <aside>
+      <div class="aside-head">
+        <h2>Label untuk tanda berikutnya</h2>
+        <div class="label-row">
+          <input type="text" id="nextLabel" placeholder="mis. mulai putaran / pose akhir" />
+        </div>
+        <div class="presets">
+          <button data-l="mulai gerakan">mulai gerakan</button>
+          <button data-l="pose">pose</button>
+          <button data-l="putaran">putaran</button>
+          <button data-l="lompatan">lompatan</button>
+          <button data-l="transisi">transisi</button>
+          <button data-l="akhir gerakan">akhir gerakan</button>
+          <button data-l="sinkron EEG">sinkron EEG</button>
+        </div>
+        <div class="help">
+          <kbd>M</kbd> tandai waktu saat ini ·
+          <kbd>←</kbd><kbd>→</kbd> geser 1 dtk ·
+          <kbd>,</kbd><kbd>.</kbd> frame ·
+          klik baris untuk loncat ke waktu itu
+        </div>
+      </div>
+      <div class="list" id="list">
+        <div class="empty" id="empty">Belum ada tanda. Putar video, lalu tekan M atau klik “Tandai sekarang”.</div>
+      </div>
+      <div class="aside-foot">
+        <button class="good" id="btnCsv">Unduh CSV</button>
+        <button id="btnJson">Unduh JSON</button>
+        <button class="warn" id="btnLoad">Muat CSV</button>
+        <button class="danger" id="btnClear">Hapus semua</button>
+        <input type="file" id="csvIn" accept=".csv,text/csv" hidden />
+      </div>
+    </aside>
+  </main>
+
+<script>
+(() => {
+  const vid = document.getElementById("vid");
+  const file = document.getElementById("file");
+  const seek = document.getElementById("seek");
+  const clock = document.getElementById("clock");
+  const durLabel = document.getElementById("durLabel");
+  const durationEl = document.getElementById("duration");
+  const filenameEl = document.getElementById("filename");
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+  const nextLabel = document.getElementById("nextLabel");
+  const speed = document.getElementById("speed");
+
+  let marks = []; // {id, t, label}
+  let videoName = "";
+  const FPS_FALLBACK = 30;
+
+  function fmt(t) {
+    if (!isFinite(t) || t < 0) t = 0;
+    const ms = Math.round((t % 1) * 1000);
+    const s = Math.floor(t) % 60;
+    const m = Math.floor(t / 60) % 60;
+    const h = Math.floor(t / 3600);
+    const core = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(3,"0")}`;
+    return h > 0 ? `${h}:${core}` : core;
+  }
+
+  function parseTime(str) {
+    const p = String(str).trim().split(":");
+    if (p.length === 3) return (+p[0])*3600 + (+p[1])*60 + parseFloat(p[2]);
+    if (p.length === 2) return (+p[0])*60 + parseFloat(p[1]);
+    return parseFloat(str) || 0;
+  }
+
+  function tick() {
+    clock.textContent = fmt(vid.currentTime || 0);
+    if (!seek.matches(":active")) seek.value = vid.currentTime || 0;
+  }
+
+  vid.addEventListener("timeupdate", tick);
+  vid.addEventListener("seeked", tick);
+  requestAnimationFrame(function loop() { tick(); requestAnimationFrame(loop); });
+
+  vid.addEventListener("loadedmetadata", () => {
+    seek.max = vid.duration || 0;
+    durLabel.textContent = fmt(vid.duration || 0);
+    durationEl.textContent = "Durasi " + fmt(vid.duration || 0);
+  });
+
+  file.addEventListener("change", () => {
+    const f = file.files[0];
+    if (!f) return;
+    videoName = f.name;
+    filenameEl.textContent = f.name;
+    const url = URL.createObjectURL(f);
+    vid.src = url;
+    vid.play().catch(() => {});
+  });
+
+  seek.addEventListener("input", () => { vid.currentTime = +seek.value; });
+  speed.addEventListener("change", () => { vid.playbackRate = +speed.value; });
+
+  document.getElementById("btnPlay").onclick = () => vid.paused ? vid.play() : vid.pause();
+  document.getElementById("btnBack").onclick = () => { vid.currentTime = Math.max(0, vid.currentTime - 1); };
+  document.getElementById("btnFwd").onclick = () => { vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 1); };
+  document.getElementById("btnFrameB").onclick = () => { vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); };
+  document.getElementById("btnFrameF").onclick = () => { vid.pause(); vid.currentTime = vid.currentTime + 1/FPS_FALLBACK; };
+
+  document.querySelectorAll(".presets button").forEach(b => {
+    b.onclick = () => { nextLabel.value = b.dataset.l; nextLabel.focus(); };
+  });
+
+  function addMark(t, label) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+    marks.push({ id, t: +t.toFixed(3), label: label || nextLabel.value || "" });
+    marks.sort((a,b) => a.t - b.t);
+    render();
+  }
+
+  document.getElementById("btnMark").onclick = () => addMark(vid.currentTime, nextLabel.value);
+
+  function render() {
+    listEl.querySelectorAll(".mark").forEach(n => n.remove());
+    emptyEl.style.display = marks.length ? "none" : "block";
+    marks.forEach(m => {
+      const row = document.createElement("div");
+      row.className = "mark";
+      row.innerHTML = `
+        <span class="t">${fmt(m.t)}</span>
+        <input value="${m.label.replace(/"/g,"&quot;")}" />
+        <button class="del danger">×</button>`;
+      row.querySelector("input").addEventListener("change", e => { m.label = e.target.value; });
+      row.querySelector(".del").onclick = ev => {
+        ev.stopPropagation();
+        marks = marks.filter(x => x.id !== m.id);
+        render();
+      };
+      row.addEventListener("click", ev => {
+        if (ev.target.tagName === "INPUT" || ev.target.tagName === "BUTTON") return;
+        vid.currentTime = m.t;
+      });
+      listEl.appendChild(row);
+    });
+  }
+
+  function csvEscape(s) {
+    s = String(s ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }
+
+  document.getElementById("btnCsv").onclick = () => {
+    const header = "urutan,waktu_detik,waktu_hhmmss,label,nama_video";
+    const rows = marks.map((m,i) =>
+      [i+1, m.t.toFixed(3), fmt(m.t), csvEscape(m.label), csvEscape(videoName)].join(",")
+    );
+    download((videoName || "tanda") + "_timestamps.csv", [header, ...rows].join("\n"));
+  };
+
+  document.getElementById("btnJson").onclick = () => {
+    const payload = {
+      video: videoName,
+      duration_s: vid.duration || null,
+      marks: marks.map(m => ({ time_s: m.t, time_fmt: fmt(m.t), label: m.label }))
+    };
+    download((videoName || "tanda") + "_timestamps.json", JSON.stringify(payload, null, 2));
+  };
+
+  function download(name, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+  }
+
+  document.getElementById("btnClear").onclick = () => {
+    if (marks.length && confirm("Hapus semua tanda?")) { marks = []; render(); }
+  };
+
+  document.getElementById("btnLoad").onclick = () => document.getElementById("csvIn").click();
+  document.getElementById("csvIn").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
+      const start = lines[0].toLowerCase().includes("waktu") ? 1 : 0;
+      const loaded = [];
+      for (let i = start; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        // expect: urutan, waktu_detik, waktu_hhmmss, label, nama_video
+        const t = parseFloat(cols[1]);
+        if (!isFinite(t)) continue;
+        loaded.push({
+          id: "load-" + i,
+          t: +t.toFixed(3),
+          label: cols[3] || ""
+        });
+      }
+      marks = loaded.sort((a,b) => a.t - b.t);
+      render();
+    };
+    reader.readAsText(f);
+    e.target.value = "";
+  });
+
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') q = false;
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { out.push(cur); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  window.addEventListener("keydown", e => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea") return;
+    if (e.code === "Space") { e.preventDefault(); vid.paused ? vid.play() : vid.pause(); }
+    if (e.key === "m" || e.key === "M") { e.preventDefault(); addMark(vid.currentTime, nextLabel.value); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); vid.currentTime = Math.max(0, vid.currentTime - (e.shiftKey ? 5 : 1)); }
+    if (e.key === "ArrowRight") { e.preventDefault(); vid.currentTime += (e.shiftKey ? 5 : 1); }
+    if (e.key === ",") { e.preventDefault(); vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); }
+    if (e.key === ".") { e.preventDefault(); vid.pause(); vid.currentTime += 1/FPS_FALLBACK; }
+  });
+})();
+</script>
+</body>
+</html>
