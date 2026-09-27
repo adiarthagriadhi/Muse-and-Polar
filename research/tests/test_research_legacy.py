@@ -1,4 +1,4 @@
-"""Research app reads sessions in the musepolar recording format."""
+"""Pipeline I/O and the legacy front-ends read sessions in the musepolar recording format."""
 
 import io
 import json
@@ -14,7 +14,7 @@ pytest.importorskip("scipy")
 
 RESEARCH = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RESEARCH / "src"))
-sys.path.insert(0, str(RESEARCH / "app"))
+sys.path.insert(0, str(RESEARCH / "legacy"))
 
 from muse2_pipeline import compute_prv_09, list_samples, load_sample, marker_titik, parse_marks, ruas_stats  # noqa: E402
 from muse2_pipeline.io import unpack_zip  # noqa: E402

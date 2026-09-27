@@ -14,9 +14,9 @@ fi
 
 cat > "$SCRIPT" <<APPLESCRIPT
 set proj to "$PROJ"
-do shell script "cd " & quoted form of proj & " && ./run_mac.command --server.headless true >/tmp/muse2-streamlit.log 2>&1 &"
+do shell script "cd " & quoted form of proj & " && ./run_mac.command --no-browser >/tmp/muse2-research.log 2>&1 &"
 delay 2.5
-open location "http://localhost:8501"
+open location "http://127.0.0.1:8600/"
 APPLESCRIPT
 
 osacompile -o "$APP" "$SCRIPT"

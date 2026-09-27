@@ -1,0 +1,226 @@
+"""Exports for Research View v2: a ZIP of CSV tables and a Word report."""
+
+from __future__ import annotations
+
+import io
+import json
+import zipfile
+
+import numpy as np
+import pandas as pd
+
+from .analysis import LABELS, Session
+from .eeg import BANDS, CH
+from .maps import BRAIN_MAP_POSITIONS, interpolate_brain_activity_idw
+
+
+def _fmt(v, d=2):
+    return "-" if v is None or (isinstance(v, float) and not np.isfinite(v)) else f"{v:.{d}f}"
+
+
+def segment_table(res: dict) -> pd.DataFrame:
+    rows = []
+    for s in res["segments"]:
+        r = {"ruas": f"{s['t0']:.0f}–{s['t1']:.0f} s", "nama": s["name"], "t0_s": s["t0"], "t1_s": s["t1"],
+             "jendela": s["n_win"], "jendela_bersih_AF": s["n_af"]}
+        for c, v, z, n in zip(CH, s["values"], s["z"], s["n_clean"]):
+            r[f"{c}_{res['band']}_{res['metric']}"] = v
+            r[f"{c}_z_vs_acuan"] = z
+            r[f"{c}_jendela_bersih"] = n
+        r["asimetri_AF"] = s["asym"]
+        r["kondisi"] = s["label"]
+        for src in ("ppg", "polar"):
+            st = s.get(src) or {}
+            r[f"{src}_hr_bpm"] = st.get("hr")
+            r[f"{src}_rmssd_ms"] = st.get("rmssd")
+            r[f"{src}_sdnn_ms"] = st.get("sdnn")
+        r.update({f"z_{k}": v for k, v in s["feat_z"].items()})
+        rows.append(r)
+    return pd.DataFrame(rows)
+
+
+def export_zip(sess: Session, res: dict, settings: dict) -> bytes:
+    spec = sess.spec(res["art_uv"])
+    win = pd.DataFrame({"t_start_s": spec["t_start"], "t_mid_s": spec["t_mid"]})
+    bad = np.array([[(b >> c) & 1 for c in range(len(CH))] for b in res["bad"]], bool).reshape(-1, len(CH))
+    for c_i, c in enumerate(CH):
+        for b in BANDS:
+            win[f"{c}_{b}_uV2"] = spec["power"][b][:, c_i]
+        win[f"{c}_total_uV2"] = spec["total"][:, c_i]
+        win[f"{c}_subseg_bersih"] = spec["n_clean"][:, c_i]
+        win[f"{c}_artefak"] = bad[:, c_i] if len(bad) else []
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("ruas.csv", segment_table(res).to_csv(index=False))
+        zf.writestr("uji_berpasangan.csv", pd.DataFrame(res["tests"]["pairs"]).to_csv(index=False))
+        zf.writestr("uji_kruskal.csv", pd.DataFrame(res["tests"]["omnibus"]).to_csv(index=False))
+        zf.writestr("jendela_dayapita.csv", win.to_csv(index=False))
+        for name, ser in (("denyut_ppg.csv", sess.ppg), ("denyut_polar.csv", sess.polar)):
+            if len(ser["t"]):
+                zf.writestr(name, pd.DataFrame({"t_s": ser["t"], "ibi_ms": ser["ibi"] * 1000,
+                                                "valid": ser["valid"]}).to_csv(index=False))
+        zf.writestr("pengaturan.json", json.dumps({"sesi": str(sess.folder), **settings}, indent=2, ensure_ascii=False))
+    return buf.getvalue()
+
+
+def _topo(ax, scores, vmin, vmax, title):
+    import matplotlib.pyplot as plt
+    from matplotlib.patches import Circle, Polygon
+
+    xs, ys, grid = interpolate_brain_activity_idw(scores, grid_size=90)
+    ax.imshow(grid, extent=(xs[0], xs[-1], ys[0], ys[-1]), origin="lower", cmap=plt.get_cmap("Blues"),
+              vmin=vmin, vmax=vmax, interpolation="bilinear")
+    ax.add_patch(Circle((0, 0), 1.0, fill=False, lw=0.8, color="#52514e"))
+    ax.add_patch(Polygon([(-0.12, 0.99), (0, 1.14), (0.12, 0.99)], closed=False, fill=False, lw=0.8, color="#52514e"))
+    for ch, (x, y) in BRAIN_MAP_POSITIONS.items():
+        ax.plot(x, y, "o", ms=3, color="#0b0b0b")
+        ax.text(x, y - 0.2, ch, ha="center", va="top", fontsize=6, color="#52514e")
+    ax.set_xlim(-1.2, 1.2)
+    ax.set_ylim(-1.2, 1.2)
+    ax.set_aspect("equal")
+    ax.axis("off")
+    ax.set_title(title, fontsize=7)
+
+
+def figure_png(sess: Session, res: dict) -> bytes:
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    segs = res["segments"]
+    colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100"]
+    fig = plt.figure(figsize=(7.2, 6.4), layout="constrained")
+    n = max(1, len(segs))
+    gs = fig.add_gridspec(3, n, height_ratios=[1.1, 0.8, 1.0])
+    ax = fig.add_subplot(gs[0, :])
+    spec = sess.spec(res["art_uv"])
+    vals = sess.window_values(spec, res["band"], res["metric"])
+    bad = np.array([[(b >> c) & 1 for c in range(len(CH))] for b in res["bad"]], bool)
+    for c_i, c in enumerate(CH):
+        y = np.where(bad[:, c_i], np.nan, vals[:, c_i]) if len(bad) else vals[:, c_i]
+        ax.plot(spec["t_mid"], y, lw=1, color=colors[c_i], label=c)
+    if res["metric"] == "abs":
+        ax.set_yscale("log")
+    ax.set_ylabel(f"{res['band']} ({res['unit']})", fontsize=7)
+    ax.legend(ncol=4, fontsize=6, frameon=False, loc="upper right")
+    ax2 = fig.add_subplot(gs[1, :], sharex=ax)
+    for ser, lab, col in ((sess.ppg, "PPG dahi", "#2a78d6"), (sess.polar, "Polar RR", "#eb6834")):
+        if len(ser["t"]):
+            y = np.where(ser["valid"], ser["ibi"] * 1000, np.nan)
+            ax2.plot(ser["t"], y, lw=1, color=col, label=lab)
+    ax2.set_ylabel("IBI (ms)", fontsize=7)
+    ax2.set_xlabel("waktu (s)", fontsize=7)
+    ax2.legend(ncol=2, fontsize=6, frameon=False, loc="upper right")
+    for a in (ax, ax2):
+        a.tick_params(labelsize=6)
+        a.grid(True, alpha=0.25, lw=0.5)
+        for e in res["edges"][1:-1]:
+            a.axvline(e, color="#52514e", lw=0.8, ls="--")
+        for s in segs:
+            if s["i"] == res["ref"]:
+                a.axvspan(s["t0"], s["t1"], color="#8a8983", alpha=0.08, lw=0)
+    # same colour scale for all maps; log10 for absolute power (as in the web view)
+    tf = (lambda v: np.log10(v) if v and v > 0 else None) if res["metric"] == "abs" else (lambda v: v)
+    allv = [tf(v) for s in segs for v in s["values"] if v is not None]
+    allv = [v for v in allv if v is not None]
+    vmin, vmax = (min(allv), max(allv)) if allv else (0, 1)
+    for i, s in enumerate(segs[:n]):
+        a = fig.add_subplot(gs[2, i])
+        vals = [tf(v) if v is not None else None for v in s["values"]]
+        if all(v is not None for v in vals):
+            _topo(a, dict(zip(CH, vals)), vmin, vmax, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}")
+        else:
+            a.axis("off")
+            a.set_title(f"{s['t0']:.0f}–{s['t1']:.0f} s · data kurang", fontsize=7)
+    out = io.BytesIO()
+    fig.savefig(out, format="png", dpi=160, facecolor="white")
+    plt.close(fig)
+    return out.getvalue()
+
+
+def report_docx(sess: Session, res: dict) -> bytes:
+    from docx import Document
+    from docx.shared import Inches, Pt
+
+    ov = sess.overview()
+    doc = Document()
+    doc.styles["Normal"].font.size = Pt(10)
+    doc.add_heading("Laporan riset Muse 2", level=1)
+    doc.add_paragraph(f"Sesi: {ov['name']}  ·  Folder: {ov['label']}  ·  Mulai: {ov['start'] or '-'}")
+    if ov["note"]:
+        doc.add_paragraph(f"Catatan: {ov['note']}")
+    doc.add_paragraph(
+        f"Durasi {ov['duration']:.0f} s  ·  Pita {res['band']} ({res['unit']})  ·  "
+        f"Ruas acuan {res['ref'] + 1}  ·  Ambang artefak {res['art_uv']:.0f} µV  ·  "
+        f"Titik: {', '.join(f'{e:.0f}' for e in res['edges'][1:-1]) or '-'}"
+    )
+    doc.add_heading("Ringkasan sesi", level=2)
+    q = ov["quality"]
+    hp, hpo = ov["hrv"]["ppg"], ov["hrv"]["polar"]
+    lines = [
+        f"Mutu EEG: {q['eeg']['status']} ({q['eeg']['rate_hz']} Hz); jendela bersih per kanal: "
+        + ", ".join(f"{c} {100 * (f or 0):.0f}%" for c, f in zip(CH, res["clean_frac"])),
+        f"Mutu PPG: {q['ppg']['status']}",
+        f"Denyut dahi (PPG): {_fmt(hp['hr'], 0)} /menit · PRV-RMSSD {_fmt(hp['rmssd'], 0)} ms · "
+        f"SDNN {_fmt(hp['sdnn'], 0)} ms · interval valid {100 * (hp['valid_frac'] or 0):.0f}%",
+    ]
+    if hpo:
+        lines.append(f"Polar H10: {_fmt(hpo['hr'], 0)} /menit · HRV-RMSSD {_fmt(hpo['rmssd'], 0)} ms · "
+                     f"SDNN {_fmt(hpo['sdnn'], 0)} ms · pNN50 {_fmt(hpo['pnn50'], 0)} %")
+    if ov["sync_offset_ms"] is not None:
+        lines.append(f"Sinkronisasi Muse−Polar: {ov['sync_offset_ms']:+.0f} ms (diterapkan ke data Polar)")
+    for ln in lines:
+        doc.add_paragraph(ln, style="List Bullet")
+    doc.add_picture(io.BytesIO(figure_png(sess, res)), width=Inches(6.4))
+
+    doc.add_heading("Per ruas", level=2)
+    t = doc.add_table(rows=1, cols=10)
+    t.style = "Table Grid"
+    hdr = ["Ruas", "Jendela bersih", "TP9", "AF7", "AF8", "TP10", "Asimetri AF", "Denyut PPG", "RMSSD Polar", "Kondisi"]
+    for i, h in enumerate(hdr):
+        t.rows[0].cells[i].text = h
+    for s in res["segments"]:
+        c = t.add_row().cells
+        c[0].text = f"{s['t0']:.0f}–{s['t1']:.0f} s" + (f"\n{s['name']}" if s["name"] else "")
+        c[1].text = f"{s['n_af']}/{s['n_win']}"
+        for j, v in enumerate(s["values"]):
+            c[2 + j].text = _fmt(v, 1)
+        c[6].text = _fmt(s["asym"], 3)
+        c[7].text = _fmt((s["ppg"] or {}).get("hr"), 0)
+        c[8].text = _fmt((s["polar"] or {}).get("rmssd"), 0)
+        c[9].text = s["label"]
+
+    doc.add_heading("Uji antar ruas", level=2)
+    doc.add_paragraph(
+        "Mann–Whitney dua sisi pada jendela 4 s yang tidak tumpang tindih; p dikoreksi Holm per ukuran; "
+        "δ Cliff positif berarti ruas kedua cenderung lebih tinggi."
+    )
+    rows = res["tests"]["pairs"]
+    if rows:
+        t = doc.add_table(rows=1, cols=7)
+        t.style = "Table Grid"
+        for i, h in enumerate(["Ukuran", "Perbandingan", "n", "Median", "p", "p Holm", "δ Cliff"]):
+            t.rows[0].cells[i].text = h
+        for r in rows:
+            c = t.add_row().cells
+            c[0].text = r["measure"]
+            c[1].text = r["pair"]
+            c[2].text = f"{r['n_a']} / {r['n_b']}"
+            c[3].text = f"{_fmt(r['med_a'], 3)} → {_fmt(r['med_b'], 3)}"
+            c[4].text = _fmt(r["p"], 3)
+            c[5].text = _fmt(r["p_holm"], 3) + (" *" if r["sig"] else "")
+            c[6].text = f"{_fmt(r['delta'], 2)} ({r['effect']})"
+    for o in res["tests"]["omnibus"]:
+        doc.add_paragraph(f"Kruskal–Wallis {o['measure']}: p = {_fmt(o['p'], 3)} ({o['k']} ruas)")
+
+    doc.add_heading("Arti label kondisi", level=2)
+    for code in ("CALM_RELAXED", "FOCUSED_ENGAGED", "ACTIVATED_HIGH_AROUSAL", "INDETERMINATE"):
+        doc.add_paragraph(f"{LABELS[code][0]}: {LABELS[code][1]}", style="List Bullet")
+    doc.add_paragraph(
+        "Label adalah hipotesis tampilan dari perubahan relatif terhadap ruas acuan (satuan z), bukan diagnosis. "
+        "PRV dahi (PPG Muse) tidak sama dengan HRV sabuk dada (Polar H10). Empat elektroda kering Muse: "
+        "peta kepala adalah interpolasi kasar."
+    )
+    out = io.BytesIO()
+    doc.save(out)
+    return out.getvalue()

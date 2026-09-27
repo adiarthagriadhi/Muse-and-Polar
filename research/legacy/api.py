@@ -1,5 +1,5 @@
 """Jalankan dari folder research/:
-PYTHONPATH=src uvicorn app.api:app --port 8000
+PYTHONPATH=src uvicorn legacy.api:app --port 8000
 Lalu buka http://127.0.0.1:8000/
 """
 from __future__ import annotations

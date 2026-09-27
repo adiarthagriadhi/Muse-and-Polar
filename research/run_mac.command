@@ -1,7 +1,7 @@
 #!/bin/bash
-# Klik dua kali di Finder (atau ./run_mac.command) untuk membuka Muse 2 Research View.
+# Klik dua kali di Finder (atau ./run_mac.command) untuk membuka Muse 2 Research View di browser.
 # Memakai virtualenv sendiri (research/.venv), terpisah dari dashboard live musepolar.
-# Argumen tambahan diteruskan ke streamlit, mis.: ./run_mac.command --server.port 8502
+# Opsi diteruskan, mis.: ./run_mac.command --port 8601 --root ~/Desktop/rekaman
 set -e
 cd "$(dirname "$0")"
 if [ ! -d .venv ]; then
@@ -11,4 +11,4 @@ if [ ! -d .venv ]; then
   ./.venv/bin/pip install -r requirements.txt
 fi
 export PYTHONPATH=src
-exec ./.venv/bin/streamlit run app/streamlit_app.py "$@"
+exec ./.venv/bin/python app/server.py "$@"

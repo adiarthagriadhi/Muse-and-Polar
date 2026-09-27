@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muse 2 Research View</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Ccircle cx='11' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='21' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='7.5' cy='19' r='2.2' fill='white'/%3E%3Ccircle cx='24.5' cy='19' r='2.2' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Muse 2 Research View</h1>
+    <p class="sub" id="sessionSub">Memuat daftar sesi…</p>
+  </div>
+  <div class="source">
+    <label class="field grow">
+      <span>Sesi</span>
+      <select id="sessionSel" aria-label="Pilih sesi"></select>
+    </label>
+    <button class="btn" id="folderBtn" title="Pilih folder rekaman">Folder…</button>
+    <label class="btn" title="Unggah ZIP berisi folder sesi">Unggah ZIP<input type="file" id="zipInput" accept=".zip" hidden></label>
+  </div>
+  <div class="exports" role="group" aria-label="Ekspor">
+    <button class="btn" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
+    <button class="btn" data-export="export" title="Tabel ruas, uji, jendela & denyut (.zip berisi CSV)">Data CSV</button>
+    <button class="btn" data-export="figure" title="Gambar ringkasan (.png)">Gambar</button>
+    <button class="btn" id="printBtn" title="Cetak halaman atau simpan sebagai PDF">Cetak</button>
+    <button class="btn icon" id="themeBtn" title="Ganti tema terang/gelap" aria-label="Ganti tema">◐</button>
+  </div>
+</header>
+
+<section class="controls card" aria-label="Pengaturan analisis">
+  <label class="field titik">
+    <span>Titik observasi (detik) <em class="hint">memisahkan ruas, mis. 60, 120</em></span>
+    <div class="row">
+      <input id="titik" type="text" inputmode="decimal" placeholder="kosong = seluruh sesi satu ruas">
+      <button class="btn" id="useMarkers" title="Isi dengan waktu penanda sesi">Pakai penanda</button>
+    </div>
+  </label>
+  <div class="field">
+    <span>Pita EEG</span>
+    <div class="seg" id="bandSeg" role="radiogroup">
+      <button data-v="delta">δ delta</button><button data-v="theta">θ theta</button>
+      <button data-v="alpha" class="on">α alpha</button><button data-v="beta">β beta</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Satuan daya</span>
+    <div class="seg" id="metricSeg" role="radiogroup">
+      <button data-v="abs" class="on" title="Daya absolut (µV²), skala log">Absolut</button>
+      <button data-v="rel" title="Persen dari daya 1–40 Hz">Relatif %</button>
+    </div>
+  </div>
+  <label class="field">
+    <span>Ruas acuan</span>
+    <select id="refSel"></select>
+  </label>
+  <label class="field small">
+    <span>Ambang artefak</span>
+    <div class="row unit"><input id="art" type="number" min="20" max="1000" step="10" value="100"><em>µV</em></div>
+  </label>
+</section>
+
+<section class="kpis" id="kpis" aria-label="Ringkasan sesi"></section>
+
+<section class="segments" id="segCards" aria-label="Ruas"></section>
+
+<section class="main">
+  <div class="card charts">
+    <div class="card-head">
+      <h2>Sinyal <span class="muted" id="viewInfo"></span></h2>
+      <div class="tools">
+        <label class="inline">Skala EEG
+          <select id="eegScale"><option value="50">±50 µV</option><option value="100" selected>±100 µV</option><option value="200">±200 µV</option><option value="400">±400 µV</option></select>
+        </label>
+        <button class="btn sm" id="zoomOut" title="Perkecil">−</button>
+        <button class="btn sm" id="zoomIn" title="Perbesar">+</button>
+        <button class="btn sm" id="zoomAll" title="Tampilkan seluruh sesi">Semua</button>
+      </div>
+    </div>
+    <p class="hint">Seret di grafik untuk memperbesar · klik untuk memilih waktu peta · klik ganda untuk kembali ke seluruh sesi. Jendela berartefak tampil kosong.</p>
+    <div class="chart" id="chEeg" style="--h:260px"></div>
+    <div class="chart" id="chBand" style="--h:220px"></div>
+    <div class="chart" id="chHeart" style="--h:190px"></div>
+  </div>
+
+  <div class="side">
+  <div class="card mapcard">
+    <div class="card-head">
+      <h2>Peta kepala</h2>
+      <div class="seg sm" id="mapModeSeg" role="radiogroup">
+        <button data-v="value" class="on" title="Nilai daya pita">Nilai</button>
+        <button data-v="change" title="Perubahan terhadap ruas acuan (z)">Perubahan vs acuan</button>
+      </div>
+    </div>
+    <p class="map-title" id="mapTitle">–</p>
+    <div class="topo-wrap"><canvas id="mapBig" width="320" height="320" aria-label="Peta kepala"></canvas></div>
+    <div class="colorbar" id="colorbar"><div class="bar"></div><div class="ticks"><span></span><span></span><span></span></div><div class="cap"></div></div>
+    <div class="map-ctrl">
+      <label class="field grow"><span id="mapTLabel">Mulai jendela: 0 s</span><input id="mapT" type="range" min="0" max="100" step="1" value="0"></label>
+      <label class="field small"><span>Lebar</span>
+        <select id="mapWin"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="60">60 s</option></select>
+      </label>
+    </div>
+    <table class="mini-table" id="mapTable" aria-label="Nilai per kanal"></table>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Spektrum per ruas</h2>
+      <select id="psdCh" aria-label="Kanal spektrum">
+        <option value="AF">AF7 + AF8 (dahi)</option><option value="TP">TP9 + TP10 (telinga)</option>
+        <option value="TP9">TP9</option><option value="AF7">AF7</option><option value="AF8">AF8</option><option value="TP10">TP10</option>
+      </select>
+    </div>
+    <div class="chart" id="chPsd" style="--h:210px"></div>
+  </div>
+  </div>
+</section>
+
+<section class="bottom">
+  <div class="card wide">
+    <div class="card-head"><h2>Per ruas</h2><span class="muted" id="segUnit"></span></div>
+    <div class="table-wrap"><table class="data" id="segTable"></table></div>
+  </div>
+  <div class="card wide">
+    <div class="card-head">
+      <h2>Uji antar ruas</h2>
+      <div class="seg sm" id="measureSeg" role="radiogroup"></div>
+    </div>
+    <p class="hint" id="testNote"></p>
+    <div class="table-wrap"><table class="data" id="testTable"></table></div>
+    <p class="omnibus" id="omnibus"></p>
+  </div>
+  <details class="card notes">
+    <summary><h2>Metode &amp; cara membaca</h2></summary>
+    <div class="notes-body">
+      <p><b>Data.</b> EEG 4 kanal Muse (256 Hz) difilter notch 50 Hz dan bandpass 1–40 Hz. Daya pita dihitung per jendela 4 detik
+        (geser 2 detik) dengan metode Welch. Jendela sebuah kanal dibuang bila amplitudonya melewati <i>ambang artefak</i>
+        (kedip, gerak) atau terlalu datar (&lt; 0,5 µV, sensor tidak menempel).</p>
+      <p><b>Ruas.</b> <i>Titik observasi</i> memotong sesi menjadi ruas. Nilai ruas = median jendela bersih.
+        <i>Relatif %</i> = daya pita dibagi daya 1–40 Hz, lebih tahan terhadap perbedaan kontak elektroda antar sesi.
+        Asimetri AF = (AF8 − AF7) / (AF8 + AF7); positif berarti kanan lebih besar.</p>
+      <p><b>Label kondisi.</b> Setiap ruas dibandingkan dengan <i>ruas acuan</i> dalam satuan z
+        (selisih median dibagi sebaran jendela acuan) untuk log daya α, β, θ, rasionya, dan denyut
+        (Polar bila ada, selain itu PPG dahi). Skor: Teraktivasi = β, α/β, −θ/β, denyut · Fokus = β, α, −θ/α ·
+        Tenang = α, θ/β, −denyut. Label dipilih bila skor tertinggi ≥ 0,5 z dan unggul ≥ 0,25 z; selain itu Indeterminan.
+        Ini hipotesis tampilan, bukan diagnosis.</p>
+      <p><b>Uji.</b> Mann–Whitney dua sisi antar ruas memakai jendela yang tidak tumpang tindih (tiap jendela 4 detik dihitung sekali),
+        p dikoreksi Holm per ukuran, dan δ Cliff sebagai besar efek (|δ| &lt; 0,15 sangat kecil, &lt; 0,33 kecil, &lt; 0,47 sedang, selebihnya besar).
+        Kruskal–Wallis ditampilkan bila ada ≥ 3 ruas.</p>
+      <p><b>Jantung.</b> PRV dahi: puncak PPG inframerah (kolom <code>ir</code>) setelah filter 0,5–3,5 Hz. Polar: interval RR H10,
+        digeser dengan hasil sinkronisasi gerak bila ada. Interval di luar 35–180 bpm atau berbeda &gt; 25 % dari median sekitarnya
+        dianggap tidak valid. PRV dahi ≠ HRV Polar.</p>
+      <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
+        Semua peta memakai skala warna yang sama agar bisa dibandingkan.</p>
+    </div>
+  </details>
+</section>
+
+<dialog id="folderDlg">
+  <form method="dialog" class="dlg">
+    <h2>Folder rekaman</h2>
+    <p class="hint">Folder berisi sesi musepolar (<code>recordings/</code>) atau satu folder sesi.</p>
+    <input id="rootInput" type="text" spellcheck="false">
+    <div class="row end">
+      <button class="btn" value="default" id="rootDefault">Default</button>
+      <button class="btn" value="cancel">Batal</button>
+      <button class="btn primary" value="ok" id="rootOk">Muat</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="busy" id="busy" hidden>Menghitung…</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>

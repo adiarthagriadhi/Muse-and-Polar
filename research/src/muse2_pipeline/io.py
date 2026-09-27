@@ -26,6 +26,7 @@ FS_PPG = 64.0
 PPG_MAP = {"ambient": "PPG1", "ir": "PPG2", "red": "PPG3"}
 EEG_FILE = "muse_eeg.csv"
 PPG_FILE = "muse_ppg.csv"
+RR_FILE = "polar_rr.csv"
 
 # research/src/muse2_pipeline/io.py -> repository root / recordings
 DEFAULT_RECORDINGS = Path(
@@ -68,6 +69,7 @@ def list_samples(root: Path) -> pd.DataFrame:
             "start_iso": meta.get("start_local"),
             "duration_sec": meta.get("duration_sec"),
             "has_ppg": (folder / PPG_FILE).exists(),
+            "has_polar": (folder / RR_FILE).exists(),
         })
     return pd.DataFrame(rows)
 
@@ -99,7 +101,14 @@ def marker_titik(markers: pd.DataFrame, skip_prefix: str = "SYNC") -> str:
     return ", ".join(f"{t:.0f}" for t in m["time_s"] if t > 0)
 
 
-def load_sample(folder: Path) -> dict:
+def sync_offset(meta: dict) -> float | None:
+    """Muse − Polar offset (s) from the first successful movement sync, if any."""
+    good = [s for s in meta.get("sync") or [] if s.get("ok") and s.get("muse_minus_polar_s") is not None]
+    return float(good[0]["muse_minus_polar_s"]) if good else None
+
+
+def load_sample(folder: Path, legacy_bp: bool = True) -> dict:
+    """Load one session. ``legacy_bp`` also computes the old per-window band power table ``bp``."""
     folder = Path(folder)
     meta = _read_meta(folder)
 
@@ -119,6 +128,12 @@ def load_sample(folder: Path) -> dict:
     markers = pd.read_csv(mk_p) if mk_p.exists() else pd.DataFrame(columns=["timestamp", "label"])
     markers["time_s"] = markers["timestamp"].astype(float) - t_origin
 
+    # Polar RR on the Muse time base: t_polar + (muse − polar offset), see musepolar README.
+    rr_p = folder / RR_FILE
+    rr = pd.read_csv(rr_p).dropna() if rr_p.exists() else pd.DataFrame(columns=["timestamp", "rr_ms"])
+    offset = sync_offset(meta)
+    rr["time_s"] = rr["timestamp"].astype(float) + (offset or 0.0) - t_origin
+
     meta["eeg_validation"] = _quality(eeg["timestamp"].to_numpy(float), FS_EEG)
     meta["ppg_validation"] = _quality(ppg["timestamp"].to_numpy(float), FS_PPG)
     if not meta.get("start_iso"):
@@ -131,8 +146,11 @@ def load_sample(folder: Path) -> dict:
         "sid": folder.name,
         "eeg_f": eeg_f,
         "ppg": ppg,
-        "bp": bandpower_windows(eeg_f),
+        "bp": bandpower_windows(eeg_f) if legacy_bp else None,
         "markers": markers,
+        "rr": rr,
+        "sync_offset": offset,
+        "t_origin": t_origin,
         "meta": meta,
         "folder": folder,
     }

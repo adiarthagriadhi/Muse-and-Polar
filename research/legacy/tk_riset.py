@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 ROOT = Path.home() / "Muse-and-Polar" / "research"  # lokasi clone repo
 sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, str(ROOT / "app"))
+sys.path.insert(0, str(ROOT / "legacy"))
 from tk_riset import launch
 launch()
 """

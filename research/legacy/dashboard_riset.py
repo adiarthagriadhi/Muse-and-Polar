@@ -1,4 +1,4 @@
-"""Satu layar. PYTHONPATH=src streamlit run app/dashboard_riset.py --server.port 8502"""
+"""Satu layar. PYTHONPATH=src streamlit run legacy/dashboard_riset.py --server.port 8502"""
 from __future__ import annotations
 import sys
 from pathlib import Path

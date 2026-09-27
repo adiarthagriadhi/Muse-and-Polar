@@ -1,7 +1,7 @@
 """
 pip install nicegui
 cd research
-PYTHONPATH=src python app/nicegui_dashboard.py
+PYTHONPATH=src python legacy/nicegui_dashboard.py
 """
 from __future__ import annotations
 import sys
