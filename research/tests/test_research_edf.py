@@ -135,3 +135,38 @@ def test_server_edf_upload(tmp_path):
     assert len(ov["channels"]) == 16
     sig = client.get(f"/api/signal/{ses['id']}", params={"t0": 0, "t1": 60, "n": 400}).json()
     assert len(sig["lo"]) == 16
+
+
+def test_channel_mode_and_heart_sources(tmp_path):
+    s = Session(make_edf(tmp_path / "cap.edf", dur=120))
+    v4 = s.view("muse4", "all")
+    assert v4.ch == ["T7", "Fp1", "Fp2", "T8"] and v4.muse_map["AF7"] == "Fp1" and v4.pair == ("Fp1", "Fp2")
+    res = v4.analyze("60")
+    assert len(res["segments"][0]["values"]) == 4 and len(res["bad"][0]) == 4 and res["measures"][0] == "Fp1+Fp2"
+    assert v4.overview()["options"]["n_all"] == 16 and s.nch == 16  # the full session is untouched
+    none = s.view("all", "none")
+    assert none.analyze("60")["hr_source"] is None and none.overview()["hrv"]["polar"] is None
+    assert s.view("all", "ecg").analyze("60")["hr_source"] == "polar"
+    assert s.view("all", "all") is s
+
+
+def test_server_channel_and_heart_params(tmp_path):
+    pytest.importorskip("fastapi")
+    try:
+        from fastapi.testclient import TestClient
+    except (ImportError, RuntimeError):
+        pytest.skip("TestClient dependencies not installed")
+    import server
+
+    (tmp_path / "rec").mkdir()
+    make_edf(tmp_path / "rec" / "cap.edf", dur=60)
+    server.STATE["default_root"] = tmp_path / "rec"
+    client = TestClient(server.app)
+    sid = client.get("/api/sessions").json()["sessions"][0]["id"]
+    ov = client.get(f"/api/session/{sid}", params={"chans": "muse4", "heart": "none"}).json()
+    assert ov["channels"] == ["T7", "Fp1", "Fp2", "T8"] and ov["chans"] == "muse4" and ov["heart"] == "none"
+    assert len(client.get(f"/api/signal/{sid}", params={"chans": "muse4", "t0": 0, "t1": 60}).json()["lo"]) == 4
+    res = client.get(f"/api/analysis/{sid}", params={"chans": "muse4", "heart": "none", "titik": "30"}).json()
+    assert res["channels"] == ["T7", "Fp1", "Fp2", "T8"] and res["hr_source"] is None
+    doc = client.get(f"/api/report/{sid}", params={"chans": "muse4", "heart": "ppg", "titik": "30"})
+    assert doc.status_code == 200 and doc.content[:2] == b"PK"

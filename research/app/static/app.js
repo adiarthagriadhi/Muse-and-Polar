@@ -11,7 +11,7 @@ const store = {
 
 const S = {
   root: '', sessions: [], sid: null, ov: null, res: null,
-  set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100 },
+  set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100, chans: 'all', heart: 'all' },
   mapT: 0, mapWin: 20, mapMode: 'value', measure: 'AF', psdCh: 'AF',
   anaReq: 0, sigReq: 0,
 };
@@ -108,7 +108,7 @@ const loadSignal = debounce(async () => {
   const req = ++S.sigReq;
   const n = Math.round(($('chEeg').clientWidth || 800) * 1.5);
   try {
-    const sig = await api(`/api/signal/${S.sid}?t0=${group.x0}&t1=${group.x1}&n=${n}`);
+    const sig = await api(`/api/signal/${S.sid}?t0=${group.x0}&t1=${group.x1}&n=${n}&chans=${S.set.chans}`);
     if (req !== S.sigReq) return;
     eegChart.setSeries(CH.map((c, i) => (sig.kind === 'env'
       ? { name: c, color: chColor(i), lane: i, t: sig.t, lo: sig.lo[i], hi: sig.hi[i] }
@@ -157,27 +157,32 @@ function showEmpty(data) {
   drawTopo($('mapBig'), {}, {});
 }
 
-async function selectSession(sid) {
+// keep=true: same recording, only the channel mode / heart sources changed (keeps titik, zoom, map time)
+async function selectSession(sid, keep = false) {
   S.sid = sid;
   store.set('sid', sid);
   let ov;
-  try { ov = await api(`/api/session/${sid}`); } catch (e) { toast(e.message); return; }
+  const q = `chans=${S.set.chans}&heart=${S.set.heart}`;
+  try { ov = await api(`/api/session/${sid}?${q}`); } catch (e) { toast(e.message); return; }
   if (S.sid !== sid) return;
   S.ov = ov;
+  renderSourceControls();
   CH = ov.channels;
   S.measure = null; // first measure (frontal pair) once the analysis arrives
   S.psdCh = 'PAIR';
   eegChart.opt.lanes = CH.length;
   $('chEeg').style.setProperty('--h', `${CH.length <= 4 ? 260 : Math.max(260, 22 * CH.length + 30)}px`);
-  const saved = store.get(`titik:${ov.folder}`);
-  S.set.titik = saved !== null ? saved : (ov.marker_titik || '');
-  S.set.ref = 0;
-  $('titik').value = S.set.titik;
-  S.mapT = 0;
+  if (!keep) {
+    const saved = store.get(`titik:${ov.folder}`);
+    S.set.titik = saved !== null ? saved : (ov.marker_titik || '');
+    S.set.ref = 0;
+    $('titik').value = S.set.titik;
+    S.mapT = 0;
+  }
   $('sessionSub').textContent = [ov.name, (ov.start || '').replace('T', ' '), ov.note].filter(Boolean).join(' · ');
   document.title = `${ov.name} · Muse 2 Research View`;
   eegChart.setSeries([]);
-  setView(0, ov.duration);
+  if (keep) { setView(group.x0, group.x1); } else setView(0, ov.duration);
   renderStatic();
   await runAnalysis();
 }
@@ -198,11 +203,46 @@ function renderStatic() {
   syncMapSlider();
 }
 
+// --- channel mode & heart sources -------------------------------------------------------
+function renderSourceControls() {
+  const o = S.ov.options;
+  const b16 = $('chansSeg').querySelector('[data-v=all]'), b4 = $('chansSeg').querySelector('[data-v=muse4]');
+  b16.textContent = `Semua (${o.n_all} kanal)`;
+  b16.disabled = o.n_all <= 4;
+  b4.disabled = !o.muse4;
+  b16.title = o.n_all <= 4 ? 'Rekaman ini hanya punya 4 kanal' : `Analisis semua ${o.n_all} kanal`;
+  b4.title = o.muse4 ? `4 kanal terdekat dengan sensor Muse: ${Object.entries(o.muse4).map(([m, c]) => (m === c ? m : `${m}→${c}`)).join(', ')}`
+    : 'Tidak ada kanal yang cocok dengan posisi sensor Muse (AF7, AF8, TP9, TP10)';
+  const eff = o.n_all <= 4 ? 'muse4' : S.set.chans;
+  $('chansSeg').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.v === eff));
+  const hs = $('heartSel');
+  hs.querySelector('[value=ppg]').disabled = !o.ppg;
+  hs.querySelector('[value=ecg]').disabled = !o.ecg;
+  const hn = S.ov.kind === 'edf' ? 'EKG' : 'Polar';
+  hs.querySelector('[value=all]').textContent = `PPG + ${hn}`;
+  hs.querySelector('[value=ecg]').textContent = `Hanya ${hn}`;
+  hs.value = S.set.heart;
+  $('chansInfo').textContent = S.ov.options.muse4 && eff === 'muse4' && o.n_all > 4
+    ? Object.entries(o.muse4).map(([m, c]) => `${m}→${c}`).join(' · ') : '';
+}
+$('chansSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b || b.disabled || !S.sid || b.dataset.v === S.set.chans) return;
+  S.set.chans = b.dataset.v; store.set('chans', S.set.chans);
+  selectSession(S.sid, true);
+});
+$('heartSel').addEventListener('change', (e) => {
+  S.set.heart = e.target.value; store.set('heart', S.set.heart);
+  if (S.sid) selectSession(S.sid, true);
+});
+S.set.chans = store.get('chans') === 'muse4' ? 'muse4' : 'all';
+S.set.heart = ['ppg', 'ecg', 'none'].includes(store.get('heart')) ? store.get('heart') : 'all';
+
 // --- analysis -----------------------------------------------------------------------
 const runAnalysis = debounce(async () => {
   if (!S.sid) return;
   const req = ++S.anaReq;
-  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art });
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart });
   try {
     const res = await api(`/api/analysis/${S.sid}?${q}`);
     if (req !== S.anaReq) return;
@@ -279,11 +319,14 @@ function renderKpis() {
     kpi('Mutu EEG', statusEl(q.eeg && q.eeg.status), `jendela bersih: ${clean}`),
     kpi('Denyut dahi (PPG)', hp.ok ? [Math.round(hp.hr), h('small', {}, 'bpm')] : '–',
       hp.ok ? `PRV-RMSSD ${fmtNum(hp.rmssd, 2)} ms · valid ${Math.round((hp.valid_frac || 0) * 100)}%`
-        : (q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
+        : (['ecg', 'none'].includes(ov.heart) && ov.options.ppg ? 'tidak dipakai (pilihan Data jantung)'
+          : q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
     kpi(ov.kind === 'edf' ? 'Denyut EKG' : 'Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
-      hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms` : 'tidak direkam'),
+      hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms`
+        : (['ppg', 'none'].includes(ov.heart) && ov.options.ecg ? 'tidak dipakai (pilihan Data jantung)' : 'tidak direkam')),
     ov.kind === 'edf'
-      ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `@ ${fmtNum(ov.fs, 3)} Hz`)], `EDF · pasangan frontal ${ov.pair_label}`)
+      ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `dari ${ov.options.n_all} @ ${fmtNum(ov.fs, 3)} Hz`)],
+        ov.chans === 'muse4' && ov.options.n_all > 4 ? '4 kanal setara Muse' : `EDF · pasangan frontal ${ov.pair_label}`)
       : kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
         fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
     kpi('Penanda', String(mk.length), mk.length ? mk.slice(0, 3).map((m) => `${fmtTime(m.t, 100)} ${m.label}`).join(' · ') : 'tidak ada'),
@@ -587,7 +630,7 @@ $('zipInput').addEventListener('change', async (e) => {
 });
 document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
   if (!S.sid) return;
-  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art });
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart });
   window.location.href = `/api/${b.dataset.export}/${S.sid}?${q}`;
 }));
 $('printBtn').addEventListener('click', () => window.print());

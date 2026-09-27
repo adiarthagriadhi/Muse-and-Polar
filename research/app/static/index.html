@@ -52,6 +52,22 @@
       <button data-v="rel" title="Persen dari daya 1–40 Hz">Relatif %</button>
     </div>
   </div>
+  <div class="field">
+    <span>Kanal EEG <em class="hint" id="chansInfo"></em></span>
+    <div class="seg" id="chansSeg" role="radiogroup" aria-label="Jumlah kanal">
+      <button data-v="all" class="on">Semua kanal</button>
+      <button data-v="muse4">4 kanal (setara Muse)</button>
+    </div>
+  </div>
+  <label class="field">
+    <span>Data jantung</span>
+    <select id="heartSel" aria-label="Sumber data jantung">
+      <option value="all">PPG + EKG/Polar</option>
+      <option value="ppg">Hanya PPG</option>
+      <option value="ecg">Hanya EKG/Polar</option>
+      <option value="none">Tanpa data jantung</option>
+    </select>
+  </label>
   <label class="field">
     <span>Ruas acuan</span>
     <select id="refSel"></select>

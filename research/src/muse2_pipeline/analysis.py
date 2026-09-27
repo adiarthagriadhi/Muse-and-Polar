@@ -20,6 +20,7 @@ Method (see research/README.md for the reasoning):
 
 from __future__ import annotations
 
+import copy
 from pathlib import Path
 
 import numpy as np
@@ -28,7 +29,7 @@ from scipy.stats import kruskal, mannwhitneyu
 from .eeg import BANDS, subsegment_spectra, window_spectra
 from .hrv import clean_ibi, hr_at, hrv_stats, ppg_beats
 from .io import load_recording, marker_titik
-from .montage import MUSE_CH, frontal_pair, positions, regions
+from .montage import MUSE_CH, frontal_pair, muse_equivalent, positions, regions
 from .segments import parse_marks
 
 LABELS = {
@@ -131,6 +132,15 @@ class Session:
         self.heart_name = self.sample.get("heart_name", "Polar RR")
         self._eeg_t = eeg["time_s"].to_numpy(float)
         self._eeg_x = eeg[self.ch].to_numpy(float)
+        self.all_ch = list(self.ch)
+        self.has_ppg_data = len(self.ppg["t"]) > 0
+        self.has_heart_data = len(self.polar["t"]) > 0
+        self.chans, self.heart = "all", "all"
+        self.muse_map = None
+        self._views: dict[tuple, "Session"] = {}
+        self._setup_channels()
+
+    def _setup_channels(self):
         # frontal pair for asymmetry and condition features (AF7/AF8 on Muse, F3/F4 on 10-20 caps)
         self.pair = frontal_pair(self.ch)
         if self.pair:
@@ -148,6 +158,47 @@ class Session:
                                              f"{self.m_pair} rata-rata" if self.pair else "Rata-rata semua kanal")}
         if self.m_asym:
             self.measure_labels[self.m_asym] = self.m_asym
+
+    def view(self, chans: str = "all", heart: str = "all") -> "Session":
+        """The same recording restricted to a channel set and heart sources.
+
+        chans: 'all' or 'muse4' (the 4 channels nearest to the Muse 2 sensors: AF7/AF8/TP9/TP10).
+        heart: 'all', 'ppg' (forehead PPG only), 'ecg' (Polar RR / EDF ECG only) or 'none'.
+        """
+        chans = "muse4" if chans == "muse4" else "all"
+        heart = heart if heart in ("ppg", "ecg", "none") else "all"
+        if (chans, heart) == ("all", "all"):
+            return self
+        key = (chans, heart)
+        if key not in self._views:
+            v = copy.copy(self)
+            v._views = {}
+            v.chans, v.heart = chans, heart
+            if chans == "muse4":
+                mp = muse_equivalent(self.ch)
+                if mp and len(self.ch) > 4:
+                    idx = [self.ch.index(c) for c in mp.values()]
+                    v.muse_map = mp
+                    v.ch = list(mp.values())
+                    v.nch = 4
+                    sub = dict(self.sub)
+                    for k in ("psd", "total", "max_abs", "std"):
+                        sub[k] = self.sub[k][:, idx]
+                    sub["power"] = {b: a[:, idx] for b, a in self.sub["power"].items()}
+                    v.sub = sub
+                    v._specs = {}
+                    v.grid = v.spec(100.0)
+                    v._eeg_x = self._eeg_x[:, idx]
+                    v._setup_channels()
+                elif len(self.ch) <= 4:
+                    v.chans = "muse4"  # already 4 channels
+            empty = {"t": np.array([]), "ibi": np.array([]), "valid": np.array([], bool)}
+            if heart in ("ppg", "none"):
+                v.polar, v.has_polar = empty, False
+            if heart in ("ecg", "none"):
+                v.ppg = empty
+            self._views[key] = v
+        return self._views[key]
 
     def spec(self, art_uv: float) -> dict:
         key = round(float(art_uv), 1)
@@ -178,6 +229,12 @@ class Session:
             "pair": list(self.pair) if self.pair else None,
             "pair_label": self.pair_label,
             "heart_name": self.heart_name,
+            "chans": self.chans, "heart": self.heart,
+            "options": {
+                "n_all": len(self.all_ch),
+                "muse4": muse_equivalent(self.all_ch) if len(self.all_ch) > 4 else {c: c for c in self.all_ch},
+                "ppg": self.has_ppg_data, "ecg": self.has_heart_data,
+            },
             "bands": {k: list(v) for k, v in BANDS.items()},
             "quality": {"eeg": meta.get("eeg_validation"), "ppg": meta.get("ppg_validation")},
             "sync_offset_ms": _num(s["sync_offset"] * 1000, 4) if s["sync_offset"] is not None else None,

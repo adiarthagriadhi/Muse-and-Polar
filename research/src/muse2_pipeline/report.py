@@ -129,13 +129,19 @@ def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
     ax.set_ylabel(f"{res['band']} ({res['unit']})", fontsize=7)
     ax.legend(ncol=4, fontsize=6, frameon=False, loc="upper right")
     ax2 = fig.add_subplot(gs[1, :], sharex=ax)
-    for ser, lab, col in ((sess.ppg, "PPG dahi", "#2a78d6"), (sess.polar, "Polar RR", "#eb6834")):
+    drawn = 0
+    for ser, lab, col in ((sess.ppg, "PPG", "#2a78d6"), (sess.polar, sess.heart_name, "#eb6834")):
         if len(ser["t"]):
             y = np.where(ser["valid"], ser["ibi"] * 1000, np.nan)
             ax2.plot(ser["t"], y, lw=1, color=col, label=lab)
+            drawn += 1
     ax2.set_ylabel("IBI (ms)", fontsize=7)
     ax2.set_xlabel("waktu (s)", fontsize=7)
-    ax2.legend(ncol=2, fontsize=6, frameon=False, loc="upper right")
+    if drawn:
+        ax2.legend(ncol=2, fontsize=6, frameon=False, loc="upper right")
+    else:
+        ax2.text(0.5, 0.5, "tanpa data jantung", transform=ax2.transAxes, ha="center", va="center",
+                 fontsize=7, color="#7a7973")
     for a in (ax, ax2):
         a.tick_params(labelsize=6)
         a.grid(True, alpha=0.25, lw=0.5)
@@ -182,6 +188,10 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
         f"Ruas acuan {res['ref'] + 1}  ·  Ambang artefak {res['art_uv']:.0f} µV  ·  "
         f"Titik: {', '.join(f'{e:.0f}' for e in res['edges'][1:-1]) or '-'}"
     )
+    kanal = (f"4 kanal setara Muse ({', '.join(f'{m}→{c}' for m, c in sess.muse_map.items())})" if sess.muse_map
+             else f"{sess.nch} kanal ({', '.join(sess.ch)})")
+    jantung = {"all": "PPG + EKG/Polar", "ppg": "hanya PPG", "ecg": "hanya EKG/Polar", "none": "tanpa data jantung"}[sess.heart]
+    doc.add_paragraph(f"Kanal dianalisis: {kanal}  ·  Data jantung: {jantung}")
     doc.add_heading("Ringkasan sesi", level=2)
     q = ov["quality"]
     hp, hpo = ov["hrv"]["ppg"], ov["hrv"]["polar"]

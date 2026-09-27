@@ -117,3 +117,25 @@ def regions(channels: list[str]) -> dict[str, list[str]]:
         if reg:
             out.setdefault(reg, []).append(c)
     return out
+
+
+# Nearest 10-20 / 10-10 substitute for each Muse 2 sensor, in order of preference.
+MUSE_EQUIVALENT = {
+    "TP9": ["TP9", "TP7", "T7", "P7", "FT9"],
+    "AF7": ["AF7", "Fp1", "F7", "AF3", "F3"],
+    "AF8": ["AF8", "Fp2", "F8", "AF4", "F4"],
+    "TP10": ["TP10", "TP8", "T8", "P8", "FT10"],
+}
+
+
+def muse_equivalent(channels: list[str]) -> dict[str, str] | None:
+    """{Muse sensor: channel used} with the 4 Muse-like positions, or None if one is missing."""
+    have = {c.upper(): c for c in channels}
+    out, used = {}, set()
+    for muse, cands in MUSE_EQUIVALENT.items():
+        pick = next((have[c.upper()] for c in cands if c.upper() in have and have[c.upper()] not in used), None)
+        if pick is None:
+            return None
+        out[muse] = pick
+        used.add(pick)
+    return out

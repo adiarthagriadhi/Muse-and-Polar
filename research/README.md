@@ -34,6 +34,8 @@ PYTHONPATH=src python app/server.py --root ~/rekaman --port 8601 --no-browser
 |---|---|
 | **Atas** | pilih sesi, pilih folder, unggah ZIP; ekspor **Laporan Word**, **Data CSV** (ZIP), **Gambar** (PNG), **Cetak/PDF**; tema terang/gelap |
 | **Pengaturan** | *Titik observasi* (memotong sesi menjadi ruas; tombol **Pakai penanda** mengisinya dari `marker.csv`), pita δ/θ/α/β, daya **absolut** (µV²) atau **relatif** (% daya 1–40 Hz), **ruas acuan**, **ambang artefak** |
+| **Kanal EEG** | **Semua kanal** (mis. 16) atau **4 kanal (setara Muse)**: pada rekaman banyak kanal dipakai elektroda terdekat dengan sensor Muse — AF7 → Fp1 (lalu F7, AF3, F3), AF8 → Fp2 (lalu F8, AF4, F4), TP9 → T7 (lalu TP7, P7), TP10 → T8 (lalu TP8, P8). Rekaman Muse selalu 4 kanal |
+| **Data jantung** | PPG + EKG/Polar, hanya PPG, hanya EKG/Polar, atau tanpa data jantung (label kondisi dihitung dari EEG saja). Pilihan yang datanya tidak ada dinonaktifkan |
 | **Ringkasan** | durasi, mutu EEG (+ % data bersih per kanal), denyut & PRV dahi, denyut & HRV Polar, offset sinkronisasi, penanda |
 | **Kartu ruas** | label kondisi, nilai pita dahi dan z terhadap acuan, denyut, jumlah jendela bersih, peta mini; klik untuk memperbesar ruas; *jadikan acuan* |
 | **Sinyal** | EEG 4 lajur, daya pita per jendela, interval antar-denyut (PPG & Polar); **seret untuk zoom**, klik untuk memilih waktu peta, klik ganda untuk kembali; penanda, batas ruas, dan tooltip nilai |

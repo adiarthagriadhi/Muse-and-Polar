@@ -124,20 +124,25 @@ async def upload(file: UploadFile = File(...)):
     return {"root": str(root), "exists": True, "sessions": found, "uploaded": True}
 
 
+def view(sid: str, chans: str, heart: str) -> Session:
+    """Session restricted to a channel mode ('all' / 'muse4') and heart sources ('all', 'ppg', 'ecg', 'none')."""
+    return session(sid).view(chans, heart)
+
+
 @app.get("/api/session/{sid}")
-def overview(sid: str):
-    return JSONResponse(session(sid).overview())
+def overview(sid: str, chans: str = "all", heart: str = "all"):
+    return JSONResponse(view(sid, chans, heart).overview())
 
 
 @app.get("/api/signal/{sid}")
-def signal(sid: str, t0: float = 0.0, t1: float = 1e9, n: int = 1600):
-    return JSONResponse(session(sid).signal(t0, t1, n))
+def signal(sid: str, t0: float = 0.0, t1: float = 1e9, n: int = 1600, chans: str = "all"):
+    return JSONResponse(view(sid, chans, "all").signal(t0, t1, n))
 
 
 @app.get("/api/analysis/{sid}")
 def analysis(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs",
-             ref: int = 0, art: float = Query(100.0, ge=10, le=2000)):
-    return JSONResponse(session(sid).analyze(titik, band, metric, ref, art))
+             ref: int = 0, art: float = Query(100.0, ge=10, le=2000), chans: str = "all", heart: str = "all"):
+    return JSONResponse(view(sid, chans, heart).analyze(titik, band, metric, ref, art))
 
 
 def _download(data: bytes, name: str, mime: str) -> Response:
@@ -145,26 +150,27 @@ def _download(data: bytes, name: str, mime: str) -> Response:
 
 
 @app.get("/api/export/{sid}")
-def export(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0):
-    s = session(sid)
+def export(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
+           chans: str = "all", heart: str = "all"):
+    s = view(sid, chans, heart)
     res = s.analyze(titik, band, metric, ref, art)
-    data = report.export_zip(s, res, _settings(titik, band, metric, ref, art))
+    data = report.export_zip(s, res, {**_settings(titik, band, metric, ref, art), "kanal": chans, "jantung": heart})
     return _download(data, f"{s.folder.name}_{band}_analisis.zip", "application/zip")
 
 
 @app.get("/api/report/{sid}")
-def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
-         scale: str = "map"):
-    s = session(sid)
+def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0, scale: str = "map",
+         chans: str = "all", heart: str = "all"):
+    s = view(sid, chans, heart)
     res = s.analyze(titik, band, metric, ref, art)
     return _download(report.report_docx(s, res, scale), f"{s.folder.name}_{band}_laporan.docx",
                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 @app.get("/api/figure/{sid}")
-def figure(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
-           scale: str = "map"):
-    s = session(sid)
+def figure(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0, scale: str = "map",
+           chans: str = "all", heart: str = "all"):
+    s = view(sid, chans, heart)
     res = s.analyze(titik, band, metric, ref, art)
     return _download(report.figure_png(s, res, scale), f"{s.folder.name}_{band}.png", "image/png")
 
