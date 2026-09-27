@@ -119,23 +119,34 @@ def regions(channels: list[str]) -> dict[str, list[str]]:
     return out
 
 
-# Nearest 10-20 / 10-10 substitute for each Muse 2 sensor, in order of preference.
-MUSE_EQUIVALENT = {
-    "TP9": ["TP9", "TP7", "T7", "P7", "FT9"],
-    "AF7": ["AF7", "Fp1", "F7", "AF3", "F3"],
-    "AF8": ["AF8", "Fp2", "F8", "AF4", "F4"],
-    "TP10": ["TP10", "TP8", "T8", "P8", "FT10"],
+# How to rebuild each Muse 2 sensor from a 10-20 / 10-10 cap, in order of preference:
+# the sensor itself, the average of the two electrodes it sits between, then a single neighbour.
+MUSE_SOURCES = {
+    "TP9": [["TP9"], ["T7", "P7"], ["TP7"], ["T7"], ["P7"]],
+    "AF7": [["AF7"], ["Fp1", "F7"], ["AF3"], ["Fp1"], ["F7"]],
+    "AF8": [["AF8"], ["Fp2", "F8"], ["AF4"], ["Fp2"], ["F8"]],
+    "TP10": [["TP10"], ["T8", "P8"], ["TP8"], ["T8"], ["P8"]],
 }
 
 
-def muse_equivalent(channels: list[str]) -> dict[str, str] | None:
-    """{Muse sensor: channel used} with the 4 Muse-like positions, or None if one is missing."""
+def muse_sources(channels: list[str]) -> dict[str, list[str]] | None:
+    """{Muse sensor: [channels averaged to rebuild it]} or None if a sensor cannot be rebuilt."""
     have = {c.upper(): c for c in channels}
-    out, used = {}, set()
-    for muse, cands in MUSE_EQUIVALENT.items():
-        pick = next((have[c.upper()] for c in cands if c.upper() in have and have[c.upper()] not in used), None)
+    out = {}
+    for muse, options in MUSE_SOURCES.items():
+        pick = next(([have[c.upper()] for c in opt] for opt in options if all(c.upper() in have for c in opt)), None)
         if pick is None:
             return None
         out[muse] = pick
-        used.add(pick)
     return out
+
+
+def muse_reference(channels: list[str]) -> str | None:
+    """Muse 2 records every sensor against Fpz; returns the Fpz channel name if the cap has one."""
+    return next((c for c in channels if c.upper() == "FPZ"), None)
+
+
+def muse_equivalent(channels: list[str]) -> dict[str, str] | None:
+    """{Muse sensor: short description of its source}, e.g. {'AF7': 'Fp1+F7', 'TP9': 'TP9'}."""
+    src = muse_sources(channels)
+    return {m: "+".join(c) for m, c in src.items()} if src else None

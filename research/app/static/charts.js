@@ -185,7 +185,7 @@ export class Chart {
         const y = Math.round(ymap(v)) + 0.5;
         if (y < b.T - 1 || y > b.B + 1) continue;
         ctx.beginPath(); ctx.moveTo(b.L, y); ctx.lineTo(b.R, y); ctx.stroke();
-        ctx.fillText(o.tickFmt(v), b.L - 6, y);
+        if (y > b.T + 5 || !o.title) ctx.fillText(o.tickFmt(v), b.L - 6, y); // keep clear of the title
       }
     }
     // x ticks

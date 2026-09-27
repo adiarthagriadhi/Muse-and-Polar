@@ -56,7 +56,7 @@
     <span>Kanal EEG <em class="hint" id="chansInfo"></em></span>
     <div class="seg" id="chansSeg" role="radiogroup" aria-label="Jumlah kanal">
       <button data-v="all" class="on">Semua kanal</button>
-      <button data-v="muse4">4 kanal (setara Muse)</button>
+      <button data-v="muse4">4 kanal (Muse)</button>
     </div>
   </div>
   <label class="field">
@@ -174,6 +174,11 @@
         (mis. <code>EEG Fp1-REF</code>, T3 = T7); kanal EKG dipakai untuk denyut dan anotasi EDF+ menjadi penanda.
         Pasangan frontal untuk asimetri dan label dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
         Dengan banyak kanal, grafik daya menampilkan rata-rata per area kepala.</p>
+      <p><b>4 kanal (Muse).</b> Rekaman banyak kanal dibuat meniru Muse 2: sensor TP9, AF7, AF8, TP10 dibangun ulang dari elektroda
+        di sekitarnya (AF7 = rata-rata Fp1 &amp; F7, AF8 = Fp2 &amp; F8, TP9 = T7 &amp; P7, TP10 = T8 &amp; P8, atau elektrodanya sendiri bila ada),
+        lalu dirujuk ulang ke Fpz seperti Muse bila kanal Fpz tersedia. Tampilan, tata letak peta, dan ukuran uji sama dengan sesi Muse.
+        Karena merata-rata dua elektroda, daya absolutnya cenderung sedikit lebih kecil; untuk membandingkan dengan Muse sungguhan,
+        <i>Relatif %</i> lebih adil.</p>
       <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
         Peta dibuat berlapis (12 pita warna tipis). Setiap peta memakai skala warnanya sendiri, seperti tampilan lama:
         biru = nilai terendah, merah = tertinggi di peta itu. Bandingkan antar peta lewat angka di elektroda.</p>

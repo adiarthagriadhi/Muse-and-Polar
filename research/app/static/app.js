@@ -211,8 +211,10 @@ function renderSourceControls() {
   b16.disabled = o.n_all <= 4;
   b4.disabled = !o.muse4;
   b16.title = o.n_all <= 4 ? 'Rekaman ini hanya punya 4 kanal' : `Analisis semua ${o.n_all} kanal`;
-  b4.title = o.muse4 ? `4 kanal terdekat dengan sensor Muse: ${Object.entries(o.muse4).map(([m, c]) => (m === c ? m : `${m}→${c}`)).join(', ')}`
-    : 'Tidak ada kanal yang cocok dengan posisi sensor Muse (AF7, AF8, TP9, TP10)';
+  const desc = (m, c) => (m === c ? m : c.includes('+') ? `${m} = rata-rata ${c.replace('+', ' & ')}` : `${m} = ${c}`);
+  const refTxt = o.muse_ref ? `dirujuk ulang ke ${o.muse_ref} seperti Muse` : 'referensi asli file (tidak ada kanal Fpz)';
+  b4.title = o.muse4 ? `Meniru Muse 2: ${Object.entries(o.muse4).map(([m, c]) => desc(m, c)).join('; ')}; ${refTxt}`
+    : 'Tidak ada kanal di sekitar posisi sensor Muse (AF7, AF8, TP9, TP10)';
   const eff = o.n_all <= 4 ? 'muse4' : S.set.chans;
   $('chansSeg').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.v === eff));
   const hs = $('heartSel');
@@ -222,8 +224,8 @@ function renderSourceControls() {
   hs.querySelector('[value=all]').textContent = `PPG + ${hn}`;
   hs.querySelector('[value=ecg]').textContent = `Hanya ${hn}`;
   hs.value = S.set.heart;
-  $('chansInfo').textContent = S.ov.options.muse4 && eff === 'muse4' && o.n_all > 4
-    ? Object.entries(o.muse4).map(([m, c]) => `${m}→${c}`).join(' · ') : '';
+  $('chansInfo').textContent = o.muse4 && eff === 'muse4' && o.n_all > 4
+    ? `${Object.entries(o.muse4).map(([m, c]) => `${m}=${c}`).join(' · ')} · ref ${o.muse_ref || 'asli'}` : '';
 }
 $('chansSeg').addEventListener('click', (e) => {
   const b = e.target.closest('button[data-v]');
@@ -326,7 +328,8 @@ function renderKpis() {
         : (['ppg', 'none'].includes(ov.heart) && ov.options.ecg ? 'tidak dipakai (pilihan Data jantung)' : 'tidak direkam')),
     ov.kind === 'edf'
       ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `dari ${ov.options.n_all} @ ${fmtNum(ov.fs, 3)} Hz`)],
-        ov.chans === 'muse4' && ov.options.n_all > 4 ? '4 kanal setara Muse' : `EDF · pasangan frontal ${ov.pair_label}`)
+        ov.chans === 'muse4' && ov.options.n_all > 4
+          ? `disesuaikan Muse · ${ov.options.muse_ref ? 'ref Fpz' : 'ref asli file'}` : `EDF · pasangan frontal ${ov.pair_label}`)
       : kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
         fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
     kpi('Penanda', String(mk.length), mk.length ? mk.slice(0, 3).map((m) => `${fmtTime(m.t, 100)} ${m.label}`).join(' · ') : 'tidak ada'),

@@ -29,7 +29,7 @@ from scipy.stats import kruskal, mannwhitneyu
 from .eeg import BANDS, subsegment_spectra, window_spectra
 from .hrv import clean_ibi, hr_at, hrv_stats, ppg_beats
 from .io import load_recording, marker_titik
-from .montage import MUSE_CH, frontal_pair, muse_equivalent, positions, regions
+from .montage import MUSE_CH, frontal_pair, muse_equivalent, muse_reference, muse_sources, positions, regions
 from .segments import parse_marks
 
 LABELS = {
@@ -136,7 +136,8 @@ class Session:
         self.has_ppg_data = len(self.ppg["t"]) > 0
         self.has_heart_data = len(self.polar["t"]) > 0
         self.chans, self.heart = "all", "all"
-        self.muse_map = None
+        self.muse_map = None  # {Muse sensor: source description} in the Muse-like 4-channel view
+        self.muse_ref = None  # 'Fpz' when re-referenced like Muse, else None (file reference kept)
         self._views: dict[tuple, "Session"] = {}
         self._setup_channels()
 
@@ -159,6 +160,33 @@ class Session:
         if self.m_asym:
             self.measure_labels[self.m_asym] = self.m_asym
 
+    def _to_muse(self, v: "Session", src: dict[str, list[str]]) -> None:
+        """Rebuild the 4 Muse 2 sensors (TP9, AF7, AF8, TP10) from a multi-channel cap.
+
+        Each sensor is the average of the electrodes it lies between (e.g. AF7 = (Fp1 + F7) / 2) or
+        the sensor itself when the cap has it. Muse measures against Fpz, so when the cap has Fpz
+        the rebuilt channels are re-referenced to it; otherwise the file's reference is kept.
+        Spectra are recomputed from the rebuilt (already filtered) signals.
+        """
+        x = self._eeg_x
+        ref = muse_reference(self.ch)
+        cols = {}
+        for sensor in MUSE_CH:
+            sig = x[:, [self.ch.index(c) for c in src[sensor]]].mean(axis=1)
+            cols[sensor] = sig - x[:, self.ch.index(ref)] if ref else sig
+        import pandas as pd
+
+        df = pd.DataFrame({"time_s": self._eeg_t, **cols})
+        v.muse_map = {m: "+".join(c) for m, c in src.items()}
+        v.muse_ref = ref
+        v.ch = list(MUSE_CH)
+        v.nch = 4
+        v.sub = subsegment_spectra(df, fs=self.fs, channels=v.ch)
+        v._specs = {}
+        v.grid = v.spec(100.0)
+        v._eeg_x = df[v.ch].to_numpy(float)
+        v._setup_channels()
+
     def view(self, chans: str = "all", heart: str = "all") -> "Session":
         """The same recording restricted to a channel set and heart sources.
 
@@ -175,21 +203,9 @@ class Session:
             v._views = {}
             v.chans, v.heart = chans, heart
             if chans == "muse4":
-                mp = muse_equivalent(self.ch)
-                if mp and len(self.ch) > 4:
-                    idx = [self.ch.index(c) for c in mp.values()]
-                    v.muse_map = mp
-                    v.ch = list(mp.values())
-                    v.nch = 4
-                    sub = dict(self.sub)
-                    for k in ("psd", "total", "max_abs", "std"):
-                        sub[k] = self.sub[k][:, idx]
-                    sub["power"] = {b: a[:, idx] for b, a in self.sub["power"].items()}
-                    v.sub = sub
-                    v._specs = {}
-                    v.grid = v.spec(100.0)
-                    v._eeg_x = self._eeg_x[:, idx]
-                    v._setup_channels()
+                src = muse_sources(self.ch)
+                if src and len(self.ch) > 4:
+                    self._to_muse(v, src)
                 elif len(self.ch) <= 4:
                     v.chans = "muse4"  # already 4 channels
             empty = {"t": np.array([]), "ibi": np.array([]), "valid": np.array([], bool)}
@@ -233,6 +249,7 @@ class Session:
             "options": {
                 "n_all": len(self.all_ch),
                 "muse4": muse_equivalent(self.all_ch) if len(self.all_ch) > 4 else {c: c for c in self.all_ch},
+                "muse_ref": muse_reference(self.all_ch) if len(self.all_ch) > 4 else "Fpz",
                 "ppg": self.has_ppg_data, "ecg": self.has_heart_data,
             },
             "bands": {k: list(v) for k, v in BANDS.items()},

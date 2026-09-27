@@ -188,7 +188,8 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
         f"Ruas acuan {res['ref'] + 1}  ·  Ambang artefak {res['art_uv']:.0f} µV  ·  "
         f"Titik: {', '.join(f'{e:.0f}' for e in res['edges'][1:-1]) or '-'}"
     )
-    kanal = (f"4 kanal setara Muse ({', '.join(f'{m}→{c}' for m, c in sess.muse_map.items())})" if sess.muse_map
+    kanal = (f"4 kanal disesuaikan Muse ({', '.join(f'{m} = ' + (c if '+' not in c else 'rata-rata ' + c.replace('+', ' & ')) for m, c in sess.muse_map.items())}; "
+             + (f"dirujuk ulang ke {sess.muse_ref} seperti Muse)" if sess.muse_ref else "referensi asli file, tanpa Fpz)") if sess.muse_map
              else f"{sess.nch} kanal ({', '.join(sess.ch)})")
     jantung = {"all": "PPG + EKG/Polar", "ppg": "hanya PPG", "ecg": "hanya EKG/Polar", "none": "tanpa data jantung"}[sess.heart]
     doc.add_paragraph(f"Kanal dianalisis: {kanal}  ·  Data jantung: {jantung}")

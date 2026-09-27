@@ -140,9 +140,12 @@ def test_server_edf_upload(tmp_path):
 def test_channel_mode_and_heart_sources(tmp_path):
     s = Session(make_edf(tmp_path / "cap.edf", dur=120))
     v4 = s.view("muse4", "all")
-    assert v4.ch == ["T7", "Fp1", "Fp2", "T8"] and v4.muse_map["AF7"] == "Fp1" and v4.pair == ("Fp1", "Fp2")
+    assert v4.ch == ["TP9", "AF7", "AF8", "TP10"] and v4.pair == ("AF7", "AF8") and v4.pair_label == "AF"
+    assert v4.muse_map == {"TP9": "T7+P7", "AF7": "Fp1+F7", "AF8": "Fp2+F8", "TP10": "T8+P8"} and v4.muse_ref is None
+    assert v4.overview()["positions"]["AF7"] == [-0.5, 0.48]  # Muse layout
     res = v4.analyze("60")
-    assert len(res["segments"][0]["values"]) == 4 and len(res["bad"][0]) == 4 and res["measures"][0] == "Fp1+Fp2"
+    assert len(res["segments"][0]["values"]) == 4 and len(res["bad"][0]) == 4
+    assert res["measures"] == ["AF", "TP9", "AF7", "AF8", "TP10", "Asimetri AF"]
     assert v4.overview()["options"]["n_all"] == 16 and s.nch == 16  # the full session is untouched
     none = s.view("all", "none")
     assert none.analyze("60")["hr_source"] is None and none.overview()["hrv"]["polar"] is None
@@ -164,9 +167,29 @@ def test_server_channel_and_heart_params(tmp_path):
     client = TestClient(server.app)
     sid = client.get("/api/sessions").json()["sessions"][0]["id"]
     ov = client.get(f"/api/session/{sid}", params={"chans": "muse4", "heart": "none"}).json()
-    assert ov["channels"] == ["T7", "Fp1", "Fp2", "T8"] and ov["chans"] == "muse4" and ov["heart"] == "none"
+    assert ov["channels"] == ["TP9", "AF7", "AF8", "TP10"] and ov["chans"] == "muse4" and ov["heart"] == "none"
     assert len(client.get(f"/api/signal/{sid}", params={"chans": "muse4", "t0": 0, "t1": 60}).json()["lo"]) == 4
     res = client.get(f"/api/analysis/{sid}", params={"chans": "muse4", "heart": "none", "titik": "30"}).json()
-    assert res["channels"] == ["T7", "Fp1", "Fp2", "T8"] and res["hr_source"] is None
+    assert res["channels"] == ["TP9", "AF7", "AF8", "TP10"] and res["hr_source"] is None
     doc = client.get(f"/api/report/{sid}", params={"chans": "muse4", "heart": "ppg", "titik": "30"})
     assert doc.status_code == 200 and doc.content[:2] == b"PK"
+
+
+def test_muse_view_rereferences_to_fpz(tmp_path):
+    """A common signal carried by Fpz (like the Muse reference) disappears after re-referencing."""
+    fs, dur = 256, 30
+    t = np.arange(0, dur, 1 / fs)
+    rng = np.random.default_rng(2)
+    common = 40 * np.sin(2 * np.pi * 6 * t)  # 6 Hz theta present at Fpz and every channel
+    sig = {"Fpz": (fs, common + rng.standard_normal(len(t)))}
+    for lab in ["Fp1", "Fp2", "F7", "F8", "T7", "T8", "P7", "P8", "Cz"]:
+        sig[lab] = (fs, common + 5 * np.sin(2 * np.pi * 10 * t) + rng.standard_normal(len(t)))
+    write_edf(tmp_path / "ref.edf", sig)
+    s = Session(tmp_path / "ref.edf")
+    v = s.view("muse4")
+    assert v.muse_ref == "Fpz" and v.muse_map["AF7"] == "Fp1+F7"
+    theta_all = np.median(s.analyze("", "theta")["segments"][0]["values"][s.ch.index("Fp1")])
+    theta_muse = v.analyze("", "theta")["segments"][0]["values"][1]
+    alpha_muse = v.analyze("", "alpha")["segments"][0]["values"][1]
+    assert theta_muse < theta_all / 50  # the shared 6 Hz is gone
+    assert alpha_muse == pytest.approx(12.5, rel=0.1)  # 10 Hz (5 µV) is not at Fpz, so it stays: 5²/2
