@@ -36,7 +36,7 @@ PYTHONPATH=src python app/server.py --root ~/rekaman --port 8601 --no-browser
 | **Ringkasan** | durasi, mutu EEG (+ % data bersih per kanal), denyut & PRV dahi, denyut & HRV Polar, offset sinkronisasi, penanda |
 | **Kartu ruas** | label kondisi, nilai pita dahi dan z terhadap acuan, denyut, jumlah jendela bersih, peta mini; klik untuk memperbesar ruas; *jadikan acuan* |
 | **Sinyal** | EEG 4 lajur, daya pita per jendela, interval antar-denyut (PPG & Polar); **seret untuk zoom**, klik untuk memilih waktu peta, klik ganda untuk kembali; penanda, batas ruas, dan tooltip nilai |
-| **Peta kepala** | peta **berlapis** (12 pita warna tipis biru → kuning → merah dengan garis kontur halus) untuk jendela waktu pilihan (geser / lebar 10–60 s), mode **Nilai** atau **Perubahan vs acuan** (z); semua peta (termasuk peta mini di kartu ruas) memakai skala warna yang sama |
+| **Peta kepala** | peta **berlapis** (12 pita warna tipis biru → kuning → merah dengan garis kontur halus) untuk jendela waktu pilihan (geser / lebar 10–60 s), mode **Nilai** atau **Perubahan vs acuan** (z); setiap peta (termasuk peta mini di kartu ruas) memakai skala warnanya sendiri agar kontras; angka di elektroda menunjukkan nilainya |
 | **Spektrum** | spektrum 1–40 Hz per ruas (dahi, telinga, atau per kanal) |
 | **Per ruas / Uji antar ruas** | tabel nilai & denyut per ruas; Mann–Whitney berpasangan dengan p Holm dan δ Cliff, Kruskal–Wallis bila ≥ 3 ruas |
 

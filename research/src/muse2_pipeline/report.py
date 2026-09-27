@@ -88,7 +88,7 @@ def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
     ax.set_title(title, fontsize=7)
 
 
-def figure_png(sess: Session, res: dict, scale: str = "shared") -> bytes:
+def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
     """Summary figure; ``scale`` = 'map' (own colour range per head map) or 'shared'."""
     import matplotlib
     matplotlib.use("Agg")
@@ -147,7 +147,7 @@ def figure_png(sess: Session, res: dict, scale: str = "shared") -> bytes:
     return out.getvalue()
 
 
-def report_docx(sess: Session, res: dict, scale: str = "shared") -> bytes:
+def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     from docx import Document
     from docx.shared import Inches, Pt
 

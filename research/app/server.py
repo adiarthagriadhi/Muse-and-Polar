@@ -147,7 +147,7 @@ def export(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", 
 
 @app.get("/api/report/{sid}")
 def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
-         scale: str = "shared"):
+         scale: str = "map"):
     s = session(sid)
     res = s.analyze(titik, band, metric, ref, art)
     return _download(report.report_docx(s, res, scale), f"{s.folder.name}_{band}_laporan.docx",
@@ -156,7 +156,7 @@ def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", re
 
 @app.get("/api/figure/{sid}")
 def figure(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
-           scale: str = "shared"):
+           scale: str = "map"):
     s = session(sid)
     res = s.analyze(titik, band, metric, ref, art)
     return _download(report.figure_png(s, res, scale), f"{s.folder.name}_{band}.png", "image/png")

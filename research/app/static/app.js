@@ -290,19 +290,14 @@ function zOf(v, c) {
   return fin(tv) && fin(m) && fin(sd) ? (tv - m) / sd : null;
 }
 
-function mapScale(extra) {
-  const res = S.res;
-  if (S.mapMode === 'change') {
-    const all = [...res.segments.flatMap((s) => s.z), ...extra].filter(fin).map(Math.abs);
-    const m = Math.max(1, Math.ceil(Math.max(0, ...all) * 2) / 2);
-    return { vmin: -m, vmax: m, scheme: 'div' };
-  }
-  const tf = res.metric === 'abs' ? toLog : (v) => v;
-  const all = [...res.segments.flatMap((s) => s.values), ...extra].map(tf).filter(fin);
-  if (!all.length) return { vmin: 0, vmax: 1, scheme: 'seq' };
+// Each head map uses its own colour range (as the original app), so every map shows
+// its full set of layers; the numbers at the electrodes carry the actual values.
+function mapScale(drawn) {
+  const all = Object.values(drawn).filter(fin);
+  if (!all.length) return { vmin: 0, vmax: 1 };
   let lo = Math.min(...all), hi = Math.max(...all);
-  if (hi - lo < 1e-9) { lo -= 0.5; hi += 0.5; }
-  return { vmin: lo, vmax: hi, scheme: 'seq' };
+  if (hi - lo < 1e-6) { const pad = S.mapMode === 'change' ? 0.25 : 0.5; lo -= pad; hi += pad; }
+  return { vmin: lo, vmax: hi };
 }
 function mapInput(valuesByCh) {
   // values as drawn: z (change), log10 power (absolute) or percent (relative)
@@ -323,8 +318,7 @@ function updateMap() {
   const segDrawn = res.segments.map((s) => (S.mapMode === 'change'
     ? Object.fromEntries(CH.map((c, i) => [c, s.z[i]]))
     : mapInput(Object.fromEntries(CH.map((c, i) => [c, s.values[i]])))));
-  const extra = S.mapMode === 'change' ? Object.values(drawn) : Object.values(values);
-  const sc = mapScale(extra);
+  const sc = mapScale(drawn);
   const fmt = labelFmt();
   drawTopo($('mapBig'), drawn, { ...sc, showValues: true, fmt });
   const T1 = Math.min(dur(), S.mapT + S.mapWin);
@@ -339,8 +333,8 @@ function updateMap() {
   const ticks = cb.querySelectorAll('.ticks span');
   [sc.vmin, (sc.vmin + sc.vmax) / 2, sc.vmax].forEach((v, i) => { ticks[i].textContent = fmt(v); });
   cb.querySelector('.cap').textContent = S.mapMode === 'change'
-    ? 'z terhadap ruas acuan · biru = turun, kuning = tetap, merah = naik · skala sama untuk semua peta'
-    : `${res.band} (${unitTxt()})${res.metric === 'abs' ? ' · lapisan pada skala log' : ''} · biru = rendah, merah = tinggi · skala sama untuk semua peta`;
+    ? 'z terhadap ruas acuan · skala per peta: biru = terendah, merah = tertinggi di peta ini'
+    : `${res.band} (${unitTxt()})${res.metric === 'abs' ? ' · lapisan pada skala log' : ''} · skala per peta: biru = terendah, merah = tertinggi`;
 
   const rows = [h('tr', {}, h('th', {}, 'Kanal'), h('th', { style: 'text-align:right' }, unitTxt()), h('th', { style: 'text-align:right' }, 'z vs acuan'), h('th', { style: 'text-align:right' }, 'jendela'))];
   CH.forEach((c, i) => rows.push(h('tr', {},
@@ -382,7 +376,7 @@ function renderSegCards(segDrawn, sc, fmt) {
       setView(s.t0, s.t1);
       S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
     });
-    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...sc, labels: false, fmt }));
+    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...mapScale(segDrawn[k]), labels: false, fmt }));
     return card;
   });
   $('segCards').replaceChildren(...cards);
