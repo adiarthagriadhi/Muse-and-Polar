@@ -89,11 +89,15 @@
   <div class="card mapcard">
     <div class="card-head">
       <h2>Peta kepala</h2>
-      <div class="seg sm" id="mapModeSeg" role="radiogroup">
+      <div class="seg sm mapModeSeg" role="radiogroup" aria-label="Isi peta">
         <button data-v="value" class="on" title="Nilai daya pita">Nilai</button>
         <button data-v="change" title="Perubahan terhadap ruas acuan (z)">Perubahan vs acuan</button>
       </div>
     </div>
+    <div class="row"><select class="topoScaleSel" aria-label="Skala warna peta" title="Skala warna peta">
+      <option value="map">Skala per peta (kontras)</option>
+      <option value="shared">Skala sama (bisa dibandingkan)</option>
+    </select></div>
     <p class="map-title" id="mapTitle">–</p>
     <div class="topo-wrap"><canvas id="mapBig" width="320" height="320" aria-label="Peta kepala"></canvas></div>
     <div class="colorbar" id="colorbar"><div class="bar"></div><div class="ticks"><span></span><span></span><span></span></div><div class="cap"></div></div>
@@ -116,6 +120,23 @@
     <div class="chart" id="chPsd" style="--h:210px"></div>
   </div>
   </div>
+</section>
+
+<section class="card topo-card" aria-label="Topografi per ruas">
+  <div class="card-head">
+    <h2>Topografi per ruas <span class="muted" id="topoInfo"></span></h2>
+    <div class="tools">
+      <div class="seg sm mapModeSeg" role="radiogroup" aria-label="Isi peta">
+        <button data-v="value" class="on" title="Nilai daya pita">Nilai</button>
+        <button data-v="change" title="Perubahan terhadap ruas acuan (z)">Perubahan vs acuan</button>
+      </div>
+      <select class="topoScaleSel" aria-label="Skala warna peta" title="Skala warna peta">
+        <option value="map">Skala per peta (kontras)</option>
+        <option value="shared">Skala sama (bisa dibandingkan)</option>
+      </select>
+    </div>
+  </div>
+  <div class="topo-grid" id="topoGrid"></div>
 </section>
 
 <section class="bottom">
@@ -153,7 +174,8 @@
         digeser dengan hasil sinkronisasi gerak bila ada. Interval di luar 35–180 bpm atau berbeda &gt; 25 % dari median sekitarnya
         dianggap tidak valid. PRV dahi ≠ HRV Polar.</p>
       <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
-        Semua peta memakai skala warna yang sama agar bisa dibandingkan.</p>
+        Peta dibuat berlapis (7 pita warna, biru = rendah, merah = tinggi). <i>Skala per peta</i> memberi kontras
+        maksimum di tiap peta (seperti tampilan lama); <i>skala sama</i> dipakai bila peta antar ruas ingin dibandingkan warnanya.</p>
     </div>
   </details>
 </section>

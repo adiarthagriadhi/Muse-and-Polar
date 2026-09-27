@@ -34,6 +34,7 @@ app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
 STATE = {"default_root": DEFAULT_RECORDINGS}
 FOLDERS: dict[str, Path] = {}  # session id -> folder
+ROOTS: set[Path] = set()  # folders scanned so far (rescanned when an unknown id is requested)
 CACHE: OrderedDict[str, tuple[float, Session]] = OrderedDict()
 CACHE_SIZE = 4
 LOCK = threading.Lock()
@@ -44,6 +45,7 @@ def _sid(folder: Path) -> str:
 
 
 def _scan(root: Path) -> list[dict]:
+    ROOTS.add(Path(root))
     inv = list_samples(root)
     out = []
     if inv is None or inv.empty:
@@ -62,6 +64,11 @@ def _scan(root: Path) -> list[dict]:
 
 def session(sid: str) -> Session:
     folder = FOLDERS.get(sid)
+    if folder is None:  # e.g. server restarted while the page stayed open
+        for root in {STATE["default_root"], *ROOTS}:
+            if Path(root).exists():
+                _scan(root)
+        folder = FOLDERS.get(sid)
     if folder is None or not (folder / "muse_eeg.csv").exists():
         raise HTTPException(404, "Sesi tidak ditemukan. Muat ulang daftar sesi.")
     mtime = (folder / "muse_eeg.csv").stat().st_mtime
@@ -139,18 +146,20 @@ def export(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", 
 
 
 @app.get("/api/report/{sid}")
-def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0):
+def word(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
+         scale: str = "map"):
     s = session(sid)
     res = s.analyze(titik, band, metric, ref, art)
-    return _download(report.report_docx(s, res), f"{s.folder.name}_{band}_laporan.docx",
+    return _download(report.report_docx(s, res, scale), f"{s.folder.name}_{band}_laporan.docx",
                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 
 @app.get("/api/figure/{sid}")
-def figure(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0):
+def figure(sid: str, titik: str = "", band: str = "alpha", metric: str = "abs", ref: int = 0, art: float = 100.0,
+           scale: str = "map"):
     s = session(sid)
     res = s.analyze(titik, band, metric, ref, art)
-    return _download(report.figure_png(s, res), f"{s.folder.name}_{band}.png", "image/png")
+    return _download(report.figure_png(s, res, scale), f"{s.folder.name}_{band}.png", "image/png")
 
 
 def main(argv=None):

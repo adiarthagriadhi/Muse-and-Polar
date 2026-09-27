@@ -424,17 +424,11 @@ export class Chart {
   }
 }
 
-// --- colour scales -----------------------------------------------------------------
+// --- colour scale: layered RdYlBu_r (as in the original matplotlib maps) ------------
 
-const SEQ_LIGHT = ['#cde2fb', '#9ec5f4', '#6da7ec', '#3987e5', '#256abf', '#184f95', '#0d366b'];
-const SEQ_DARK = ['#0d366b', '#184f95', '#256abf', '#3987e5', '#6da7ec', '#9ec5f4', '#cde2fb'];
-const DIV_LIGHT = ['#1c5cab', '#5598e7', '#b7d3f6', '#f0efec', '#f4b8b0', '#e66767', '#b82d2d'];
-const DIV_DARK = ['#9ec5f4', '#5598e7', '#1c5cab', '#383835', '#b82d2d', '#e66767', '#f4b8b0'];
-
-export function scaleStops(scheme) {
-  const d = isDark();
-  return scheme === 'div' ? (d ? DIV_DARK : DIV_LIGHT) : (d ? SEQ_DARK : SEQ_LIGHT);
-}
+// matplotlib "RdYlBu_r": blue = low, yellow = middle, red = high
+const RDYLBU_R = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'];
+export const LEVELS = 7;
 const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
 function colorAt(u, stops) {
   u = Math.max(0, Math.min(1, u));
@@ -442,13 +436,21 @@ function colorAt(u, stops) {
   const a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]);
   return [0, 1, 2].map((k) => Math.round(a[k] + (b[k] - a[k]) * f));
 }
-export const gradientCss = (scheme) => `linear-gradient(90deg, ${scaleStops(scheme).join(', ')})`;
+export const levelColors = (n = LEVELS) => Array.from({ length: n }, (_, k) => colorAt((k + 0.5) / n, RDYLBU_R));
+// colour bar with one hard-edged block per level
+export function layeredCss(n = LEVELS) {
+  const c = levelColors(n).map((rgb) => `rgb(${rgb.join(',')})`);
+  return `linear-gradient(90deg, ${c.map((col, k) => `${col} ${(k / n) * 100}% ${((k + 1) / n) * 100}%`).join(', ')})`;
+}
 
 // --- topomap ---------------------------------------------------------------------
 
 export const POS = { AF7: [-0.5, 0.48], AF8: [0.5, 0.48], TP9: [-0.82, -0.2], TP10: [0.82, -0.2] };
 
-export function drawTopo(canvas, values, { vmin, vmax, scheme = 'seq', labels = true, showValues = false, fmt = fmtNum } = {}) {
+// Layered head map: inverse-distance interpolation of the electrodes (power 3, as the
+// original), cut into `levels` equal colour bands between vmin and vmax, with thin
+// contour lines between bands.
+export function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues = false, fmt = fmtNum, levels = LEVELS } = {}) {
   const d = window.devicePixelRatio || 1;
   const size = canvas.getBoundingClientRect().width || canvas.width;
   const px = Math.max(40, Math.round(size * d));
@@ -456,37 +458,43 @@ export function drawTopo(canvas, values, { vmin, vmax, scheme = 'seq', labels = 
   const ctx = canvas.getContext('2d');
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, px, px);
-  const pad = px * (labels ? 0.1 : 0.06), R = px / 2 - pad, cx = px / 2, cy = px / 2 + (labels ? px * 0.02 : 0);
+  const pad = px * (labels ? 0.1 : 0.07), R = px / 2 - pad, cx = px / 2, cy = px / 2 + (labels ? px * 0.02 : 0);
   const toPx = ([x, y]) => [cx + x * R, cy - y * R];
   const pts = Object.entries(POS).filter(([c]) => values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]));
-  const stops = scaleStops(scheme);
   const lw = Math.max(1, px / 160);
   if (pts.length >= 2 && Number.isFinite(vmin) && Number.isFinite(vmax)) {
-    const n = Math.min(110, Math.round(R));
-    const img = ctx.createImageData(2 * n, 2 * n);
     const span = vmax - vmin || 1;
-    for (let j = 0; j < 2 * n; j++) {
-      for (let i = 0; i < 2 * n; i++) {
-        const x = (i + 0.5) / n - 1, y = 1 - (j + 0.5) / n;
+    const cols = levelColors(levels);
+    const lev = new Int8Array(px * px).fill(-1);
+    const x0 = Math.max(0, Math.floor(cx - R)), x1 = Math.min(px, Math.ceil(cx + R));
+    const y0 = Math.max(0, Math.floor(cy - R)), y1 = Math.min(px, Math.ceil(cy + R));
+    for (let j = y0; j < y1; j++) {
+      const y = (cy - (j + 0.5)) / R;
+      for (let i = x0; i < x1; i++) {
+        const x = (i + 0.5 - cx) / R;
         if (x * x + y * y > 1) continue;
         let ws = 0, vs = 0;
-        for (const [c, [px0, py0]] of pts) {
-          const dd = Math.hypot(x - px0, y - py0) + 1e-6, w = 1 / (dd * dd * dd);
+        for (const [c, [ex, ey]] of pts) {
+          const dd = Math.hypot(x - ex, y - ey) + 1e-6, w = 1 / (dd * dd * dd);
           ws += w; vs += w * values[c];
         }
-        const [r, g, b] = colorAt((vs / ws - vmin) / span, stops);
-        const k = (j * 2 * n + i) * 4;
-        img.data[k] = r; img.data[k + 1] = g; img.data[k + 2] = b; img.data[k + 3] = 255;
+        lev[j * px + i] = Math.max(0, Math.min(levels - 1, Math.floor(((vs / ws - vmin) / span) * levels)));
       }
     }
-    const tmp = document.createElement('canvas');
-    tmp.width = tmp.height = 2 * n;
-    tmp.getContext('2d').putImageData(img, 0, 0);
-    ctx.imageSmoothingEnabled = true;
-    ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.clip();
-    ctx.drawImage(tmp, cx - R, cy - R, 2 * R, 2 * R);
-    ctx.restore();
+    const img = ctx.createImageData(px, px);
+    const edge = isDark() ? 1.6 : 0.62; // contour lines: darker (light theme) / lighter (dark theme)
+    for (let j = y0; j < y1; j++) {
+      for (let i = x0; i < x1; i++) {
+        const q = j * px + i, k = lev[q];
+        if (k < 0) continue;
+        const r = lev[q + 1], dn = j + 1 < px ? lev[q + px] : -1;
+        const line = (r >= 0 && r !== k) || (dn >= 0 && dn !== k);
+        const c = cols[k], o = q * 4;
+        for (let m = 0; m < 3; m++) img.data[o + m] = line ? Math.min(255, c[m] * edge) : c[m];
+        img.data[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
   } else {
     ctx.fillStyle = css('--surface-2');
     ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();

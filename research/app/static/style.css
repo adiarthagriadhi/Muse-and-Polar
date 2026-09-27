@@ -143,15 +143,27 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; color: var(-
 
 /* segment cards */
 .segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
-.seg-card { display: grid; grid-template-columns: 1fr 84px; gap: 4px 10px; padding: 10px 12px; cursor: pointer; }
+.seg-card { display: flex; flex-direction: column; gap: 3px; padding: 10px 12px; cursor: pointer; }
 .seg-card:hover { border-color: var(--axis); }
 .seg-card.ref { background: linear-gradient(0deg, var(--ref-fill), var(--ref-fill)), var(--surface-1); }
 .seg-card .t { font-size: 11px; color: var(--text-secondary); }
 .seg-card .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.seg-card canvas { grid-row: 1 / span 4; grid-column: 2; width: 84px; height: 84px; align-self: center; }
 .seg-card .facts { font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; }
 .seg-card .facts b { color: var(--text-primary); font-weight: 600; }
-.seg-card .arti { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
+.seg-card .arti { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; margin-top: 2px; }
+.topo-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 290px)); gap: 10px; }
+.topo-item {
+  display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 8px 8px;
+  border: 1px solid var(--grid); border-radius: 10px; cursor: pointer; min-width: 0; text-align: center;
+}
+.topo-item:hover { border-color: var(--axis); }
+.topo-item.ref { background: var(--ref-fill); }
+.topo-item .tt { font-size: 12px; font-weight: 600; }
+.topo-item .nm { font-size: 11.5px; color: var(--text-secondary); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.topo-item .label-chip { font-size: 12px; }
+.topo-item canvas { width: 100%; max-width: 250px; aspect-ratio: 1; height: auto; }
+.topo-item .rng { font-size: 11px; color: var(--text-muted); }
+.mapcard .row select { width: 100%; }
 .label-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
 .label-chip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: var(--lab-ind); }
 .label-chip.CALM_RELAXED i { background: var(--lab-calm); }

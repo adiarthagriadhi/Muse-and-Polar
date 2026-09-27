@@ -34,9 +34,10 @@ PYTHONPATH=src python app/server.py --root ~/rekaman --port 8601 --no-browser
 | **Atas** | pilih sesi, pilih folder, unggah ZIP; ekspor **Laporan Word**, **Data CSV** (ZIP), **Gambar** (PNG), **Cetak/PDF**; tema terang/gelap |
 | **Pengaturan** | *Titik observasi* (memotong sesi menjadi ruas; tombol **Pakai penanda** mengisinya dari `marker.csv`), pita δ/θ/α/β, daya **absolut** (µV²) atau **relatif** (% daya 1–40 Hz), **ruas acuan**, **ambang artefak** |
 | **Ringkasan** | durasi, mutu EEG (+ % data bersih per kanal), denyut & PRV dahi, denyut & HRV Polar, offset sinkronisasi, penanda |
-| **Kartu ruas** | label kondisi, nilai pita dahi dan z terhadap acuan, denyut, jumlah jendela bersih, peta mini; klik untuk memperbesar ruas; *jadikan acuan* |
+| **Kartu ruas** | label kondisi, nilai pita dahi dan z terhadap acuan, denyut, jumlah jendela bersih; klik untuk memperbesar ruas; *jadikan acuan* |
 | **Sinyal** | EEG 4 lajur, daya pita per jendela, interval antar-denyut (PPG & Polar); **seret untuk zoom**, klik untuk memilih waktu peta, klik ganda untuk kembali; penanda, batas ruas, dan tooltip nilai |
-| **Peta kepala** | peta untuk jendela waktu pilihan (geser / lebar 10–60 s), mode **Nilai** atau **Perubahan vs acuan** (z); semua peta memakai skala warna yang sama |
+| **Peta kepala** | peta **berlapis** (7 pita warna biru → kuning → merah dengan garis kontur, seperti versi lama) untuk jendela waktu pilihan (geser / lebar 10–60 s); mode **Nilai** atau **Perubahan vs acuan** (z); skala warna **per peta** (kontras maksimum) atau **sama** untuk semua peta |
+| **Topografi per ruas** | satu peta kepala berlapis untuk setiap ruas analisis, lengkap dengan label kondisi dan nilai elektroda; klik untuk memperbesar ruas itu |
 | **Spektrum** | spektrum 1–40 Hz per ruas (dahi, telinga, atau per kanal) |
 | **Per ruas / Uji antar ruas** | tabel nilai & denyut per ruas; Mann–Whitney berpasangan dengan p Holm dan δ Cliff, Kruskal–Wallis bila ≥ 3 ruas |
 

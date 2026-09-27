@@ -63,26 +63,33 @@ def export_zip(sess: Session, res: dict, settings: dict) -> bytes:
     return buf.getvalue()
 
 
-def _topo(ax, scores, vmin, vmax, title):
-    import matplotlib.pyplot as plt
-    from matplotlib.patches import Circle, Polygon
+def _topo(ax, scores, vmin, vmax, title, fmt=lambda v: f"{v:.3g}"):
+    """Layered head map as in the original app: 7 filled RdYlBu_r levels with contour lines."""
+    from matplotlib.patches import Circle, Ellipse, Polygon
 
-    xs, ys, grid = interpolate_brain_activity_idw(scores, grid_size=90)
-    ax.imshow(grid, extent=(xs[0], xs[-1], ys[0], ys[-1]), origin="lower", cmap=plt.get_cmap("Blues"),
-              vmin=vmin, vmax=vmax, interpolation="bilinear")
-    ax.add_patch(Circle((0, 0), 1.0, fill=False, lw=0.8, color="#52514e"))
-    ax.add_patch(Polygon([(-0.12, 0.99), (0, 1.14), (0.12, 0.99)], closed=False, fill=False, lw=0.8, color="#52514e"))
+    xs, ys, grid = interpolate_brain_activity_idw(scores, grid_size=140)
+    xx, yy = np.meshgrid(xs, ys)
+    if vmax - vmin < 1e-9:
+        vmin, vmax = vmin - 0.5, vmax + 0.5
+    levels = np.linspace(vmin, vmax, 8)
+    ax.contourf(xx, yy, grid, levels=levels, cmap="RdYlBu_r", extend="both")
+    ax.contour(xx, yy, grid, levels=levels, colors="k", linewidths=0.25, alpha=0.35)
+    ax.add_patch(Circle((0, 0), 1.0, fill=False, lw=0.8, color="#333"))
+    ax.add_patch(Polygon([(-0.1, 0.995), (0, 1.1), (0.1, 0.995)], closed=False, fill=False, lw=0.8, color="#333"))
+    for sx in (-1, 1):
+        ax.add_patch(Ellipse((sx * 1.03, 0), 0.1, 0.32, fill=False, lw=0.8, color="#333"))
     for ch, (x, y) in BRAIN_MAP_POSITIONS.items():
-        ax.plot(x, y, "o", ms=3, color="#0b0b0b")
-        ax.text(x, y - 0.2, ch, ha="center", va="top", fontsize=6, color="#52514e")
-    ax.set_xlim(-1.2, 1.2)
-    ax.set_ylim(-1.2, 1.2)
+        ax.scatter(x, y, s=10, c="k", zorder=3)
+        ax.text(x, y + 0.13, f"{ch}\n{fmt(scores[ch])}", ha="center", va="bottom", fontsize=5.5, zorder=4)
+    ax.set_xlim(-1.18, 1.18)
+    ax.set_ylim(-1.18, 1.18)
     ax.set_aspect("equal")
     ax.axis("off")
     ax.set_title(title, fontsize=7)
 
 
-def figure_png(sess: Session, res: dict) -> bytes:
+def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
+    """Summary figure; ``scale`` = 'map' (own colour range per head map) or 'shared'."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -119,8 +126,9 @@ def figure_png(sess: Session, res: dict) -> bytes:
         for s in segs:
             if s["i"] == res["ref"]:
                 a.axvspan(s["t0"], s["t1"], color="#8a8983", alpha=0.08, lw=0)
-    # same colour scale for all maps; log10 for absolute power (as in the web view)
+    # log10 for absolute power (as in the web view); labels show the real value
     tf = (lambda v: np.log10(v) if v and v > 0 else None) if res["metric"] == "abs" else (lambda v: v)
+    lab = (lambda v: f"{10 ** v:.3g}") if res["metric"] == "abs" else (lambda v: f"{v:.3g}")
     allv = [tf(v) for s in segs for v in s["values"] if v is not None]
     allv = [v for v in allv if v is not None]
     vmin, vmax = (min(allv), max(allv)) if allv else (0, 1)
@@ -128,7 +136,8 @@ def figure_png(sess: Session, res: dict) -> bytes:
         a = fig.add_subplot(gs[2, i])
         vals = [tf(v) if v is not None else None for v in s["values"]]
         if all(v is not None for v in vals):
-            _topo(a, dict(zip(CH, vals)), vmin, vmax, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}")
+            lo, hi = (min(vals), max(vals)) if scale == "map" else (vmin, vmax)
+            _topo(a, dict(zip(CH, vals)), lo, hi, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}", lab)
         else:
             a.axis("off")
             a.set_title(f"{s['t0']:.0f}–{s['t1']:.0f} s · data kurang", fontsize=7)
@@ -138,7 +147,7 @@ def figure_png(sess: Session, res: dict) -> bytes:
     return out.getvalue()
 
 
-def report_docx(sess: Session, res: dict) -> bytes:
+def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     from docx import Document
     from docx.shared import Inches, Pt
 
@@ -171,7 +180,12 @@ def report_docx(sess: Session, res: dict) -> bytes:
         lines.append(f"Sinkronisasi Muse−Polar: {ov['sync_offset_ms']:+.0f} ms (diterapkan ke data Polar)")
     for ln in lines:
         doc.add_paragraph(ln, style="List Bullet")
-    doc.add_picture(io.BytesIO(figure_png(sess, res)), width=Inches(6.4))
+    doc.add_picture(io.BytesIO(figure_png(sess, res, scale)), width=Inches(6.4))
+    doc.add_paragraph(
+        "Peta kepala berlapis (7 pita, biru = rendah, merah = tinggi); "
+        + ("skala warna per peta (kontras maksimum, bandingkan lewat angka)." if scale == "map"
+           else "skala warna sama untuk semua ruas.")
+    )
 
     doc.add_heading("Per ruas", level=2)
     t = doc.add_table(rows=1, cols=10)

@@ -189,6 +189,12 @@ def test_server_endpoints(client):
     assert doc.status_code == 200 and doc.content[:2] == b"PK"
     assert client.get(f"/api/figure/{sid}").content[:4] == b"\x89PNG"
     assert client.get("/api/session/doesnotexist").status_code == 404
+    for scale in ("map", "shared"):
+        assert client.get(f"/api/figure/{sid}", params={"titik": "60,120", "scale": scale}).content[:4] == b"\x89PNG"
+    # after a server restart the registry is empty: a known id is found again by rescanning
+    import server
+    server.FOLDERS.clear()
+    assert client.get(f"/api/session/{sid}").status_code == 200
 
 
 def test_server_upload_zip(client, tmp_path):
