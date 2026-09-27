@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Muse 2 — Dashboard riset</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%233b6fd8'/%3E%3Ccircle cx='11' cy='13' r='2' fill='white'/%3E%3Ccircle cx='21' cy='13' r='2' fill='white'/%3E%3Ccircle cx='8' cy='20' r='2' fill='white'/%3E%3Ccircle cx='24' cy='20' r='2' fill='white'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #eef1f5;
+      --card: #fff;
+      --line: #e3e7ee;
+      --ink: #1c2430;
+      --muted: #6b7380;
+      --blue: #3b6fd8;
+      --purple: #6b4fd6;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      padding: 12px 16px;
+      overflow: hidden;
+    }
+    .wrap { height: 100%; display: grid; grid-template-rows: auto auto auto 1fr auto; gap: 10px; }
+    .bar, .metrics, .states, .main, .foot { display: grid; gap: 10px; }
+    .bar {
+      grid-template-columns: 1.4fr 110px 1.3fr 80px 1.3fr 1.1fr 140px;
+      align-items: end;
+    }
+    .metrics { grid-template-columns: repeat(6, 1fr); }
+    .states { grid-template-columns: 1fr 1fr; }
+    .main { grid-template-columns: 1.35fr 1fr; min-height: 0; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+    input, select {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px;
+      padding: 6px 8px; font-size: 13px; background: #fafbfe;
+    }
+    .seg { display: flex; gap: 4px; background: #f3f5f9; padding: 3px; border-radius: 10px; }
+    .seg button {
+      border: 0; background: transparent; padding: 5px 10px; border-radius: 8px;
+      font-size: 12px; cursor: pointer; color: var(--muted);
+    }
+    .seg button.on { background: #fff; color: var(--blue); font-weight: 600; box-shadow: 0 1px 2px #0001; }
+    .metric .k { font-size: 11px; color: var(--muted); }
+    .metric .v { font-size: 26px; font-weight: 700; letter-spacing: -0.04em; line-height: 1.1; }
+    .metric .v small { font-size: 12px; font-weight: 500; color: var(--muted); }
+    .st h3 { margin: 0 0 6px; font-size: 18px; letter-spacing: -0.02em; }
+    .st h3 span { color: var(--purple); font-weight: 700; }
+    .st p { margin: 0; font-size: 13px; color: #4a5260; line-height: 1.35; }
+    .plots { display: grid; grid-template-rows: 1.15fr 0.85fr; gap: 8px; min-height: 0; }
+    .maps { display: grid; grid-template-rows: 1.35fr auto; gap: 8px; min-height: 0; }
+    .mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .pane {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      min-height: 0; display: flex; align-items: center; justify-content: center;
+      color: var(--muted); font-size: 12px;
+    }
+    .foot { display: grid; grid-template-columns: 1.4fr 1fr; gap: 10px; align-items: stretch; }
+    .stats {
+      background: #fff; border: 1px solid var(--line); border-radius: 14px;
+      padding: 10px 14px; font-size: 15px;
+    }
+    .stats strong { font-size: 15px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+    .chip {
+      border: 1px solid var(--line); border-radius: 999px; padding: 6px 12px;
+      font-size: 15px; background: #f7f8fb;
+    }
+    .chip b { font-variant-numeric: tabular-nums; font-size: 16px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; color: var(--muted); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+    .btn {
+      border: 1px solid var(--line); background: #fff; border-radius: 10px;
+      padding: 7px 10px; font-size: 12px; cursor: pointer; height: 34px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <div>
+        <label>Folder trials</label>
+        <input id="folder" value="" placeholder="folder trials" />
+      </div>
+      <div>
+        <label>Berkas</label>
+        <button class="btn" style="width:100%">Unggah ZIP</button>
+      </div>
+      <div>
+        <label>Sampel</label>
+        <select id="sample"></select>
+      </div>
+      <div>
+        <label>Titik</label>
+        <input id="titik" value="60" />
+      </div>
+      <div>
+        <label>Pita</label>
+        <div class="seg">
+          <button data-band="delta">delta</button><button data-band="theta">theta</button>
+          <button data-band="alpha" class="on">alpha</button><button data-band="beta">beta</button>
+        </div>
+      </div>
+      <div>
+        <label id="t0lab">Peta (s) 0</label>
+        <input id="t0" type="range" min="0" max="230" value="0" />
+      </div>
+      <div class="card" style="padding:8px 10px">
+        <div class="k" style="font-size:11px;color:var(--muted)">Sesi</div>
+        <div style="font-size:13px">251 s · WARNING/VALID</div>
+      </div>
+    </div>
+
+    <div class="metrics">
+      <div class="card metric"><div class="k">Denyut</div><div class="v" id="m-hr">–</div></div>
+      <div class="card metric"><div class="k">PRV-SDNN</div><div class="v" id="m-sdnn">–</div></div>
+      <div class="card metric"><div class="k">PRV-RMSSD</div><div class="v" id="m-rmssd">–</div></div>
+      <div class="card metric"><div class="k">Durasi</div><div class="v" id="m-dur">–</div></div>
+      <div class="card metric"><div class="k">EEG / PPG</div><div class="v" id="m-qc" style="font-size:16px">–</div></div>
+      <div class="card metric"><div class="k">&gt;80 µV</div><div class="v" id="m-frac">–</div></div>
+    </div>
+
+    <div class="states" id="states"></div>
+
+    <div class="main">
+      <div class="plots">
+        <div class="pane"><img id="img-traces" alt="jejak" style="width:100%;height:100%;object-fit:contain" /></div>
+      </div>
+      <div class="maps">
+        <div class="pane"><img id="img-maps" alt="peta" style="width:100%;height:100%;object-fit:contain" /></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div class="stats">
+        <strong id="stat-title">Uji antar ruas</strong> · Mann–Whitney
+        <div class="chips" id="chips"></div>
+      </div>
+      <div class="card legend">
+        <span title="Otak lebih pelan, denyut tidak naik"><i class="dot" style="background:#3b6fd8"></i>Tenang</span>
+        <span title="Otak lebih siaga, denyut biasa"><i class="dot" style="background:#e0a100"></i>Fokus</span>
+        <span title="Otak/denyut lebih kencang"><i class="dot" style="background:#d23b3b"></i>Teraktivasi</span>
+        <span title="Perubahan terlalu kecil atau campur"><i class="dot" style="background:#6b4fd6"></i>Indeterminan</span>
+        <span title="PRV dahi bukan HRV Polar">PRV ≠ Polar</span>
+      </div>
+    </div>
+  </div>
+<script>
+const $ = (id) => document.getElementById(id);
+let band = "alpha";
+const fmt = (x, d=0) => (x===null || x===undefined || Number.isNaN(x)) ? "–" : Number(x).toFixed(d);
+const fp = (x) => (x===null || x===undefined) ? "n/a" : Number(x).toFixed(3);
+
+function q() {
+  const p = new URLSearchParams({
+    trials: $("folder").value,
+    label: $("sample").value,
+    titik: $("titik").value,
+    band,
+    t0: $("t0").value,
+  });
+  return p.toString();
+}
+
+async function loadSamples() {
+  const r = await fetch("/api/samples?trials=" + encodeURIComponent($("folder").value));
+  const j = await r.json();
+  $("sample").innerHTML = (j.labels||[]).map(l => `<option>${l}</option>`).join("");
+  if (j.labels && j.labels.length) refresh();
+}
+
+async function refresh() {
+  if (!$("sample").value) return;
+  const qs = q();
+  const j = await (await fetch("/api/view?" + qs)).json();
+  if (j.error) {
+    $("states").innerHTML = "<div class='card st'><h3>Gagal hitung</h3><p>"+j.error+"</p></div>";
+    return;
+  }
+  $("m-hr").innerHTML = fmt(j.denyut, 0);
+  $("m-sdnn").innerHTML = fmt(j.sdnn, 0) + " <small>ms</small>";
+  $("m-rmssd").innerHTML = fmt(j.rmssd, 0) + " <small>ms</small>";
+  $("m-dur").innerHTML = fmt(j.tmax, 0) + " <small>s</small>";
+  $("m-qc").textContent = (j.eeg||"-") + " / " + (j.ppg||"-");
+  $("m-frac").textContent = j.frac===null ? "–" : (100*j.frac).toFixed(1) + "%";
+  $("t0").max = Math.max(0, Math.floor((j.tmax||230)-20));
+  $("t0lab").textContent = "Peta (s) " + $("t0").value;
+  $("states").innerHTML = (j.states||[]).map(s => `
+    <div class="card st">
+      <h3>${s.t0.toFixed(0)}–${s.t1.toFixed(0)} s · <span>${s.label}</span></h3>
+      <p>${s.arti} Denyut ${fmt(s.hr,0)} / RMSSD ${fmt(s.rmssd,0)} ms.</p>
+    </div>`).join("");
+  const t = (j.tests||[])[0];
+  $("stat-title").textContent = t ? ("Uji " + t.pair) : "Uji antar ruas";
+  $("chips").innerHTML = t ? [
+    ["Δα", t.d_alpha], ["Δβ", t.d_beta], ["AF7", t.af7], ["AF8", t.af8], ["Asim.", t.asimetri]
+  ].map(([k,v]) => `<span class="chip">${k} <b>p=${fp(v)}</b></span>`).join("") : "";
+  $("img-traces").src = "/api/fig/traces.png?" + qs + "&_=" + Date.now();
+  $("img-maps").src = "/api/fig/maps.png?" + qs + "&_=" + Date.now();
+}
+
+document.querySelectorAll("[data-band]").forEach(b => b.onclick = () => {
+  document.querySelectorAll("[data-band]").forEach(x => x.classList.remove("on"));
+  b.classList.add("on"); band = b.dataset.band; refresh();
+});
+$("sample").onchange = refresh;
+$("titik").onchange = refresh;
+$("t0").oninput = () => { $("t0lab").textContent = "Peta (s) " + $("t0").value; };
+$("t0").onchange = refresh;
+window.addEventListener("load", () => {
+  fetch("/api/samples").then(r=>r.json()).then(j=>{
+    if (j.trials) $("folder").value = j.trials;
+    $("sample").innerHTML = (j.labels||[]).map(l=>`<option>${l}</option>`).join("");
+    if (j.labels && j.labels.length) refresh();
+  });
+});
+</script>
+</body>
+</html>

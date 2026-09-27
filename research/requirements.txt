@@ -1,0 +1,9 @@
+numpy
+pandas
+scipy
+matplotlib
+streamlit
+python-docx
+fastapi
+uvicorn
+python-multipart
