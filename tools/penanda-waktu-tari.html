@@ -351,9 +351,28 @@
     return parseFloat(str) || 0;
   }
 
+  let dragging = false;   // slider sedang digeser pengguna
+  let fixingDuration = false;
+
+  // Durasi yang bisa dipakai: duration jika valid, jika tidak ujung rentang seekable.
+  function knownDuration() {
+    if (isFinite(vid.duration) && vid.duration > 0) return vid.duration;
+    const s = vid.seekable;
+    if (s && s.length && isFinite(s.end(s.length - 1))) return s.end(s.length - 1);
+    return 0;
+  }
+
+  function updateDuration() {
+    const d = knownDuration();
+    seek.max = d > 0 ? d : Math.max(1, vid.currentTime || 0);
+    durLabel.textContent = fmt(d);
+    durationEl.textContent = d > 0 ? "Durasi " + fmt(d) : "";
+  }
+
   function tick() {
     clock.textContent = fmt(vid.currentTime || 0);
-    if (!seek.matches(":active")) seek.value = vid.currentTime || 0;
+    if (!knownDuration() && vid.currentTime > +seek.max) seek.max = vid.currentTime;
+    if (!dragging) seek.value = vid.currentTime || 0;
   }
 
   vid.addEventListener("timeupdate", tick);
@@ -361,9 +380,20 @@
   requestAnimationFrame(function loop() { tick(); requestAnimationFrame(loop); });
 
   vid.addEventListener("loadedmetadata", () => {
-    seek.max = vid.duration || 0;
-    durLabel.textContent = fmt(vid.duration || 0);
-    durationEl.textContent = "Durasi " + fmt(vid.duration || 0);
+    updateDuration();
+    // Sebagian file (mis. .webm hasil rekaman) tidak menyimpan durasi → duration = Infinity.
+    // Loncat jauh ke akhir memaksa browser menghitung durasinya, lalu kembali ke awal.
+    if (!isFinite(vid.duration)) {
+      fixingDuration = true;
+      vid.currentTime = 1e101;
+    }
+  });
+  vid.addEventListener("durationchange", () => {
+    updateDuration();
+    if (fixingDuration && isFinite(vid.duration)) {
+      fixingDuration = false;
+      vid.currentTime = 0;
+    }
   });
 
   file.addEventListener("change", () => {
@@ -371,17 +401,27 @@
     if (!f) return;
     videoName = f.name;
     filenameEl.textContent = f.name;
+    fixingDuration = false;
+    dragging = false;
     const url = URL.createObjectURL(f);
     vid.src = url;
     vid.play().catch(() => {});
   });
 
-  seek.addEventListener("input", () => { vid.currentTime = +seek.value; });
+  // Tandai saat slider digeser agar tick() tidak menimpa posisinya (":active" tidak andal di Safari/layar sentuh).
+  seek.addEventListener("pointerdown", () => { dragging = true; });
+  window.addEventListener("pointerup", () => { dragging = false; });
+  window.addEventListener("pointercancel", () => { dragging = false; });
+  seek.addEventListener("input", () => {
+    vid.currentTime = +seek.value;
+    clock.textContent = fmt(+seek.value);
+  });
+  seek.addEventListener("change", () => { vid.currentTime = +seek.value; dragging = false; });
   speed.addEventListener("change", () => { vid.playbackRate = +speed.value; });
 
   document.getElementById("btnPlay").onclick = () => vid.paused ? vid.play() : vid.pause();
   document.getElementById("btnBack").onclick = () => { vid.currentTime = Math.max(0, vid.currentTime - 1); };
-  document.getElementById("btnFwd").onclick = () => { vid.currentTime = Math.min(vid.duration || 0, vid.currentTime + 1); };
+  document.getElementById("btnFwd").onclick = () => { vid.currentTime = Math.min(knownDuration() || Infinity, vid.currentTime + 1); };
   document.getElementById("btnFrameB").onclick = () => { vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); };
   document.getElementById("btnFrameF").onclick = () => { vid.pause(); vid.currentTime = vid.currentTime + 1/FPS_FALLBACK; };
 
