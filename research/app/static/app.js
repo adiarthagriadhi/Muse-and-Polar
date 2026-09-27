@@ -3,6 +3,15 @@ import { Chart, ChartGroup, css, drawTopo, fmtNum, fmtTime, layeredCss } from '.
 const $ = (id) => document.getElementById(id);
 let CH = ['TP9', 'AF7', 'AF8', 'TP10']; // replaced by the session's channels (Muse 4, EDF 16, ...)
 const SYM = { delta: 'δ', theta: 'θ', alpha: 'α', beta: 'β' };
+// heart data label: Polar (musepolar session or joined Polar Sensor Logger files) or ECG from the file itself
+const heartShort = () => (S.ov && (S.ov.kind === 'musepolar' || S.ov.polar_info) ? 'Polar' : 'EKG');
+function polarNote(ov) {
+  const p = ov.polar_info; if (!p) return '';
+  const src = p.source === 'ECG' ? 'EKG .txt' : 'RR .txt';
+  if (p.aligned !== 'clock') return ` · ${src}, disejajarkan di awal (EEG tanpa jam)`;
+  const d = p.start_diff_s + (ov.pshift || 0);
+  return ` · ${src}, mulai ${Math.abs(d).toFixed(1)} s ${d < 0 ? 'sebelum' : 'sesudah'} EEG`;
+}
 const KIND_LABEL = { edf: 'EDF', csv: 'CSV', lsl: 'CSV (format lama)' };
 const mLabel = (m) => (S.res && S.res.measure_labels && S.res.measure_labels[m]) || m;
 const store = {
@@ -12,7 +21,7 @@ const store = {
 
 const S = {
   root: '', sessions: [], sid: null, ov: null, res: null,
-  set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100, chans: 'all', heart: 'all' },
+  set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100, chans: 'all', heart: 'all', pshift: 0 },
   mapT: 0, mapWin: 20, mapMode: 'value', measure: 'AF', psdCh: 'AF',
   anaReq: 0, sigReq: 0,
 };
@@ -175,7 +184,8 @@ async function selectSession(sid, keep = false) {
   S.sid = sid;
   store.set('sid', sid);
   let ov;
-  const q = `chans=${S.set.chans}&heart=${S.set.heart}`;
+  if (!keep) { S.set.pshift = 0; $('pshift').value = 0; }
+  const q = `chans=${S.set.chans}&heart=${S.set.heart}&pshift=${S.set.pshift}`;
   try { ov = await api(`/api/session/${sid}?${q}`); } catch (e) { toast(e.message); return; }
   if (S.sid !== sid) return;
   S.ov = ov;
@@ -234,10 +244,11 @@ function renderSourceControls() {
   const hs = $('heartSel');
   hs.querySelector('[value=ppg]').disabled = !o.ppg;
   hs.querySelector('[value=ecg]').disabled = !o.ecg;
-  const hn = S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar';
+  const hn = heartShort();
   hs.querySelector('[value=all]').textContent = `PPG + ${hn}`;
   hs.querySelector('[value=ecg]').textContent = `Hanya ${hn}`;
   hs.value = S.set.heart;
+  $('pshiftField').hidden = !S.ov.polar_info;
   $('chansInfo').textContent = o.muse4 && eff === 'muse4' && o.n_all > 4
     ? `${Object.entries(o.muse4).map(([m, c]) => `${m}=${c}`).join(' · ')} · ref ${o.muse_ref || 'asli'}` : '';
 }
@@ -246,6 +257,11 @@ $('chansSeg').addEventListener('click', (e) => {
   if (!b || b.disabled || !S.sid || b.dataset.v === S.set.chans) return;
   S.set.chans = b.dataset.v; store.set('chans', S.set.chans);
   selectSession(S.sid, true);
+});
+$('pshift').addEventListener('change', (e) => {
+  const v = Math.max(-600, Math.min(600, +e.target.value || 0));
+  e.target.value = v; S.set.pshift = v;
+  if (S.sid) selectSession(S.sid, true);
 });
 $('heartSel').addEventListener('change', (e) => {
   S.set.heart = e.target.value; store.set('heart', S.set.heart);
@@ -258,7 +274,7 @@ S.set.heart = ['ppg', 'ecg', 'none'].includes(store.get('heart')) ? store.get('h
 const runAnalysis = debounce(async () => {
   if (!S.sid) return;
   const req = ++S.anaReq;
-  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart });
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart, pshift: S.set.pshift });
   try {
     const res = await api(`/api/analysis/${S.sid}?${q}`);
     if (req !== S.anaReq) return;
@@ -337,8 +353,8 @@ function renderKpis() {
       hp.ok ? `PRV-RMSSD ${fmtNum(hp.rmssd, 2)} ms · valid ${Math.round((hp.valid_frac || 0) * 100)}%`
         : (['ecg', 'none'].includes(ov.heart) && ov.options.ppg ? 'tidak dipakai (pilihan Data jantung)'
           : q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
-    kpi(ov.kind !== 'musepolar' ? 'Denyut EKG' : 'Polar H10', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
-      hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms`
+    kpi(heartShort() === 'Polar' ? 'Polar H10' : 'Denyut EKG', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
+      hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms${polarNote(ov)}`
         : (['ppg', 'none'].includes(ov.heart) && ov.options.ecg ? 'tidak dipakai (pilihan Data jantung)' : 'tidak direkam')),
     ov.kind !== 'musepolar'
       ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `dari ${ov.options.n_all} @ ${fmtNum(ov.fs, 3)} Hz`)],
@@ -434,7 +450,7 @@ function updateMap() {
 
 // --- segment cards ------------------------------------------------------------------
 function heartOf(s) {
-  if (s.polar && s.polar.ok) return { src: S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar', ...s.polar };
+  if (s.polar && s.polar.ok) return { src: heartShort(), ...s.polar };
   if (s.ppg && s.ppg.ok) return { src: 'PPG', ...s.ppg };
   return null;
 }
@@ -475,7 +491,7 @@ function td(v, cls) { return h('td', { class: cls || (v === '–' ? 'na' : null)
 function renderSegTable() {
   const res = S.res;
   $('segUnit').textContent = `nilai kanal = median daya ${SYM[res.band]} ${res.band} (${unitTxt()}) pada jendela bersih`;
-  const hn = S.ov.kind !== 'musepolar' ? 'EKG' : 'Polar';
+  const hn = heartShort();
   const cols = ['Ruas', 'Nama', `Jendela bersih ${res.pair_label}`, ...CH, ...(res.pair ? [`Asimetri ${res.pair_label}`] : []),
     'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Kondisi'];
   const head = h('tr', {}, ...cols.map((t, i) => h('th', { class: i === 1 || i === cols.length - 1 ? 'l' : null }, t)));
@@ -635,8 +651,14 @@ async function openLocal(files, what) {
   if (!files || !files.length) return;
   busy(true);
   try {
-    const data = await window.ENGINE.addFiles(files);
-    toast(`${data.added.length} rekaman dimuat dari ${what}.` + (data.errors.length ? ` Dilewati: ${data.errors.join('; ')}` : ''), 'info');
+    const data = await window.ENGINE.addFiles(files, S.sid);
+    if (data.attachedTo) { // only Polar files: joined to the open recording
+      toast('Data Polar digabung ke rekaman yang sedang dibuka.' + (data.errors.length ? ` ${data.errors.join('; ')}` : ''), 'info');
+      await selectSession(data.attachedTo, true);
+      return;
+    }
+    toast(`${data.added.length} rekaman dimuat dari ${what}.` + (data.polarJoined.length ? ` Data Polar digabung ke ${data.polarJoined.length} rekaman.` : '')
+      + (data.errors.length ? ` Dilewati: ${data.errors.join('; ')}` : ''), 'info');
     applySessionList(data, true);
     const first = data.sessions.find((x) => x.id === data.added[0]);
     if (first) { $('sessionSel').value = first.id; selectSession(first.id); }
@@ -688,7 +710,7 @@ $('zipInput').addEventListener('change', async (e) => {
 });
 document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
   if (!S.sid) return;
-  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart });
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart, pshift: S.set.pshift });
   if (ARTIFACT) {
     busy(true);
     window.ENGINE.exportText(S.sid, Object.fromEntries(q)).then(async (text) => {

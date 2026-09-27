@@ -115,6 +115,22 @@ Pasangan frontal untuk asimetri dan label kondisi dipilih otomatis: F3/F4, lalu 
 Dengan lebih dari 4 kanal, lajur EEG diwarnai per area kepala dan grafik daya pita menampilkan rata-rata per area
 (frontal, sentral, temporal, parietal, oksipital); tabel dan uji tetap per kanal.
 
+### File Polar Sensor Logger (.txt)
+
+Aplikasi Android *Polar Sensor Logger* menyimpan satu file `.txt` (dipisah `;`) per aliran, mis.
+`Polar_H10_XXXX_20260920_081500_RR.txt`, `..._ECG.txt`, `..._HR.txt`, `..._ACC.txt`, `..._MARKER.txt`.
+File ini tidak dianalisis sendiri, tetapi **digabung dengan rekaman EEG**:
+
+- Pilih file EEG (EDF/CSV/ZIP) bersama file `_RR.txt` (dan/atau `_ECG.txt`, `_MARKER.txt`), atau letakkan semuanya
+  di satu folder. File Polar saja yang dibuka belakangan ditempelkan ke sesi yang sedang terbuka.
+- Pasangan dicari dari jam: *Phone timestamp* (waktu lokal) dibandingkan dengan jam mulai EEG, dan dipilih rekaman
+  Polar yang paling banyak tumpang tindih. Bila EEG tidak punya jam dan hanya ada satu set Polar, awal keduanya
+  disejajarkan.
+- Interval RR dipakai langsung (beberapa interval dalam satu paket disebar mundur dari waktu paket). `_ECG.txt`
+  hanya dipakai bila tidak ada file RR; puncak R lalu dideteksi. `HR`/`ACC` diabaikan; penanda menjadi garis
+  “Polar: …”.
+- Kotak **Geser Polar** (detik) mengoreksi selisih jam ponsel dan perekam EEG.
+
 ## Metode
 
 - **EEG.** Notch 50 Hz + bandpass 1–40 Hz. Spektrum dihitung pada potongan 2 s (Hann, geser 0,25 s).
@@ -145,6 +161,7 @@ research/
   src/muse2_pipeline/
     io.py                  baca sesi musepolar dan file EDF, sinkronisasi Polar
     csvload.py             file CSV EEG lain (Mind Monitor, muselsl, OpenBCI, format lama, CSV umum)
+    polar.py               file .txt Polar Sensor Logger (RR, ECG, penanda), dicocokkan ke EEG lewat jam
     edf.py                 pembaca/penulis EDF, EDF+ (anotasi) dan BDF tanpa dependensi tambahan
     montage.py             nama & posisi elektroda 10-20/10-10, pasangan frontal, area kepala
     eeg.py                 filter, spektrum potongan & jendela (plus fungsi lama)

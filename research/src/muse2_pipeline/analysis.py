@@ -135,7 +135,7 @@ class Session:
         self.all_ch = list(self.ch)
         self.has_ppg_data = len(self.ppg["t"]) > 0
         self.has_heart_data = len(self.polar["t"]) > 0
-        self.chans, self.heart = "all", "all"
+        self.chans, self.heart, self.pshift = "all", "all", 0.0
         self.muse_map = None  # {Muse sensor: source description} in the Muse-like 4-channel view
         self.muse_ref = None  # 'Fpz' when re-referenced like Muse, else None (file reference kept)
         self._views: dict[tuple, "Session"] = {}
@@ -187,7 +187,7 @@ class Session:
         v._eeg_x = df[v.ch].to_numpy(float)
         v._setup_channels()
 
-    def view(self, chans: str = "all", heart: str = "all") -> "Session":
+    def view(self, chans: str = "all", heart: str = "all", pshift: float = 0.0) -> "Session":
         """The same recording restricted to a channel set and heart sources.
 
         chans: 'all' or 'muse4' (the 4 channels nearest to the Muse 2 sensors: AF7/AF8/TP9/TP10).
@@ -195,9 +195,10 @@ class Session:
         """
         chans = "muse4" if chans == "muse4" else "all"
         heart = heart if heart in ("ppg", "ecg", "none") else "all"
-        if (chans, heart) == ("all", "all"):
+        pshift = round(float(pshift or 0.0), 3)
+        if (chans, heart, pshift) == ("all", "all", 0.0):
             return self
-        key = (chans, heart)
+        key = (chans, heart, pshift)
         if key not in self._views:
             v = copy.copy(self)
             v._views = {}
@@ -208,6 +209,9 @@ class Session:
                     self._to_muse(v, src)
                 elif len(self.ch) <= 4:
                     v.chans = "muse4"  # already 4 channels
+            if pshift and len(self.polar["t"]):  # manual correction of the Polar clock (seconds)
+                v.polar = {**self.polar, "t": np.asarray(self.polar["t"]) + pshift}
+            v.pshift = pshift
             empty = {"t": np.array([]), "ibi": np.array([]), "valid": np.array([], bool)}
             if heart in ("ppg", "none"):
                 v.polar, v.has_polar = empty, False
@@ -245,7 +249,8 @@ class Session:
             "pair": list(self.pair) if self.pair else None,
             "pair_label": self.pair_label,
             "heart_name": self.heart_name,
-            "chans": self.chans, "heart": self.heart,
+            "chans": self.chans, "heart": self.heart, "pshift": self.pshift,
+            "polar_info": s.get("polar_info"),
             "options": {
                 "n_all": len(self.all_ch),
                 "muse4": muse_equivalent(self.all_ch) if len(self.all_ch) > 4 else {c: c for c in self.all_ch},

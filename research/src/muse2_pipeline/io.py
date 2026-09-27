@@ -98,7 +98,7 @@ def marker_titik(markers: pd.DataFrame, skip_prefix: str = "SYNC") -> str:
     if markers is None or not len(markers):
         return ""
     m = markers[~markers["label"].astype(str).str.startswith(skip_prefix)]
-    return ", ".join(f"{t:.0f}" for t in m["time_s"] if t > 0)
+    return ", ".join(dict.fromkeys(f"{t:.0f}" for t in m["time_s"] if t > 0))  # same second once
 
 
 def sync_offset(meta: dict) -> float | None:
@@ -246,6 +246,42 @@ def _edf_patient(field: str) -> str:
 
 
 def load_recording(path: Path) -> dict:
+    """Load a recording (see _load_any) and join Polar Sensor Logger files found next to it."""
+    rec = _load_any(Path(path))
+    rec.setdefault("abs_start", None)
+    rec["polar_info"] = None
+    if rec["kind"] != "musepolar":  # musepolar sessions carry their own Polar RR
+        attach_polar(rec, Path(path).parent if Path(path).is_file() else Path(path))
+    return rec
+
+
+def attach_polar(rec: dict, folder: Path, sets: list[dict] | None = None) -> None:
+    """Use the Polar recording that overlaps this EEG recording in clock time as its heart data.
+
+    Without a clock time on the EEG side, a single Polar recording in the folder is aligned at the start.
+    """
+    from .polar import best_match, polar_sets_in
+
+    sets = polar_sets_in(folder) if sets is None else sets
+    if not sets:
+        return
+    dur = float(rec["eeg_f"]["time_s"].iloc[-1])
+    s, aligned = best_match(sets, rec["abs_start"], dur), "clock"
+    if s is None and rec["abs_start"] is None and len(sets) == 1:
+        s, aligned = sets[0], "start"
+    if s is None:
+        return
+    origin = rec["abs_start"] if aligned == "clock" else s["t_first"]
+    rec["rr"] = pd.DataFrame({"time_s": s["t"] - origin, "rr_ms": s["rr_ms"]})
+    rec["heart_name"] = "Polar H10"
+    extra = pd.DataFrame([(t - origin, f"Polar: {lab}") for t, lab in s["markers"]], columns=["time_s", "label"])
+    if len(extra):
+        rec["markers"] = pd.concat([rec["markers"], extra], ignore_index=True).sort_values("time_s", ignore_index=True)
+    rec["polar_info"] = {"name": s["name"], "source": s["source"], "aligned": aligned,
+                         "start_diff_s": round(float(s["t_first"] - origin), 3)}
+
+
+def _load_any(path: Path) -> dict:
     """Load a musepolar folder or an EDF/BDF file into one common structure.
 
     Keys: kind, participant, condition, channels, fs, eeg_f (time_s + filtered channels),
@@ -264,7 +300,7 @@ def load_recording(path: Path) -> dict:
     if path.is_dir():
         s = load_sample(path, legacy_bp=False)
         return {**s, "kind": "musepolar", "channels": list(CH), "fs": FS_EEG, "ppg_fs": FS_PPG,
-                "heart_name": "Polar RR", "label": path.name}
+                "heart_name": "Polar RR", "label": path.name, "abs_start": s["t_origin"]}
     return _load_edf(path)
 
 
@@ -332,4 +368,5 @@ def _load_edf(path: Path) -> dict:
         "kind": "edf", "label": path.name, "participant": meta["name"], "condition": "",
         "channels": channels, "fs": fs, "eeg_f": eeg_f, "ppg": ppg_df, "ppg_fs": pfs, "rr": rr,
         "heart_name": "EKG (EDF)", "markers": markers, "sync_offset": None, "meta": meta, "folder": path,
+        "abs_start": d["start"].timestamp() if d["start"] else None,  # EDF start is local clock time
     }

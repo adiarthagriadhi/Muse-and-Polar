@@ -171,10 +171,11 @@ def from_table(df: pd.DataFrame, label: str, stem: str, rate: float | None = Non
     ppg_col = next((c for c in cols if re.search(r"PPG|PLETH", c, flags=re.I)), None)
 
     t_all = to_seconds(df[tcol], tcol) if tcol else None
-    start_dt = None
+    start_dt = first_epoch = None
     if tcol is not None and pd.to_numeric(df[tcol], errors="coerce").notna().mean() <= 0.9:
         first = pd.to_datetime(df[tcol].astype(str).str.strip(), errors="coerce").dropna()
         start_dt = first.iloc[0].isoformat(timespec="seconds") if len(first) else None
+        first_epoch = first.iloc[0].to_pydatetime().timestamp() if len(first) else None  # local clock
     markers = []
     if mcol is not None and t_all is not None:
         for t, lab in zip(t_all, df[mcol]):
@@ -237,6 +238,8 @@ def from_table(df: pd.DataFrame, label: str, stem: str, rate: float | None = Non
         "markers": pd.DataFrame([(tt - t0, s) for tt, s in markers], columns=["time_s", "label"]) if markers
         else pd.DataFrame({"time_s": [], "label": []}),
         "sync_offset": None, "meta": meta, "folder": None,
+        # absolute clock time of the first sample (Unix s) when the file has one: epoch stamps or local date-times
+        "abs_start": (first_epoch + t0) if first_epoch is not None else (t0 if t0 > 1e8 else None),
     }
 
 

@@ -446,7 +446,7 @@ const ENGINE = (() => {
     return [0, ...[...new Set(v)].sort((a, b) => a - b), tmax];
   }
   function markerTitik(markers) {
-    return markers.filter((m) => !String(m.label).startsWith('SYNC') && m.t > 0).map((m) => Math.round(m.t)).join(', ');
+    return [...new Set(markers.filter((m) => !String(m.label).startsWith('SYNC') && m.t > 0).map((m) => Math.round(m.t).toFixed(0)))].join(', ');
   }
 
   class Session {
@@ -461,7 +461,7 @@ const ENGINE = (() => {
       this.polar = rec.rr ? cleanIbi(Array.from(rec.rr.t), Array.from(rec.rr.ms, (v) => v / 1000)) : EMPTY;
       this.hasPolar = this.polar.valid.filter(Boolean).length >= 20;
       this.hasPpgData = this.ppg.t.length > 0; this.hasHeartData = this.polar.t.length > 0;
-      this.chans = 'all'; this.heart = 'all'; this.museMap = null; this.museRefCh = null; this.views = {};
+      this.chans = 'all'; this.heart = 'all'; this.pshift = 0; this.museMap = null; this.museRefCh = null; this.views = {};
       this.setupChannels();
     }
     setupChannels() {
@@ -482,10 +482,11 @@ const ENGINE = (() => {
       if (!this.specs[key]) { if (Object.keys(this.specs).length > 6) this.specs = {}; this.specs[key] = windowSpectra(this.sub, key); }
       return this.specs[key];
     }
-    view(chans, heart) {
+    view(chans, heart, pshift = 0) {
       chans = chans === 'muse4' ? 'muse4' : 'all'; heart = ['ppg', 'ecg', 'none'].includes(heart) ? heart : 'all';
-      if (chans === 'all' && heart === 'all') return this;
-      const key = chans + '|' + heart;
+      pshift = Math.round((+pshift || 0) * 1000) / 1000;
+      if (chans === 'all' && heart === 'all' && !pshift) return this;
+      const key = chans + '|' + heart + '|' + pshift;
       if (this.views[key]) return this.views[key];
       const v = Object.assign(Object.create(Session.prototype), this);
       v.views = {}; v.chans = chans; v.heart = heart;
@@ -503,6 +504,8 @@ const ENGINE = (() => {
           v.setupChannels();
         }
       }
+      if (pshift && this.polar.t.length) v.polar = { ...this.polar, t: this.polar.t.map((x) => x + pshift) }; // Polar clock correction
+      v.pshift = pshift;
       if (heart === 'ppg' || heart === 'none') { v.polar = EMPTY; v.hasPolar = false; }
       if (heart === 'ecg' || heart === 'none') v.ppg = EMPTY;
       return (this.views[key] = v);
@@ -513,6 +516,7 @@ const ENGINE = (() => {
         name: r.participant, note: r.condition, folder: r.id, label: r.label, kind: r.kind, fs: this.fs,
         start: r.start, duration: num(this.tmax, 6), channels: this.ch, positions: positions(this.ch), regions: regions(this.ch),
         pair: this.pair, pair_label: this.pairLabel, heart_name: r.heartName, chans: this.chans, heart: this.heart,
+        pshift: this.pshift, polar_info: r.polarInfo || null,
         options: {
           n_all: this.allCh.length,
           muse4: this.allCh.length > 4 ? museEquivalent(this.allCh) : Object.fromEntries(this.allCh.map((c) => [c, c])),
@@ -756,6 +760,7 @@ const ENGINE = (() => {
       rr, heartName: 'EKG (EDF)', markers: d.ann, syncOffset: null,
       quality: { eeg: { status: 'VALID', rate_hz: fs }, ppg: { status: ppg ? 'VALID' : '-', rate_hz: ppg ? ppg.fs : null } },
       nChannels: chans.length, duration: n / fs, hasPpg: !!ppg, hasHeart: !!ecg,
+      absStart: d.start ? Date.parse(d.start) / 1000 : null, // EDF start is local clock time
     };
   }
   function parseCSV(text) {
@@ -804,6 +809,7 @@ const ENGINE = (() => {
       id, kind: 'musepolar', label: folder, participant: meta.name || folder, condition: meta.note || '', start: meta.start_local || null,
       channels: [...MUSE_CH], fs: 256, t, x: eeg.map((c) => filterEEG(c, 256)), ppg, rr, heartName: 'Polar RR', markers, syncOffset: off,
       quality: { eeg: quality(ts, 256), ppg: pq }, nChannels: 4, duration: t[t.length - 1], hasPpg: !!ppg, hasHeart: !!rr,
+      absStart: t0,
     };
   }
 
@@ -851,7 +857,7 @@ const ENGINE = (() => {
     const ms = vals.map((v) => { const s = v.trim(); return s ? Date.parse(s.replace(' ', 'T')) : NaN; });
     if (ms.filter(fin).length > 0.9 * vals.length) {
       const i0 = ms.findIndex(fin);
-      return { t: ms.map((v) => (v - ms[i0]) / 1000), start: vals[i0].trim().replace(' ', 'T').slice(0, 19) };
+      return { t: ms.map((v) => (v - ms[i0]) / 1000), start: vals[i0].trim().replace(' ', 'T').slice(0, 19), epoch0: ms[i0] / 1000 };
     }
     return null;
   }
@@ -911,6 +917,7 @@ const ENGINE = (() => {
       ppg, rr, heartName: 'EKG (CSV)', markers: markers.map((m) => ({ t: m.t - t0, label: m.label })), syncOffset: null,
       quality: { eeg: quality, ppg: { status: ppg ? 'VALID' : '-', rate_hz: ppg ? ppg.fs : null } },
       nChannels: eeg.length, duration: n / fs, hasPpg: !!ppg, hasHeart: !!rr,
+      absStart: time && fin(time.epoch0) ? time.epoch0 + t0 : (t0 > 1e8 ? t0 : null),
     };
   }
   async function recordingFromLSL(files, dir, id) { // earlier app: EEG_raw.csv + PPG_raw.csv + metadata json
@@ -928,6 +935,87 @@ const ENGINE = (() => {
       meta: { name: part, note: cond, start: meta.start_iso || null } });
   }
 
+  // ---------------------------------------------------------------- Polar Sensor Logger (.txt)
+  // Same rules as src/muse2_pipeline/polar.py: RR file used directly, ECG only when there is no RR,
+  // MARKER file -> markers; joined to the EEG recording that overlaps it in clock time.
+  const POLAR_SETS = [];
+  const polarType = (name, header) => {
+    const m = name.match(/_(RR|ECG|HR|ACC|PPI|MARKER)\.txt$/i); if (m) return m[1].toUpperCase();
+    const h = header.toLowerCase();
+    if (h.includes('rr-interval') || /\brr\b/.test(h)) return 'RR';
+    if (h.includes('ecg')) return 'ECG';
+    if (h.includes('marker')) return 'MARKER';
+    return null;
+  };
+  const polarKey = (path) => path.replace(/_(RR|ECG|HR|ACC|PPI|MARKER)\.txt$/i, '');
+  const localEpoch = (s) => Date.parse(s.trim().replace(' ', 'T')) / 1000;
+  function polarRows(text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const sep = lines[0].split(';').length >= lines[0].split(',').length ? ';' : ',';
+    return [lines[0].split(sep).map((c) => c.trim().toLowerCase()), lines.slice(1).map((l) => l.split(sep))];
+  }
+  function parsePolarRR(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp'), ri = head.findIndex((c) => c.includes('rr'));
+    const ts = [], rr = [];
+    for (const r of rows) { const a = localEpoch(r[ti] || ''), b = parseFloat(r[ri]); if (fin(a) && fin(b)) { ts.push(a); rr.push(b); } }
+    const t = ts.slice();
+    for (let i = t.length - 2; i >= 0; i--) if (ts[i] === ts[i + 1]) t[i] = t[i + 1] - rr[i + 1] / 1000;
+    return { t, rr };
+  }
+  function parsePolarECG(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp');
+    const si = head.findIndex((c) => c.includes('sensor timestamp')), vi = head.findIndex((c) => c.includes('ecg'));
+    let t0 = null; const sens = [], v = [];
+    for (const r of rows) {
+      const a = localEpoch(r[ti] || ''), val = parseFloat(r[vi]);
+      if (!fin(val) || (t0 === null && !fin(a))) continue;
+      if (t0 === null) t0 = a;
+      sens.push(si >= 0 ? parseFloat(r[si]) : NaN); v.push(val);
+    }
+    let t, fs = 130;
+    if (si >= 0 && sens.every(fin) && sens.length > 1) {
+      t = sens.map((x) => t0 + (x - sens[0]) / 1e9);
+      if (t[t.length - 1] > t[0]) fs = (t.length - 1) / (t[t.length - 1] - t[0]);
+    } else t = v.map((_, i) => t0 + i / fs);
+    return { t: Float64Array.from(t), v: Float64Array.from(v), fs };
+  }
+  function parsePolarMarkers(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp'), out = [];
+    for (const r of rows) { const a = localEpoch(r[ti] || ''); if (fin(a)) out.push({ t: a, label: r.filter((_, j) => j !== ti).join(';').trim() || 'marker' }); }
+    return out;
+  }
+  function loadPolarSet(name, files) {
+    let rr, source;
+    if (files.RR) { const p = parsePolarRR(files.RR); rr = { t: p.t, ms: p.rr }; source = 'RR'; }
+    else if (files.ECG) {
+      const e = parsePolarECG(files.ECG), tb = ecgBeats(e.v, e.t, e.fs);
+      if (tb.length < 2) return null;
+      rr = { t: tb.slice(1), ms: tb.slice(1).map((v, i) => (v - tb[i]) * 1000) }; source = 'ECG';
+    } else return null;
+    if (rr.t.length < 2) return null;
+    return { name, source, t: rr.t, ms: rr.ms, markers: files.MARKER ? parsePolarMarkers(files.MARKER) : [],
+      tFirst: rr.t[0] - rr.ms[0] / 1000, tLast: rr.t[rr.t.length - 1] };
+  }
+  function bestPolar(sets, absStart, dur) {
+    if (absStart === null || absStart === undefined || !sets.length) return null;
+    let best = null, bov = 0;
+    for (const s of sets) { const ov = Math.min(absStart + dur, s.tLast) - Math.max(absStart, s.tFirst); if (ov > bov) { best = s; bov = ov; } }
+    return best;
+  }
+  function attachPolar(rec, sets) {
+    let s = bestPolar(sets, rec.absStart, rec.duration), aligned = 'clock';
+    if (!s && (rec.absStart === null || rec.absStart === undefined) && sets.length === 1) { s = sets[0]; aligned = 'start'; }
+    if (!s) return false;
+    const origin = aligned === 'clock' ? rec.absStart : s.tFirst;
+    rec.rr = { t: Float64Array.from(s.t, (v) => v - origin), ms: Float64Array.from(s.ms) };
+    rec.heartName = 'Polar H10'; rec.hasHeart = true;
+    rec.markers = rec.markers.filter((m) => !String(m.label).startsWith('Polar: '))
+      .concat(s.markers.map((m) => ({ t: m.t - origin, label: `Polar: ${m.label}` }))).sort((a, b) => a.t - b.t);
+    rec.polarInfo = { name: s.name, source: s.source, aligned, start_diff_s: +(s.tFirst - origin).toFixed(3) };
+    SESS.delete(rec.id);
+    return true;
+  }
+
   // ---------------------------------------------------------------- registry & requests
   const SESS = new Map(), RECS = [];
   let counter = 0;
@@ -938,11 +1026,13 @@ const ENGINE = (() => {
       .sort((a, b) => String(b.start || '').localeCompare(String(a.start || '')) || b.label.localeCompare(a.label));
   }
   function addRecording(rec) { RECS.push(rec); }
-  async function addFiles(fileList) {
+  async function addFiles(fileList, currentId = null) {
     await yieldUI();
     const byDir = {}, edfs = [], zips = [], errors = [];
+    const polarFiles = [];
     for (const f of fileList) {
       const path = f.webkitRelativePath || f.relPath || f.name, low = path.toLowerCase();
+      if (low.endsWith('.txt') && /phone timestamp/i.test(f.slice ? await f.slice(0, 300).text() : (await f.text()).slice(0, 300))) { polarFiles.push([path, f]); continue; }
       if (low.endsWith('.edf') || low.endsWith('.bdf')) edfs.push(f);
       else if (low.endsWith('.zip')) zips.push(f);
       else { const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '.'; (byDir[dir] = byDir[dir] || {})[path.slice(path.lastIndexOf('/') + 1)] = f; }
@@ -953,9 +1043,19 @@ const ENGINE = (() => {
       for (const [p, e] of Object.entries(zip.files)) {
         if (e.dir) continue;
         const low = p.toLowerCase(), wrap = { name: p.slice(p.lastIndexOf('/') + 1), relPath: p, text: () => e.async('string'), arrayBuffer: () => e.async('arraybuffer') };
-        if (low.endsWith('.edf') || low.endsWith('.bdf')) edfs.push(wrap);
+        if (low.endsWith('.txt') && /phone timestamp/i.test((await wrap.text()).slice(0, 200))) polarFiles.push([p, wrap]);
+        else if (low.endsWith('.edf') || low.endsWith('.bdf')) edfs.push(wrap);
         else { const dir = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '.'; (byDir[dir] = byDir[dir] || {})[wrap.name] = wrap; }
       }
+    }
+    const groups = {}, newSets = [];
+    for (const [path, f] of polarFiles) {
+      const text = await f.text(), typ = polarType(path.split('/').pop(), text.split(/\r?\n/)[0]);
+      if (['RR', 'ECG', 'MARKER'].includes(typ)) (groups[polarKey(path)] = groups[polarKey(path)] || {})[typ] = text;
+    }
+    for (const [key, files] of Object.entries(groups)) {
+      const st = loadPolarSet(key.split('/').pop(), files);
+      if (st) { POLAR_SETS.push(st); newSets.push(st); } else errors.push(`${key.split('/').pop()}: tidak ada interval RR/EKG yang terbaca`);
     }
     const added = [];
     for (const f of edfs) {
@@ -977,8 +1077,22 @@ const ENGINE = (() => {
         }
       } catch (e) { errors.push(`${dir}: ${e.message}`); }
     }
-    if (!added.length) throw new Error(errors[0] || 'Tidak ada rekaman EEG (folder musepolar, file EDF/BDF, atau CSV dengan kolom EEG) di pilihan ini.');
-    return { root: 'browser', exists: true, sessions: sessionList(), added, errors };
+    // join Polar recordings to the EEG recordings they overlap in clock time
+    const polarJoined = [];
+    for (const id of added) {
+      const rec = RECS.find((r) => r.id === id);
+      // by clock among every Polar recording opened so far; without an EEG clock only a single pair chosen together
+      const sets = rec.absStart !== null && rec.absStart !== undefined ? POLAR_SETS : (added.length === 1 ? newSets : []);
+      if (rec.kind !== 'musepolar' && attachPolar(rec, sets)) polarJoined.push(id);
+    }
+    let attachedTo = null;
+    if (!added.length && newSets.length && currentId) { // only Polar files chosen: join them to the open recording
+      const rec = RECS.find((r) => r.id === currentId);
+      if (rec && rec.kind !== 'musepolar' && attachPolar(rec, newSets)) attachedTo = rec.id;
+      else if (rec && rec.kind === 'musepolar') errors.push('Sesi musepolar sudah punya data Polar sendiri.');
+    }
+    if (!added.length && !attachedTo) throw new Error(errors[0] || 'Tidak ada rekaman EEG (folder musepolar, file EDF/BDF, atau CSV dengan kolom EEG) di pilihan ini.');
+    return { root: 'browser', exists: true, sessions: sessionList(), added, errors, attachedTo, polarJoined };
   }
   async function session(id) {
     if (SESS.has(id)) return SESS.get(id);
@@ -991,7 +1105,7 @@ const ENGINE = (() => {
     const u = new URL(path, 'http://x'), q = Object.fromEntries(u.searchParams), parts = u.pathname.split('/').filter(Boolean);
     const kind = parts[1], id = parts[2];
     if (kind === 'sessions') return { root: 'browser', exists: true, sessions: sessionList() };
-    const s = (await session(id)).view(q.chans || 'all', q.heart || 'all');
+    const s = (await session(id)).view(q.chans || 'all', q.heart || 'all', +q.pshift || 0);
     if (kind === 'session') return s.overview();
     if (kind === 'signal') return s.signal(+q.t0 || 0, fin(+q.t1) ? +q.t1 : 1e9, +q.n || 1600);
     if (kind === 'analysis') { await yieldUI(); return s.analyze(q.titik || '', q.band || 'alpha', q.metric || 'abs', +q.ref || 0, +q.art || 100); }
@@ -1001,7 +1115,7 @@ const ENGINE = (() => {
   // ---------------------------------------------------------------- export (ZIP of CSV tables)
   const csvLine = (a) => a.map((v) => (v === null || v === undefined ? '' : typeof v === 'string' && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(',');
   async function exportZip(id, q) {
-    const s = (await session(id)).view(q.chans, q.heart);
+    const s = (await session(id)).view(q.chans, q.heart, +q.pshift || 0);
     const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), spec = s.spec(+q.art), ch = s.ch, nch = s.nch;
     const segHead = ['ruas', 'nama', 't0_s', 't1_s', 'jendela', `jendela_bersih_${res.pair_label}`,
       ...ch.flatMap((c) => [`${c}_${res.band}_${res.metric}`, `${c}_z_vs_acuan`, `${c}_jendela_bersih`]), `asimetri_${res.pair_label}`, 'kondisi',
@@ -1030,7 +1144,7 @@ const ENGINE = (() => {
 
   // Tab-separated tables for the clipboard (paste into Excel/Sheets) - used where downloads are blocked.
   async function exportText(id, q) {
-    const s = (await session(id)).view(q.chans, q.heart);
+    const s = (await session(id)).view(q.chans, q.heart, +q.pshift || 0);
     const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), ch = s.ch;
     const f = (v) => (v === null || v === undefined ? '' : typeof v === 'number' ? String(+v.toPrecision(5)).replace('.', ',') : String(v));
     const rows = [[`Sesi: ${s.rec.participant}`, `Pita: ${res.band} (${res.unit})`, `Ruas acuan: ${res.ref + 1}`], [],
@@ -1082,7 +1196,7 @@ const ENGINE = (() => {
   }
 
   return { handle, addFiles, exportZip, exportText, loadDemo, _internals: { butterBandSOS, notchSOS, filtfilt, filterEEG, subsegmentSpectra, windowSpectra,
-    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, Session, mwTest, kruskal, holm, findPeaks, ppgBeats, ecgBeats, cleanIbi, hrvStats, canonical, position, museSources } };
+    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, loadPolarSet, attachPolar, Session, mwTest, kruskal, holm, findPeaks, ppgBeats, ecgBeats, cleanIbi, hrvStats, canonical, position, museSources } };
 })();
 if (typeof window !== 'undefined') window.ENGINE = ENGINE;
 if (typeof module !== 'undefined') module.exports = ENGINE;

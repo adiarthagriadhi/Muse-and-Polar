@@ -20,7 +20,7 @@
     </label>
     <button class="btn" id="folderBtn" title="Pilih folder rekaman (sesi musepolar dan/atau file EDF)">Folder…</button>
     <input type="file" id="dirInput" webkitdirectory multiple hidden>
-    <label class="btn" title="Buka file EDF/EDF+/BDF, CSV (Mind Monitor, muselsl, OpenBCI, CSV dengan kanal 10-20), atau ZIP berisi rekaman">Buka file<input type="file" id="zipInput" accept=".zip,.edf,.bdf,.csv,.txt" hidden></label>
+    <label class="btn" title="Buka file EDF/EDF+/BDF, CSV (Mind Monitor, muselsl, OpenBCI, CSV dengan kanal 10-20), file .txt Polar Sensor Logger, atau ZIP berisi rekaman. Pilih EEG dan Polar sekaligus untuk menggabungkannya.">Buka file<input type="file" id="zipInput" accept=".zip,.edf,.bdf,.csv,.txt" hidden></label>
     <button class="btn web-only" id="demoBtn" title="Muat dua rekaman contoh (Muse 4 kanal dan EDF 16 kanal)" hidden>Data contoh</button>
   </div>
   <div class="exports" role="group" aria-label="Ekspor">
@@ -69,6 +69,10 @@
       <option value="ecg">Hanya EKG/Polar</option>
       <option value="none">Tanpa data jantung</option>
     </select>
+  </label>
+  <label class="field small" id="pshiftField" hidden title="Koreksi bila jam ponsel Polar berbeda dari jam alat EEG (positif = data Polar digeser ke kanan)">
+    <span>Geser Polar</span>
+    <div class="row unit"><input id="pshift" type="number" step="0.1" value="0"><em>s</em></div>
   </label>
   <label class="field">
     <span>Ruas acuan</span>
@@ -180,6 +184,12 @@
         muselsl (<code>timestamps, TP9…</code>), format aplikasi lama (<code>EEG_raw.csv</code> + <code>PPG_raw.csv</code>), OpenBCI GUI
         (<code>EXG Channel</code>, sample rate dari header), atau CSV apa pun dengan kolom waktu dan kanal bernama 10-20, plus kolom
         ECG/PPG/marker bila ada. Nilai dianggap µV. Frekuensi sampel diambil dari header atau dihitung dari kolom waktu (minimal 100 Hz).</p>
+      <p><b>Polar Sensor Logger (.txt).</b> Pilih file EEG bersama file <code>…_RR.txt</code> (atau <code>…_ECG.txt</code>) dari aplikasi
+        Polar Sensor Logger, atau letakkan dalam satu folder. Data Polar digabung dengan rekaman EEG yang waktunya tumpang tindih,
+        dicocokkan lewat jam (kolom <i>Phone timestamp</i> dan waktu mulai EEG), lalu menjadi sumber denyut dan HRV. Interval RR dipakai
+        langsung; EKG dipakai bila tidak ada file RR. <code>…_MARKER.txt</code> menjadi penanda. Bila jam ponsel dan alat EEG berbeda,
+        koreksi dengan <i>Geser Polar</i>. Bila rekaman EEG tidak punya jam (mis. CSV tanpa waktu), satu file Polar yang dipilih bersamanya
+        disejajarkan di awal. Membuka file Polar saja akan menggabungkannya ke rekaman yang sedang dibuka.</p>
       <p><b>4 kanal (Muse).</b> Rekaman banyak kanal dibuat meniru Muse 2: sensor TP9, AF7, AF8, TP10 dibangun ulang dari elektroda
         di sekitarnya (AF7 = rata-rata Fp1 &amp; F7, AF8 = Fp2 &amp; F8, TP9 = T7 &amp; P7, TP10 = T8 &amp; P8, atau elektrodanya sendiri bila ada),
         lalu dirujuk ulang ke Fpz seperti Muse bila kanal Fpz tersedia. Tampilan, tata letak peta, dan ukuran uji sama dengan sesi Muse.
