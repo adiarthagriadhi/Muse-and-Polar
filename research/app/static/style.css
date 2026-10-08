@@ -26,9 +26,6 @@
   --ref-fill: rgba(122, 121, 115, 0.10);
   --seg-fill: rgba(42, 120, 214, 0.035);
   --win-fill: rgba(42, 120, 214, 0.16);
-  --lab-calm: #1baf7a;
-  --lab-focus: #2a78d6;
-  --lab-active: #e34948;
   --lab-ind: #7a7973;
   --shadow: 0 1px 2px rgba(0, 0, 0, .05);
 }
@@ -41,7 +38,7 @@
     --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
     --marker: #9085e9; --accent: #3987e5;
     --ref-fill: rgba(143, 142, 134, 0.12); --seg-fill: rgba(57, 135, 229, 0.05); --win-fill: rgba(57, 135, 229, 0.22);
-    --lab-calm: #199e70; --lab-focus: #3987e5; --lab-active: #e66767; --lab-ind: #8f8e86;
+    --lab-ind: #8f8e86;
     --shadow: none;
   }
 }
@@ -53,7 +50,7 @@
   --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
   --marker: #9085e9; --accent: #3987e5;
   --ref-fill: rgba(143, 142, 134, 0.12); --seg-fill: rgba(57, 135, 229, 0.05); --win-fill: rgba(57, 135, 229, 0.22);
-  --lab-calm: #199e70; --lab-focus: #3987e5; --lab-active: #e66767; --lab-ind: #8f8e86;
+  --lab-ind: #8f8e86;
   --shadow: none;
 }
 
@@ -153,15 +150,9 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; color: var(-
 .seg-card canvas { grid-row: 1 / span 4; grid-column: 2; width: 84px; height: 84px; align-self: center; }
 .seg-card .facts { font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; }
 .seg-card .facts b { color: var(--text-primary); font-weight: 600; }
-.seg-card .arti { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
 .label-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
 .label-chip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: var(--lab-ind); }
-.label-chip.CALM_RELAXED i { background: var(--lab-calm); }
-.label-chip.FOCUSED_ENGAGED i { background: var(--lab-focus); }
-.label-chip.ACTIVATED_HIGH_AROUSAL i { background: var(--lab-active); }
 .label-chip.REFERENCE i { background: transparent; border: 2px solid var(--text-secondary); }
-.label-chip.NO_DATA i { background: transparent; border: 2px dashed var(--lab-ind); }
-.label-chip.NO_DATA, .label-chip.INDETERMINATE { color: var(--text-secondary); }
 
 /* main area */
 .main { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(300px, 1fr); gap: 12px; align-items: start; }

@@ -158,7 +158,7 @@ for (const p of process.argv.slice(2)) {
   const s = new I.Session(I.recordingFromCSV(fs.readFileSync(p, 'utf8'), require('path').basename(p), 'r'));
   const ov = s.overview(); const a = s.analyze(ov.marker_titik || '45', 'alpha');
   out[require('path').basename(p)] = { fs: ov.fs, ch: ov.channels, mk: ov.marker_titik, start: ov.start,
-    labels: a.segments.map((g) => g.label), values: a.segments.map((g) => g.values) };
+    refs: a.segments.map((g) => g.is_ref), values: a.segments.map((g) => g.values) };
 }
 process.stdout.write(JSON.stringify(out));
 """
@@ -171,6 +171,6 @@ process.stdout.write(JSON.stringify(out));
         a = s.analyze(ov["marker_titik"] or "45", "alpha")
         j = js[n]
         assert j["fs"] == s.fs and j["ch"] == s.ch and j["mk"] == ov["marker_titik"] and j["start"] == ov["start"]
-        assert j["labels"] == [g["label"] for g in a["segments"]]
+        assert j["refs"] == [g["is_ref"] for g in a["segments"]]
         np.testing.assert_allclose([[v or 0 for v in g["values"]] for g in a["segments"]],
                                    [[v or 0 for v in vs] for vs in j["values"]], rtol=2e-3)

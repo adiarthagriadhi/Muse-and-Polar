@@ -63,11 +63,11 @@ def detect_peaks(t, x, k: float = 1.0, refine: bool = False, fs: float = FS) -> 
     return tp
 
 
-def ppg_beats(sig, time_s, k: float = 1.0, refine: bool = False) -> np.ndarray:
-    """Pulse times (s) from a raw PPG_2 channel with the B1 settings."""
-    if len(sig) < 13:  # filtfilt needs more samples than its padding
+def ppg_beats(sig, time_s, k: float = 1.0, refine: bool = False, fs: float = FS) -> np.ndarray:
+    """Pulse times (s) from a raw PPG_2 channel with the B1 settings (B1: fs = 64 Hz)."""
+    if len(sig) < 22:  # filtfilt needs more samples than its padding
         return np.array([])
-    return detect_peaks(time_s, preprocess(sig), k, refine)
+    return detect_peaks(time_s, preprocess(sig, fs=fs), k, refine, fs=fs)
 
 
 def valid_intervals(ibi_ms, rule: str = "malik") -> np.ndarray:
@@ -107,6 +107,20 @@ def window_metrics(tbeats, lo: float, hi: float, rule: str = "malik", gap_spanni
         art=1 - o.mean() if len(o) else nan,
         n=int(len(nn)),
     )
+
+
+def interval_series(t_beats, ibi_s=None, rule: str = "malik") -> dict:
+    """Intervals with the B1 validity mask, as used by the Research View.
+
+    ``t_beats``: beat times (s). If ``ibi_s`` is given (Polar RR), ``t_beats`` are the times at which
+    those intervals ended. Returns ``t`` (end of interval, s), ``ibi`` (s) and ``valid``.
+    """
+    t_beats = np.asarray(t_beats, float)
+    if ibi_s is None:
+        ibi, t = np.diff(t_beats), t_beats[1:]
+    else:
+        ibi, t = np.asarray(ibi_s, float), t_beats
+    return {"t": t, "ibi": ibi, "valid": valid_intervals(ibi * 1000.0, rule) if len(ibi) else np.array([], bool)}
 
 
 def polar_beats(rr_ms) -> np.ndarray:

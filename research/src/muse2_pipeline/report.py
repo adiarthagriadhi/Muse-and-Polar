@@ -9,7 +9,7 @@ import zipfile
 import numpy as np
 import pandas as pd
 
-from .analysis import LABELS, Session
+from .analysis import Session
 from .eeg import BANDS
 from .maps import interpolate_brain_activity_idw
 from .montage import positions as montage_positions, regions as montage_regions
@@ -29,13 +29,12 @@ def segment_table(res: dict) -> pd.DataFrame:
             r[f"{c}_z_vs_acuan"] = z
             r[f"{c}_jendela_bersih"] = n
         r[f"asimetri_{res['pair_label']}"] = s["asym"]
-        r["kondisi"] = s["label"]
+        r["acuan"] = bool(s["is_ref"])
         for src in ("ppg", "polar"):
             st = s.get(src) or {}
             r[f"{src}_hr_bpm"] = st.get("hr")
             r[f"{src}_rmssd_ms"] = st.get("rmssd")
             r[f"{src}_sdnn_ms"] = st.get("sdnn")
-        r.update({f"z_{k}": v for k, v in s["feat_z"].items()})
         rows.append(r)
     return pd.DataFrame(rows)
 
@@ -161,7 +160,7 @@ def figure_png(sess: Session, res: dict, scale: str = "map") -> bytes:
         vals = [tf(v) if v is not None else None for v in s["values"]]
         if all(v is not None for v in vals):
             lo, hi = (min(vals), max(vals)) if scale == "map" else (vmin, vmax)
-            _topo(a, dict(zip(sess.ch, vals)), lo, hi, f"{s['t0']:.0f}–{s['t1']:.0f} s · {s['label']}", lab,
+            _topo(a, dict(zip(sess.ch, vals)), lo, hi, f"{s['t0']:.0f}–{s['t1']:.0f} s" + (" · acuan" if s["is_ref"] else ""), lab,
                   pos=montage_positions(sess.ch))
         else:
             a.axis("off")
@@ -230,8 +229,8 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     if res["pair"]:
         rows.append((f"Asimetri {res['pair_label']}", [_fmt(s["asym"], 3) for s in segs]))
     rows += [("Denyut PPG", [_fmt((s["ppg"] or {}).get("hr"), 0) for s in segs]),
-             (f"RMSSD {heart}", [_fmt((s["polar"] or {}).get("rmssd"), 0) for s in segs]),
-             ("Kondisi", [s["label"] for s in segs])]
+             ("PRV-RMSSD PPG", [_fmt((s["ppg"] or {}).get("rmssd"), 0) for s in segs]),
+             (f"RMSSD {heart}", [_fmt((s["polar"] or {}).get("rmssd"), 0) for s in segs])]
     for name, vals_ in rows:  # one row per measure, one column per segment (fits any channel count)
         c = t.add_row().cells
         c[0].text = name
@@ -261,12 +260,11 @@ def report_docx(sess: Session, res: dict, scale: str = "map") -> bytes:
     for o in res["tests"]["omnibus"]:
         doc.add_paragraph(f"Kruskal–Wallis {o['measure']}: p = {_fmt(o['p'], 3)} ({o['k']} ruas)")
 
-    doc.add_heading("Arti label kondisi", level=2)
-    for code in ("CALM_RELAXED", "FOCUSED_ENGAGED", "ACTIVATED_HIGH_AROUSAL", "INDETERMINATE"):
-        doc.add_paragraph(f"{LABELS[code][0]}: {LABELS[code][1]}", style="List Bullet")
+    doc.add_heading("Catatan", level=2)
     doc.add_paragraph(
-        "Label adalah hipotesis tampilan dari perubahan relatif terhadap ruas acuan (satuan z), bukan diagnosis. "
-        "PRV dahi (PPG) tidak sama dengan HRV dari EKG/sabuk dada. "
+        "Nilai z adalah perubahan relatif terhadap ruas acuan, bukan diagnosis. "
+        "Denyut PPG dihitung dengan pipeline B1 (lihat README). PRV dahi (PPG) tidak sama dengan HRV dari EKG/sabuk dada; "
+        "pada B1, RMSSD ultra-singkat dari PPG dahi ditaksir berlebih dibanding Polar H10. "
         + (f"Empat elektroda kering Muse: peta kepala adalah interpolasi kasar." if sess.nch <= 4 else
            f"Peta kepala diinterpolasi dari {sess.nch} elektroda (posisi 10-20/10-10), gambaran kasar.")
     )

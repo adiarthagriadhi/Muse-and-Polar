@@ -467,14 +467,13 @@ function renderSegCards(segDrawn, sc, fmt) {
     const card = h('div', { class: `card seg-card${isRef ? ' ref' : ''}`, title: 'Klik untuk memperbesar ruas ini di grafik' },
       h('div', { class: 't' }, `Ruas ${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
       s.name ? h('div', { class: 'nm', title: s.name }, s.name) : null,
-      h('div', {}, h('span', { class: `label-chip ${s.code}` }, h('i'), s.label)),
+      isRef ? h('div', {}, h('span', { class: 'label-chip REFERENCE' }, h('i'), 'Acuan')) : null,
       h('div', { class: 'facts' },
         `${SYM[res.band]} ${res.pair_label} `, h('b', {}, `${valFmt(af)} ${unitTxt()}`), isRef ? '' : ` (z ${signed(zaf, 1)})`, h('br'),
         hr ? ['Denyut ', h('b', {}, Math.round(hr.hr)), ` (${hr.src})`, fin(hr.rmssd) ? [' · RMSSD ', h('b', {}, Math.round(hr.rmssd)), ' ms'] : ''] : 'Denyut –',
         h('br'), `${s.n_pair}/${s.n_win} jendela bersih ${res.pair_label}`,
         isRef ? '' : [' · ', h('button', { class: 'btn sm', style: 'min-height:22px;padding:0 7px;font-size:11px', onclick: (e) => { e.stopPropagation(); setRef(s.i); } }, 'jadikan acuan')]),
-      cv,
-      h('div', { class: 'arti' }, s.arti));
+      cv);
     card.addEventListener('click', () => {
       setView(s.t0, s.t1);
       S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
@@ -493,7 +492,7 @@ function renderSegTable() {
   $('segUnit').textContent = `nilai kanal = median daya ${SYM[res.band]} ${res.band} (${unitTxt()}) pada jendela bersih`;
   const hn = heartShort();
   const cols = ['Ruas', 'Nama', `Jendela bersih ${res.pair_label}`, ...CH, ...(res.pair ? [`Asimetri ${res.pair_label}`] : []),
-    'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Kondisi'];
+    'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Acuan'];
   const head = h('tr', {}, ...cols.map((t, i) => h('th', { class: i === 1 || i === cols.length - 1 ? 'l' : null }, t)));
   const rows = res.segments.map((s) => h('tr', { class: s.i === res.ref ? 'ref' : null },
     td(`${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
@@ -505,7 +504,7 @@ function renderSegTable() {
     td(s.ppg && fin(s.ppg.rmssd) ? Math.round(s.ppg.rmssd) : '–'),
     td(s.polar && s.polar.ok ? Math.round(s.polar.hr) : '–'),
     td(s.polar && fin(s.polar.rmssd) ? Math.round(s.polar.rmssd) : '–'),
-    h('td', { class: 'l' }, h('span', { class: `label-chip ${s.code}` }, h('i'), s.label))));
+    h('td', { class: 'l' }, s.is_ref ? h('span', { class: 'label-chip REFERENCE' }, h('i'), 'Acuan') : '')));
   $('segTable').replaceChildren(h('thead', {}, head), h('tbody', {}, ...rows));
 }
 

@@ -43,7 +43,10 @@ const ENGINE = (() => {
         poles.push([(nr * dr + ni * di) / d, (ni * dr - nr * di) / d]);
       }
     }
-    const sos = poles.filter((p) => p[1] > 1e-12).map(([r, i]) => [1, 0, -1, -2 * r, r * r + i * i]);
+    const sos = poles.filter((p) => p[1] > 1e-9).map(([r, i]) => [1, 0, -1, -2 * r, r * r + i * i]);
+    // odd orders: the real prototype pole can give two real band-pass poles; they form one more section
+    const real = poles.filter((p) => Math.abs(p[1]) <= 1e-9).map((p) => p[0]);
+    for (let k = 0; k + 1 < real.length; k += 2) sos.push([1, 0, -1, -(real[k] + real[k + 1]), real[k] * real[k + 1]]);
     // unity gain at the geometric centre frequency
     const wc = 2 * Math.atan(Math.sqrt(w0sq) / K);
     let g = 1;
@@ -282,16 +285,66 @@ const ENGINE = (() => {
     }
     return pk;
   }
-  const IBI_MIN = 60 / 180, IBI_MAX = 60 / 35;
-  function ppgBeats(sig, t, fs) {
-    if (sig.length < 4 * fs) return [];
-    const md = median(sig), x = filtfilt(butterBandSOS(2, 0.5, 3.5, fs), sig.map((v) => v - md), Math.round(3 * fs));
-    const blk = Math.round(10 * fs), amps = [];
-    for (let i = 0; i + blk <= x.length; i += blk) { const s = x.subarray(i, i + blk); amps.push(percentile(s, 95) - percentile(s, 5)); }
-    if (!amps.length) amps.push(percentile(x, 95) - percentile(x, 5));
-    const prom = 0.3 * median(amps);
-    if (!(prom > 0)) return [];
-    return findPeaks(x, { distance: Math.max(1, Math.round(IBI_MIN * fs)), prominence: prom }).map((p) => t[p]);
+  const IBI_MIN = 60 / 180;
+  // B1 reference PPG pipeline (src/muse2_pipeline/ppg_b1.py): PPG_2, zeros interpolated, Butterworth 3rd order
+  // 0.6-3.5 Hz zero-phase (scipy filtfilt in transfer-function form: odd padding of 21 samples and lfilter_zi
+  // initial state), peaks >= 60/160 s apart with prominence 1.4826 x MAD.
+  function polyMul(p, q) { const r = new Array(p.length + q.length - 1).fill(0); p.forEach((x, i) => q.forEach((y, j) => { r[i + j] += x * y; })); return r; }
+  function lfilter(b, a, x, zi) {
+    const n = b.length - 1, z = Float64Array.from(zi), y = new Float64Array(x.length);
+    for (let k = 0; k < x.length; k++) {
+      const xn = x[k], yn = b[0] * xn + z[0];
+      for (let i = 0; i < n - 1; i++) z[i] = b[i + 1] * xn + z[i + 1] - a[i + 1] * yn;
+      z[n - 1] = b[n] * xn - a[n] * yn; y[k] = yn;
+    }
+    return y;
+  }
+  function lfilterZi(b, a) { // scipy.signal.lfilter_zi: solve (I - companion(a).T) zi = b[1:] - a[1:] b[0]
+    const n = a.length - 1, M = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+    for (let i = 0; i < n; i++) { M[i][0] += a[i + 1]; if (i + 1 < n) M[i][i + 1] -= 1; }
+    const v = Array.from({ length: n }, (_, i) => b[i + 1] - a[i + 1] * b[0]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]]; [v[c], v[p]] = [v[p], v[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k < n; k++) M[r][k] -= f * M[c][k]; v[r] -= f * v[c]; }
+    }
+    return v.map((x, i) => x / M[i][i]);
+  }
+  function filtfiltBA(b, a, x) {
+    const n = x.length, pad = 3 * Math.max(a.length, b.length);
+    const ext = new Float64Array(n + 2 * pad);
+    for (let i = 0; i < pad; i++) { ext[i] = 2 * x[0] - x[pad - i]; ext[n + pad + i] = 2 * x[n - 1] - x[n - 2 - i]; }
+    ext.set(x, pad);
+    const zi = lfilterZi(b, a);
+    let y = lfilter(b, a, ext, zi.map((v) => v * ext[0])); y.reverse();
+    y = lfilter(b, a, y, zi.map((v) => v * y[0])); y.reverse();
+    return y.subarray(pad, pad + n);
+  }
+  function ppgBeatsB1(sig, t, fs = 64) {
+    if (sig.length < 22) return [];
+    const s = Float64Array.from(sig), good = [];
+    for (let i = 0; i < s.length; i++) if (s[i] !== 0) good.push(i);
+    if (good.length && good.length < s.length) {
+      let g = 0;
+      for (let i = 0; i < s.length; i++) {
+        if (s[i] !== 0) continue;
+        while (g < good.length - 1 && good[g + 1] < i) g++;
+        const l = good[g], r = good[Math.min(g + 1, good.length - 1)];
+        s[i] = i <= good[0] ? s[good[0]] : i >= good[good.length - 1] ? s[good[good.length - 1]] : s[l] + (s[r] - s[l]) * (i - l) / (r - l);
+      }
+    }
+    const sos = butterBandSOS(3, 0.6, 3.5, fs);
+    const b = sos.reduce((p, q) => polyMul(p, q.slice(0, 3)), [1]), a = sos.reduce((p, q) => polyMul(p, [1, q[3], q[4]]), [1]);
+    const x = filtfiltBA(b, a, s), md = median(x), mad = median(Array.from(x, (v) => Math.abs(v - md)));
+    return findPeaks(x, { distance: Math.round(fs * 60 / 160), prominence: 1.4826 * mad }).filter((p) => p > 0 && p < x.length - 1).map((p) => t[p]);
+  }
+  function validB1(ibiS) { // 300-2000 ms and <= 20 % change from the preceding interval
+    return ibiS.map((v, i) => v >= 0.3 && v <= 2 && (i === 0 || Math.abs(v - ibiS[i - 1]) / ibiS[i - 1] <= 0.2));
+  }
+  function intervalSeries(tb, ibi = null) {
+    let t;
+    if (ibi === null) { ibi = tb.slice(1).map((v, i) => v - tb[i]); t = tb.slice(1); } else t = tb;
+    return { t, ibi, valid: validB1(ibi) };
   }
   function ecgBeats(sig, t, fs) {
     if (sig.length < 4 * fs || fs < 50) return [];
@@ -316,18 +369,6 @@ const ENGINE = (() => {
     }
     return [...out].sort((a, b) => a - b).map((i) => t[i]);
   }
-  function cleanIbi(tb, ibi = null) {
-    let t;
-    if (ibi === null) { ibi = tb.slice(1).map((v, i) => v - tb[i]); t = tb.slice(1); } else t = tb;
-    if (!ibi.length) return { t: [], ibi: [], valid: [] };
-    const ok = ibi.map((v) => v >= IBI_MIN && v <= IBI_MAX);
-    const good = ibi.filter((_, i) => ok[i]);
-    const fillv = good.length ? median(good) : 1;
-    const ref = ibi.map((v, i) => (ok[i] ? v : fillv));
-    const med = ref.map((_, i) => median(ref.slice(Math.max(0, i - 3), i + 4).concat(
-      Array(Math.max(0, 3 - i)).fill(ref[0]), Array(Math.max(0, i + 4 - ref.length)).fill(ref[ref.length - 1]))));
-    return { t, ibi, valid: ibi.map((v, i) => ok[i] && Math.abs(v - med[i]) <= 0.25 * med[i]) };
-  }
   function hrvStats(ser, t0 = null, t1 = null) {
     const m = ser.t.map((t) => (t0 === null || t >= t0) && (t1 === null || t < t1));
     const nAll = m.filter(Boolean).length, good = m.map((v, i) => v && ser.valid[i]);
@@ -343,14 +384,6 @@ const ENGINE = (() => {
     }
     return out;
   }
-  function hrAt(ser, centers, half) {
-    const t = ser.t.filter((_, i) => ser.valid[i]), ibi = ser.ibi.filter((_, i) => ser.valid[i]);
-    return Array.from(centers, (c) => {
-      let s = 0, n = 0; for (let i = 0; i < t.length; i++) if (t[i] >= c - half && t[i] < c + half) { s += ibi[i]; n++; }
-      return n ? 60 / (s / n) : nan;
-    });
-  }
-
   // ---------------------------------------------------------------- statistics
   function erfc(x) { // Numerical Recipes erfcc, |error| < 1.2e-7
     const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
@@ -429,16 +462,6 @@ const ENGINE = (() => {
   const cliffWord = (d) => (d === null ? '-' : Math.abs(d) < 0.147 ? 'sangat kecil' : Math.abs(d) < 0.33 ? 'kecil' : Math.abs(d) < 0.474 ? 'sedang' : 'besar');
 
   // ---------------------------------------------------------------- analysis
-  const LABELS = {
-    REFERENCE: ['Acuan', 'Ruas pembanding. Kondisi ruas lain dihitung relatif terhadap ruas ini.'],
-    CALM_RELAXED: ['Tenang', 'Otak lebih pelan, denyut tidak naik: nuansa istirahat.'],
-    FOCUSED_ENGAGED: ['Fokus', 'Otak lebih siaga, denyut biasa: nuansa memperhatikan.'],
-    ACTIVATED_HIGH_AROUSAL: ['Teraktivasi', 'Otak dan/atau denyut lebih kencang: nuansa terpacu.'],
-    INDETERMINATE: ['Indeterminan', 'Perubahan terlalu kecil atau bercampur; tidak memilih tiga label lain.'],
-    NO_DATA: ['Data kurang', 'Kurang dari 3 jendela EEG bersih pada pasangan frontal.'],
-  };
-  const DOMAIN = { LOW_AROUSAL: 'CALM_RELAXED', ENGAGEMENT: 'FOCUSED_ENGAGED', AROUSAL: 'ACTIVATED_HIGH_AROUSAL' };
-  const SD_FLOOR = { alpha: 0.05, beta: 0.05, theta: 0.05, tb: 0.05, ab: 0.05, ta: 0.05, hr: 2 };
   const EMPTY = { t: [], ibi: [], valid: [] };
 
   function parseMarks(text, tmax) {
@@ -457,8 +480,8 @@ const ENGINE = (() => {
       this.sub = subsegmentSpectra(this.t, this.x, this.fs);
       this.specs = {};
       this.grid = this.spec(100);
-      this.ppg = rec.ppg ? cleanIbi(ppgBeats(rec.ppg.v, rec.ppg.t, rec.ppg.fs)) : EMPTY;
-      this.polar = rec.rr ? cleanIbi(Array.from(rec.rr.t), Array.from(rec.rr.ms, (v) => v / 1000)) : EMPTY;
+      this.ppg = rec.ppg ? intervalSeries(ppgBeatsB1(rec.ppg.v, rec.ppg.t, rec.ppg.fs)) : EMPTY;
+      this.polar = rec.rr ? intervalSeries(Array.from(rec.rr.t), Array.from(rec.rr.ms, (v) => v / 1000)) : EMPTY;
       this.hasPolar = this.polar.valid.filter(Boolean).length >= 20;
       this.hasPpgData = this.ppg.t.length > 0; this.hasHeartData = this.polar.t.length > 0;
       this.chans = 'all'; this.heart = 'all'; this.pshift = 0; this.museMap = null; this.museRefCh = null; this.views = {};
@@ -565,12 +588,7 @@ const ENGINE = (() => {
         refMean.push(v.length >= 3 ? median(v) : nan);
         refSd.push(v.length >= 3 ? Math.max(std(v, 1), metric === 'abs' ? 0.05 : 0.5) : nan);
       }
-      const [feats, hrSource] = this.features(spec, afClean);
-      const zref = {};
-      for (const [k, v] of Object.entries(feats)) {
-        const x = v.filter((_, w) => segOf[w] === ref).filter(fin);
-        zref[k] = x.length >= 3 ? [median(x), Math.max(std(x, 1), SD_FLOOR[k])] : [nan, nan];
-      }
+      const hrSource = this.hasPolar ? 'polar' : this.ppg.valid.filter(Boolean).length >= 20 ? 'ppg' : null;
       const segs = [];
       for (let i = 0; i < nseg; i++) {
         const a = edges[i], b = edges[i + 1], ws = [];
@@ -585,17 +603,13 @@ const ENGINE = (() => {
         let asym = nan;
         if (this.pair) { const l = chVals[af[0]], r = chVals[af[1]]; asym = fin(l) && fin(r) && l + r ? (r - l) / (r + l) : nan; }
         const nAf = ws.filter((w) => afClean[w]).length;
-        const z = Object.fromEntries(Object.entries(feats).map(([k, v]) => [k, (median(ws.filter((w) => afClean[w]).map((w) => v[w])) - zref[k][0]) / zref[k][1]]));
-        const [code, scores] = classify(z, nAf, i === ref);
         let name = '';
         for (const m of this.rec.markers) if (Math.abs(m.t - a) <= 1.5 && !String(m.label).startsWith('SYNC')) name = String(m.label);
         segs.push({
           i, t0: num(a, 6), t1: num(b, 6), name, n_win: ws.length, n_clean: chClean, n_pair: nAf,
           values: arr(chVals), z: arr(chZ, 3), asym: num(asym, 3),
           ppg: hrvStats(this.ppg, a, b), polar: this.hasPolar ? hrvStats(this.polar, a, b) : null,
-          code, label: LABELS[code][0], arti: code === 'NO_DATA' ? `Kurang dari 3 jendela EEG bersih pada ${this.pairLabel}.` : LABELS[code][1],
-          feat_z: Object.fromEntries(Object.entries(z).map(([k, v]) => [k, num(v, 3)])),
-          scores: Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, num(v, 3)])),
+          is_ref: i === ref,
           psd: Array.from({ length: nch }, (_, c) => arr(this.meanPsd(spec, a, b, c))),
         });
       }
@@ -611,15 +625,6 @@ const ENGINE = (() => {
         ref_mean: arr(refMean), ref_sd: arr(refSd), hr_source: hrSource, freqs: arr(this.sub.freqs, 4),
         segments: segs, tests: this.tests(spec, val, bad, segOf, nseg, edges),
       };
-    }
-    features(spec, afClean) {
-      const nch = this.nch, idx = this.pairIdx, nw = spec.nwin;
-      const lm = (b) => Array.from({ length: nw }, (_, w) => { let s = 0; for (const c of idx) s += spec.power[b][w * nch + c]; return afClean[w] ? Math.log10(s / idx.length) : nan; });
-      const al = lm('alpha'), be = lm('beta'), th = lm('theta');
-      let src = this.hasPolar ? 'polar' : 'ppg';
-      const hr = hrAt(this.hasPolar ? this.polar : this.ppg, spec.tMid, spec.winS / 2);
-      if (!hr.some(fin)) src = null;
-      return [{ alpha: al, beta: be, theta: th, tb: th.map((v, i) => v - be[i]), ab: al.map((v, i) => v - be[i]), ta: th.map((v, i) => v - al[i]), hr }, src];
     }
     meanPsd(spec, a, b, c) {
       const { n, nch, nf, psd, t0, segS } = this.sub, out = new Float64Array(nf); let k = 0;
@@ -658,17 +663,6 @@ const ENGINE = (() => {
       }
       return { pairs, omnibus, n_step: k };
     }
-  }
-  function classify(z, nAf, isRef) {
-    const zz = (k) => (k in z ? z[k] : nan), nm = (a) => mean(a);
-    const any = Object.values(z).some(fin);
-    const dom = any ? { AROUSAL: nm([zz('beta'), zz('ab'), -zz('tb'), zz('hr')]), ENGAGEMENT: nm([zz('beta'), zz('alpha'), -zz('ta')]), LOW_AROUSAL: nm([zz('alpha'), zz('tb'), -zz('hr')]) }
-      : { AROUSAL: nan, ENGAGEMENT: nan, LOW_AROUSAL: nan };
-    if (isRef) return ['REFERENCE', dom];
-    if (nAf < 3 || !Object.values(dom).every(fin)) return ['NO_DATA', dom];
-    const rk = Object.entries(dom).sort((a, b) => b[1] - a[1]);
-    if (rk[0][1] < 0.5 || rk[0][1] - rk[1][1] < 0.25) return ['INDETERMINATE', dom];
-    return [DOMAIN[rk[0][0]], dom];
   }
   function lb(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; } return lo; }
   function lbR(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= x) lo = m + 1; else hi = m; } return lo; }
@@ -1118,10 +1112,10 @@ const ENGINE = (() => {
     const s = (await session(id)).view(q.chans, q.heart, +q.pshift || 0);
     const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), spec = s.spec(+q.art), ch = s.ch, nch = s.nch;
     const segHead = ['ruas', 'nama', 't0_s', 't1_s', 'jendela', `jendela_bersih_${res.pair_label}`,
-      ...ch.flatMap((c) => [`${c}_${res.band}_${res.metric}`, `${c}_z_vs_acuan`, `${c}_jendela_bersih`]), `asimetri_${res.pair_label}`, 'kondisi',
+      ...ch.flatMap((c) => [`${c}_${res.band}_${res.metric}`, `${c}_z_vs_acuan`, `${c}_jendela_bersih`]), `asimetri_${res.pair_label}`, 'acuan',
       'ppg_hr_bpm', 'ppg_rmssd_ms', 'ppg_sdnn_ms', 'polar_hr_bpm', 'polar_rmssd_ms', 'polar_sdnn_ms'];
     const segRows = res.segments.map((g) => [`${g.t0.toFixed(0)}–${g.t1.toFixed(0)} s`, g.name, g.t0, g.t1, g.n_win, g.n_pair,
-      ...ch.flatMap((_, c) => [g.values[c], g.z[c], g.n_clean[c]]), g.asym, g.label,
+      ...ch.flatMap((_, c) => [g.values[c], g.z[c], g.n_clean[c]]), g.asym, g.is_ref,
       g.ppg.hr, g.ppg.rmssd, g.ppg.sdnn, g.polar ? g.polar.hr : null, g.polar ? g.polar.rmssd : null, g.polar ? g.polar.sdnn : null]);
     const tHead = ['measure', 'pair', 'n_a', 'n_b', 'med_a', 'med_b', 'p', 'p_holm', 'delta', 'effect', 'sig'];
     const winHead = ['t_start_s', 't_mid_s', ...ch.flatMap((c) => [...BAND_NAMES.map((b) => `${c}_${b}_uV2`), `${c}_total_uV2`, `${c}_artefak`])];
@@ -1148,9 +1142,9 @@ const ENGINE = (() => {
     const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), ch = s.ch;
     const f = (v) => (v === null || v === undefined ? '' : typeof v === 'number' ? String(+v.toPrecision(5)).replace('.', ',') : String(v));
     const rows = [[`Sesi: ${s.rec.participant}`, `Pita: ${res.band} (${res.unit})`, `Ruas acuan: ${res.ref + 1}`], [],
-      ['Ruas', 'Nama', 'Jendela bersih', ...ch, `Asimetri ${res.pair_label}`, 'Denyut PPG', 'PRV-RMSSD', `Denyut ${s.rec.heartName}`, 'HRV-RMSSD', 'Kondisi'],
+      ['Ruas', 'Nama', 'Jendela bersih', ...ch, `Asimetri ${res.pair_label}`, 'Denyut PPG', 'PRV-RMSSD', `Denyut ${s.rec.heartName}`, 'HRV-RMSSD', 'Acuan'],
       ...res.segments.map((g) => [`${Math.round(g.t0)}–${Math.round(g.t1)} s`, g.name, `${g.n_pair}/${g.n_win}`, ...g.values, g.asym,
-        g.ppg.hr, g.ppg.rmssd, g.polar ? g.polar.hr : null, g.polar ? g.polar.rmssd : null, g.label]), [],
+        g.ppg.hr, g.ppg.rmssd, g.polar ? g.polar.hr : null, g.polar ? g.polar.rmssd : null, g.is_ref ? 'ya' : '']), [],
       ['Ukuran', 'Perbandingan', 'n', 'Median 1', 'Median 2', 'p', 'p Holm', 'δ Cliff', 'Efek', 'Berbeda'],
       ...res.tests.pairs.map((r) => [res.measure_labels[r.measure] || r.measure, r.pair, `${r.n_a}/${r.n_b}`, r.med_a, r.med_b, r.p, r.p_holm, r.delta, r.effect, r.sig ? 'ya' : 'tidak'])];
     return rows.map((r) => r.map(f).join('\t')).join('\n');
@@ -1196,7 +1190,7 @@ const ENGINE = (() => {
   }
 
   return { handle, addFiles, exportZip, exportText, loadDemo, _internals: { butterBandSOS, notchSOS, filtfilt, filterEEG, subsegmentSpectra, windowSpectra,
-    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, loadPolarSet, attachPolar, Session, mwTest, kruskal, holm, findPeaks, ppgBeats, ecgBeats, cleanIbi, hrvStats, canonical, position, museSources } };
+    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, loadPolarSet, attachPolar, Session, mwTest, kruskal, holm, findPeaks, ppgBeatsB1, ecgBeats, intervalSeries, hrvStats, filtfiltBA, canonical, position, museSources } };
 })();
 if (typeof window !== 'undefined') window.ENGINE = ENGINE;
 if (typeof module !== 'undefined') module.exports = ENGINE;

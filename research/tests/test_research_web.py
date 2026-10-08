@@ -42,7 +42,7 @@ def test_engine_matches_python(tmp_path):
         a, b = py[key], js[key]
         assert a["channels"] == b["channels"] and a["measures"] == b["measures"]
         for ga, gb in zip(a["segments"], b["segments"]):
-            assert ga["code"] == gb["code"] and ga["n_pair"] == gb["n_pair"]
+            assert ga["is_ref"] == gb["is_ref"] and ga["n_pair"] == gb["n_pair"]
             np.testing.assert_allclose([v or 0 for v in ga["values"]], [v or 0 for v in gb["values"]], rtol=2e-3)
             assert ga["polar"]["hr"] == pytest.approx(gb["polar"]["hr"], rel=1e-6)
         for ra, rb in zip(a["tests"]["pairs"], b["tests"]["pairs"]):

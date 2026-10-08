@@ -1,2 +1,0 @@
-# Tambahan untuk front-end lama (legacy/). Pasang setelah ../requirements.txt.
-streamlit>=1.30

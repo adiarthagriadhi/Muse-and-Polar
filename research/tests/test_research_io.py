@@ -1,4 +1,4 @@
-"""Pipeline I/O and the legacy front-ends read sessions in the musepolar recording format."""
+"""Pipeline I/O reads sessions in the musepolar recording format."""
 
 import io
 import json
@@ -14,9 +14,8 @@ pytest.importorskip("scipy")
 
 RESEARCH = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(RESEARCH / "src"))
-sys.path.insert(0, str(RESEARCH / "legacy"))
 
-from muse2_pipeline import compute_prv_09, list_samples, load_sample, marker_titik, parse_marks, ruas_stats  # noqa: E402
+from muse2_pipeline import list_samples, load_sample, marker_titik, parse_marks, ruas_stats  # noqa: E402
 from muse2_pipeline.io import unpack_zip  # noqa: E402
 
 T0 = 1_758_790_000.0  # Unix time of the first EEG sample
@@ -80,8 +79,11 @@ def test_load_sample_aligns_streams_and_maps_ppg(tmp_path):
     assert marker_titik(data["markers"]) == "45"
     assert len(data["bp"]) > 30
 
-    prv = compute_prv_09(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float))
-    assert prv["ok"] and prv["hr"] == pytest.approx(60, abs=1)
+    from muse2_pipeline.hrv import hrv_stats
+    from muse2_pipeline.ppg_b1 import interval_series, ppg_beats
+
+    st = hrv_stats(interval_series(ppg_beats(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float))))
+    assert st["ok"] and st["hr"] == pytest.approx(60, abs=1)
 
     tab, _ = ruas_stats(data["bp"], parse_marks("45", eeg["time_s"].iloc[-1]), "alpha")
     assert tab["AF7"].iloc[1] > 3 * tab["AF7"].iloc[0]  # alpha rises after the marker
@@ -90,8 +92,6 @@ def test_load_sample_aligns_streams_and_maps_ppg(tmp_path):
 def test_session_without_ppg(tmp_path):
     data = load_sample(make_session(tmp_path, ppg=False))
     assert data["ppg"].empty and data["meta"]["ppg_validation"]["status"] == "-"
-    prv = compute_prv_09(data["ppg"]["PPG2"].to_numpy(float), data["ppg"]["time_s"].to_numpy(float))
-    assert not prv["ok"] and len(prv["tp"]) == 0
 
 
 def _zip_of(folder: Path) -> bytes:
@@ -106,28 +106,3 @@ def test_unpack_zip(tmp_path):
     d = make_session(tmp_path / "rec")
     root = unpack_zip(_zip_of(d))
     assert list_samples(root)["label"].tolist() == [d.name]
-
-
-def test_api_upload_then_figures(tmp_path):
-    pytest.importorskip("fastapi")
-    pytest.importorskip("matplotlib")
-    try:
-        from fastapi.testclient import TestClient
-    except (ImportError, RuntimeError):
-        pytest.skip("TestClient dependencies not installed")
-    import api
-
-    d = make_session(tmp_path / "rec")
-    client = TestClient(api.app)
-    r = client.post("/upload", files={"file": ("s.zip", _zip_of(d))}, follow_redirects=False)
-    assert r.status_code == 303
-    page = client.get(r.headers["location"])
-    assert page.status_code == 200 and "ERROR" not in page.text and d.name in page.text
-    # Figures must use the uploaded folder, not the default recordings/ folder.
-    import html
-    import re
-
-    src = html.unescape(re.search(r'id="img-tr" src="([^"]+)"', page.text).group(1))
-    assert client.get(src).status_code == 200
-    view = client.get("/api/view", params={"trials": str(api.LAST_UPLOAD["root"]), "label": d.name}).json()
-    assert view["denyut"] == pytest.approx(60, abs=1) and view["eeg"] == "VALID"

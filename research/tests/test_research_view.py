@@ -18,7 +18,8 @@ sys.path.insert(0, str(RESEARCH / "app"))
 
 from muse2_pipeline.analysis import Session, holm  # noqa: E402
 from muse2_pipeline.eeg import subsegment_spectra, window_spectra  # noqa: E402
-from muse2_pipeline.hrv import clean_ibi, hrv_stats, ppg_beats  # noqa: E402
+from muse2_pipeline.hrv import hrv_stats  # noqa: E402
+from muse2_pipeline.ppg_b1 import interval_series, ppg_beats  # noqa: E402
 
 T0 = 1_790_400_000.0
 SYNC = 0.062
@@ -64,21 +65,32 @@ def make_session(root: Path, name="20260926_093000_demo", dur=180.0, blinks=True
 
 # --- heart -------------------------------------------------------------------------
 
-def test_ppg_beats_on_sharp_pulses():
-    # narrow pulses with a flat baseline made the original MAD-prominence detector double count
+def _pulses(width, per=1.0, noise=20, dur=60):
     fs = 64
-    t = np.arange(0, 60, 1 / fs)
-    x = 2e5 + 3000 * sum(np.exp(-((t - b) ** 2) / (2 * 0.06 ** 2)) for b in np.arange(0.2, 60, 1.0))
-    x += 20 * np.random.default_rng(0).standard_normal(len(t))
-    st = hrv_stats(clean_ibi(ppg_beats(x, t)))
+    t = np.arange(0, dur, 1 / fs)
+    x = 2e5 + 3000 * sum(np.exp(-((t - b) ** 2) / (2 * width ** 2)) for b in np.arange(0.2, dur, per))
+    return t, x + noise * np.random.default_rng(0).standard_normal(len(t))
+
+
+def test_ppg_beats_on_forehead_like_pulses():
+    t, x = _pulses(0.10)
+    st = hrv_stats(interval_series(ppg_beats(x, t)))
     assert st["ok"] and st["hr"] == pytest.approx(60, abs=1)
 
 
-def test_clean_ibi_flags_missed_beat():
+@pytest.mark.xfail(strict=True, reason="known B1 limitation: at low heart rate, very narrow pulses on a flat baseline "
+                                       "leave band-pass side lobes that pass the 1.4826 x MAD prominence (extra beats)")
+def test_ppg_beats_on_very_narrow_pulses_b1_limitation():
+    t, x = _pulses(0.06)
+    st = hrv_stats(interval_series(ppg_beats(x, t)))
+    assert st["hr"] == pytest.approx(60, abs=1)
+
+
+def test_b1_rule_flags_missed_beat():
     ibi = np.full(30, 0.8)
-    ibi[10] = 1.6  # a missed beat
-    ser = clean_ibi(np.cumsum(ibi), ibi)
-    assert not ser["valid"][10] and ser["valid"].sum() == 29
+    ibi[10] = 1.6  # a missed beat: rejected, and so is the next interval (> 20 % change from 1.6 s)
+    ser = interval_series(np.cumsum(ibi), ibi)
+    assert not ser["valid"][10] and not ser["valid"][11] and ser["valid"].sum() == 28
     st = hrv_stats(ser)
     assert st["hr"] == pytest.approx(75) and st["rmssd"] == pytest.approx(0, abs=1e-9)
 
@@ -113,15 +125,12 @@ def test_subsegment_power_matches_sine():
 
 # --- segment analysis ---------------------------------------------------------------
 
-def test_analysis_segments_labels_and_tests(tmp_path):
+def test_analysis_segments_and_tests(tmp_path):
     s = Session(make_session(tmp_path))
     res = s.analyze("60,120", "alpha", "abs", ref=0, art_uv=100)
     segs = res["segments"]
-    assert [g["code"] for g in segs][0] == "REFERENCE"
-    # task: beta and heart rate up vs. rest. Which label wins depends on the original score
-    # weights (alpha/beta enters Teraktivasi with a + sign), so only check the evidence here.
-    assert segs[2]["code"] in ("ACTIVATED_HIGH_AROUSAL", "FOCUSED_ENGAGED")
-    assert segs[2]["feat_z"]["beta"] > 1 and segs[2]["feat_z"]["hr"] > 1
+    assert [g["is_ref"] for g in segs] == [True, False, False]
+    assert not any(k in g for g in segs for k in ("code", "label", "feat_z", "scores"))  # no condition labels
     assert segs[1]["name"] == "Mata tertutup" and segs[2]["name"] == "Aritmetika"
     assert segs[1]["values"][1] > 5 * segs[0]["values"][1]  # alpha AF7 eyes closed
     assert segs[1]["polar"]["hr"] == pytest.approx(60, abs=1.5) and segs[2]["ppg"]["hr"] == pytest.approx(84, abs=2)
@@ -133,7 +142,7 @@ def test_analysis_segments_labels_and_tests(tmp_path):
     assert {o["measure"] for o in res["tests"]["omnibus"]} >= {"AF", "AF7"}
     # relative power and another reference
     rel = s.analyze("60,120", "beta", "rel", ref=1)
-    assert rel["unit"] == "%" and rel["segments"][1]["code"] == "REFERENCE"
+    assert rel["unit"] == "%" and rel["segments"][1]["is_ref"]
     assert all(0 <= v <= 100 for g in rel["segments"] for v in g["values"] if v is not None)
     json.dumps(res)  # JSON-serialisable
 

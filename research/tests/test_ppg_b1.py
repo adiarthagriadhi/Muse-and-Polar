@@ -56,3 +56,28 @@ def test_rmssd_uses_successive_valid_intervals_only():
 
 def test_polar_beats_start_at_zero():
     assert ppg_b1.polar_beats([1000, 500]).tolist() == [0.0, 1.0, 1.5]
+
+
+@pytest.mark.skipif(__import__("shutil").which("node") is None, reason="Node.js not installed")
+def test_browser_engine_uses_the_same_b1_pipeline():
+    import json
+    import subprocess
+
+    rr = 0.75 + 0.05 * np.sin(np.arange(200) * 0.4)
+    t, x = synthetic_ppg(np.cumsum(rr), noise=600, seed=3)
+    x[[100, 101, 2000]] = 0  # dropped samples are interpolated
+    run = """
+const E = require(process.argv[1]); const I = E._internals; const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+const tb = I.ppgBeatsB1(d.x, d.t, 64); const s = I.intervalSeries(tb);
+process.stdout.write(JSON.stringify({ tb, valid: s.valid, st: I.hrvStats(s, 10, 110) }));
+"""
+    engine = str(Path(__file__).resolve().parents[1] / "web" / "engine.js")
+    js = json.loads(subprocess.run(["node", "-e", run, engine], input=json.dumps({"t": t.tolist(), "x": x.tolist()}),
+                                   capture_output=True, text=True, check=True).stdout)
+    tb = ppg_b1.ppg_beats(x, t)
+    assert np.allclose(js["tb"], tb, atol=1e-9)
+    assert js["valid"] == ppg_b1.interval_series(tb)["valid"].tolist()
+    from muse2_pipeline.hrv import hrv_stats
+
+    py = hrv_stats(ppg_b1.interval_series(tb), 10, 110)
+    assert js["st"]["hr"] == pytest.approx(py["hr"], rel=1e-9) and js["st"]["rmssd"] == pytest.approx(py["rmssd"], rel=1e-9)

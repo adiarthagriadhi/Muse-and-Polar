@@ -165,20 +165,19 @@
       <p><b>Ruas.</b> <i>Titik observasi</i> memotong sesi menjadi ruas. Nilai ruas = median jendela bersih.
         <i>Relatif %</i> = daya pita dibagi daya 1–40 Hz, lebih tahan terhadap perbedaan kontak elektroda antar sesi.
         Asimetri AF = (AF8 − AF7) / (AF8 + AF7); positif berarti kanan lebih besar.</p>
-      <p><b>Label kondisi.</b> Setiap ruas dibandingkan dengan <i>ruas acuan</i> dalam satuan z
-        (selisih median dibagi sebaran jendela acuan) untuk log daya α, β, θ, rasionya, dan denyut
-        (Polar bila ada, selain itu PPG dahi). Skor: Teraktivasi = β, α/β, −θ/β, denyut · Fokus = β, α, −θ/α ·
-        Tenang = α, θ/β, −denyut. Label dipilih bila skor tertinggi ≥ 0,5 z dan unggul ≥ 0,25 z; selain itu Indeterminan.
-        Ini hipotesis tampilan, bukan diagnosis.</p>
+      <p><b>Perubahan vs acuan.</b> Nilai z per kanal = (median ruas − median ruas acuan) / sebaran jendela acuan.
+        Aplikasi tidak memberi label kondisi atau keadaan; nilai ditampilkan apa adanya.</p>
       <p><b>Uji.</b> Mann–Whitney dua sisi antar ruas memakai jendela yang tidak tumpang tindih (tiap jendela 4 detik dihitung sekali),
         p dikoreksi Holm per ukuran, dan δ Cliff sebagai besar efek (|δ| &lt; 0,15 sangat kecil, &lt; 0,33 kecil, &lt; 0,47 sedang, selebihnya besar).
         Kruskal–Wallis ditampilkan bila ada ≥ 3 ruas.</p>
-      <p><b>Jantung.</b> PRV dahi: puncak PPG inframerah (kolom <code>ir</code>) setelah filter 0,5–3,5 Hz. Polar: interval RR H10,
-        digeser dengan hasil sinkronisasi gerak bila ada. Interval di luar 35–180 bpm atau berbeda &gt; 25 % dari median sekitarnya
-        dianggap tidak valid. PRV dahi ≠ HRV Polar.</p>
+      <p><b>Jantung.</b> Pipeline B1: PPG inframerah (kolom <code>ir</code>/PPG_2), filter Butterworth orde 3 0,6–3,5 Hz fase nol,
+        puncak berjarak ≥ 60/160 s dengan prominensi 1,4826 × MAD. Interval PPG, RR Polar dan EKG dianggap tidak valid bila
+        di luar 300–2000 ms atau berubah &gt; 20 % dari interval sebelumnya; RMSSD hanya dari pasangan interval valid berurutan.
+        Polar digeser dengan hasil sinkronisasi gerak bila ada. PPG dahi = PRV, bukan HRV; pada studi B1 denyut Muse 2 sesuai
+        dengan Polar H10, tetapi RMSSD ultra-singkat dari PPG dahi ditaksir berlebih.</p>
       <p><b>EDF / banyak kanal.</b> File EDF, EDF+ atau BDF dibaca langsung. Kanal dikenali dari namanya menurut sistem 10-20/10-10
         (mis. <code>EEG Fp1-REF</code>, T3 = T7); kanal EKG dipakai untuk denyut dan anotasi EDF+ menjadi penanda.
-        Pasangan frontal untuk asimetri dan label dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
+        Pasangan frontal untuk asimetri dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
         Dengan banyak kanal, grafik daya menampilkan rata-rata per area kepala.</p>
       <p><b>CSV.</b> Dikenali otomatis: rekaman musepolar, Mind Monitor (<code>RAW_TP9</code>…, penanda dari kolom <code>Elements</code>),
         muselsl (<code>timestamps, TP9…</code>), format aplikasi lama (<code>EEG_raw.csv</code> + <code>PPG_raw.csv</code>), OpenBCI GUI

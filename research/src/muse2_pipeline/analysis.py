@@ -13,9 +13,11 @@ Method (see research/README.md for the reasoning):
   windows (every 2nd window) so that samples are not double counted; pairwise
   Mann–Whitney U with Holm correction per measure, Cliff's delta as effect size,
   Kruskal–Wallis when there are 3 or more segments.
-- Condition labels compare each segment with the reference segment in z units:
-  z = (segment median − reference median) / reference SD, on log10 band powers, log ratios
-  and heart rate, so features with different units are comparable.
+- Change maps compare each segment with the reference segment in z units:
+  z = (segment median − reference median) / reference SD per channel. No condition or
+  state labels are derived.
+- Heart: forehead-PPG pulses and the interval rule follow the B1 pipeline (``ppg_b1``);
+  the same rule is applied to Polar RR / ECG intervals. PPG gives PRV, Polar/ECG gives HRV.
 """
 
 from __future__ import annotations
@@ -27,23 +29,12 @@ import numpy as np
 from scipy.stats import kruskal, mannwhitneyu
 
 from .eeg import BANDS, subsegment_spectra, window_spectra
-from .hrv import clean_ibi, hr_at, hrv_stats, ppg_beats
+from .hrv import hrv_stats
 from .io import load_recording, marker_titik
+from .ppg_b1 import interval_series, ppg_beats
 from .montage import MUSE_CH, frontal_pair, muse_equivalent, muse_reference, muse_sources, positions, regions
 from .segments import parse_marks
 
-LABELS = {
-    "REFERENCE": ("Acuan", "Ruas pembanding. Kondisi ruas lain dihitung relatif terhadap ruas ini."),
-    "CALM_RELAXED": ("Tenang", "Otak lebih pelan, denyut tidak naik: nuansa istirahat."),
-    "FOCUSED_ENGAGED": ("Fokus", "Otak lebih siaga, denyut biasa: nuansa memperhatikan."),
-    "ACTIVATED_HIGH_AROUSAL": ("Teraktivasi", "Otak dan/atau denyut lebih kencang: nuansa terpacu."),
-    "INDETERMINATE": ("Indeterminan", "Perubahan terlalu kecil atau bercampur; tidak memilih tiga label lain."),
-    "NO_DATA": ("Data kurang", "Kurang dari 3 jendela EEG bersih pada pasangan frontal."),
-}
-DOMAIN_TO_CODE = {"LOW_AROUSAL": "CALM_RELAXED", "ENGAGEMENT": "FOCUSED_ENGAGED", "AROUSAL": "ACTIVATED_HIGH_AROUSAL"}
-# Minimum reference SD (floors keep z finite when the reference is very steady).
-SD_FLOOR = {"alpha": 0.05, "beta": 0.05, "theta": 0.05, "tb": 0.05, "ab": 0.05, "ta": 0.05, "hr": 2.0}
-Z_MIN, Z_MARGIN = 0.5, 0.25
 MIN_N_TEST = 5
 
 
@@ -124,10 +115,10 @@ class Session:
         self._specs: dict[float, dict] = {}
         self.grid = self.spec(100.0)
         ppg = self.sample["ppg"]
-        self.ppg = clean_ibi(ppg_beats(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float),
-                                       fs=float(self.sample.get("ppg_fs", 64.0))))
+        self.ppg = interval_series(ppg_beats(ppg["PPG2"].to_numpy(float), ppg["time_s"].to_numpy(float),
+                                             fs=float(self.sample.get("ppg_fs", 64.0))))
         rr = self.sample["rr"]
-        self.polar = clean_ibi(rr["time_s"].to_numpy(float), rr["rr_ms"].to_numpy(float) / 1000.0)
+        self.polar = interval_series(rr["time_s"].to_numpy(float), rr["rr_ms"].to_numpy(float) / 1000.0)
         self.has_polar = int(self.polar["valid"].sum()) >= 20
         self.heart_name = self.sample.get("heart_name", "Polar RR")
         self._eeg_t = eeg["time_s"].to_numpy(float)
@@ -329,8 +320,7 @@ class Session:
             floor = 0.05 if metric == "abs" else 0.5
             ref_sd.append(max(float(v.std(ddof=1)), floor) if len(v) >= 3 else np.nan)
 
-        feats, hr_source = self._features(spec, af_clean)
-        zref = self._ref_stats(feats, seg_of == ref)
+        hr_source = "polar" if self.has_polar else ("ppg" if int(self.ppg["valid"].sum()) >= 20 else None)
 
         marks = self.sample["markers"]
         segs = []
@@ -347,8 +337,6 @@ class Session:
                 l, r = ch_vals[af[0]], ch_vals[af[1]]
                 asym = (r - l) / (r + l) if np.isfinite(l) and np.isfinite(r) and (r + l) else np.nan
             n_af = int((m & af_clean).sum())
-            z = {k: (_med(feats[k][m & af_clean]) - zref[k][0]) / zref[k][1] for k in feats}
-            code, scores = self._classify(z, n_af, i == ref)
             name = ""
             for t, lab in zip(marks["time_s"], marks["label"]):
                 if abs(t - a) <= 1.5 and not str(lab).startswith("SYNC"):
@@ -359,10 +347,7 @@ class Session:
                 "values": _arr(ch_vals), "z": _arr(ch_z, 3), "asym": _num(asym, 3),
                 "ppg": hrv_stats(self.ppg, a, b),
                 "polar": hrv_stats(self.polar, a, b) if self.has_polar else None,
-                "code": code, "label": LABELS[code][0],
-                "arti": LABELS[code][1] if code != "NO_DATA" else f"Kurang dari 3 jendela EEG bersih pada {self.pair_label}.",
-                "feat_z": {k: _num(v, 3) for k, v in z.items()},
-                "scores": {k: _num(v, 3) for k, v in scores.items()},
+                "is_ref": i == ref,
                 "psd": [_arr(self._mean_psd(spec, a, b, c), 4) for c in range(self.nch)],
             })
 
@@ -383,51 +368,6 @@ class Session:
             "segments": segs,
             "tests": self._tests(spec, vals, bad, seg_of, nseg, edges),
         }
-
-    def _features(self, spec, af_clean):
-        p = spec["power"]
-        idx = self.pair_idx
-        with np.errstate(divide="ignore", invalid="ignore"):
-            al = np.log10(p["alpha"][:, idx].mean(axis=1))
-            be = np.log10(p["beta"][:, idx].mean(axis=1))
-            th = np.log10(p["theta"][:, idx].mean(axis=1))
-        src, ser = ("polar", self.polar) if self.has_polar else ("ppg", self.ppg)
-        hr = hr_at(ser, spec["t_mid"], spec["win_s"] / 2)
-        if not np.isfinite(hr).any():
-            src = None
-        feats = {"alpha": al, "beta": be, "theta": th, "tb": th - be, "ab": al - be, "ta": th - al, "hr": hr}
-        for k in feats:
-            if k != "hr":
-                feats[k] = np.where(af_clean, feats[k], np.nan)
-        return feats, src
-
-    @staticmethod
-    def _ref_stats(feats, ref_mask):
-        out = {}
-        for k, v in feats.items():
-            x = v[ref_mask]
-            x = x[np.isfinite(x)]
-            out[k] = (float(np.median(x)), max(float(x.std(ddof=1)), SD_FLOOR[k])) if len(x) >= 3 else (np.nan, np.nan)
-        return out
-
-    @staticmethod
-    def _classify(z, n_af, is_ref):
-        def zz(k):
-            return z.get(k, np.nan)
-
-        dom = {
-            "AROUSAL": np.nanmean([zz("beta"), zz("ab"), -zz("tb"), zz("hr")]),
-            "ENGAGEMENT": np.nanmean([zz("beta"), zz("alpha"), -zz("ta")]),
-            "LOW_AROUSAL": np.nanmean([zz("alpha"), zz("tb"), -zz("hr")]),
-        } if any(np.isfinite(v) for v in z.values()) else {"AROUSAL": np.nan, "ENGAGEMENT": np.nan, "LOW_AROUSAL": np.nan}
-        if is_ref:
-            return "REFERENCE", dom
-        if n_af < 3 or not all(np.isfinite(v) for v in dom.values()):
-            return "NO_DATA", dom
-        rk = sorted(dom.items(), key=lambda kv: kv[1], reverse=True)
-        if rk[0][1] < Z_MIN or rk[0][1] - rk[1][1] < Z_MARGIN:
-            return "INDETERMINATE", dom
-        return DOMAIN_TO_CODE[rk[0][0]], dom
 
     def _mean_psd(self, spec, a, b, c):
         mid = self.sub["t0"] + self.sub["seg_s"] / 2
