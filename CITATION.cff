@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Muse–Polar: live recording and analysis of Muse 2 EEG and Polar H10 heart data"
+type: software
+authors:
+  - family-names: Griadhi
+    given-names: I Putu Adiartha
+    orcid: "https://orcid.org/0000-0002-9895-9353"
+    affiliation: "Department of Physiology, Faculty of Medicine, Universitas Udayana, Bali, Indonesia"
+repository-code: "https://github.com/adiarthagriadhi/Muse-and-Polar"
+abstract: >-
+  Open research software that records a Muse 2 EEG headband and a Polar H10 chest strap over
+  Bluetooth Low Energy on one host clock (raw CSV, markers, movement-based clock synchronisation,
+  simulator) and analyses the recordings (EEG band power per segment, head maps, between-segment
+  statistics, PPG pulse-rate variability with the B1 reference pipeline, Polar HRV; EDF/BDF input).
+keywords:
+  - EEG
+  - Muse 2
+  - Polar H10
+  - photoplethysmography
+  - pulse rate variability
+  - heart rate variability
+  - Bluetooth Low Energy
+  - psychophysiology
+# license: set after the author chooses MIT or Apache-2.0
+# version, date-released and doi: filled in at the v1.0.0 release (see docs/RELEASE.md)

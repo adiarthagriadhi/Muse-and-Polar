@@ -1,3 +1,5 @@
+> English overview: [README](../README.md). Panduan pengguna dashboard live (Bahasa Indonesia).
+
 # Muse & Polar — Dashboard Live Recording
 
 Dashboard lokal di MacBook untuk **melihat secara live dan merekam** data dari:
@@ -190,7 +192,7 @@ markers = pd.read_csv(f"{d}/marker.csv")
 
 ## Analisis rekaman (Muse 2 Research View)
 
-Folder [`research/`](research/README.md) berisi penampil riset offline yang membaca sesi di
+Folder [`research/`](../research/README.md) berisi penampil riset offline yang membaca sesi di
 `recordings/` (daya pita EEG per ruas, peta, PRV dahi, uji antar ruas, laporan Word). Aplikasi ini
 terpisah dari dashboard live, dengan dependensi dan virtualenv sendiri:
 `cd research && ./run_mac.command`.
