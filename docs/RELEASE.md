@@ -15,6 +15,10 @@ Taken by the author on 8 Oct 2026:
 Still open:
 
 1. Third-party items in `docs/THIRD-PARTY.md` checked, including the patent note on "Muse Dashboard".
+   Ask Sentra HKI / LPPM Universitas Udayana (a) whether anything should be filed as a patent before
+   the open release (filing must precede publication) and (b) who holds the copyright for software
+   made in the course of employment (author or university); update `LICENSE` and `CITATION.cff`
+   accordingly.
 2. Whether the git history is published as is or only a squashed `main`. The history contains no
    participant data, but older commits contain the removed condition labels and legacy front-ends,
    and a local OneDrive path of the research data folder (no data) in an early version of
@@ -23,14 +27,17 @@ Still open:
 
 ## B. Before going public (in the private repository)
 
-1. Merge all work into `main`; set `main` as the default branch on GitHub
-   (Settings → General → Default branch); delete the old `claude/*` branches after checking that
-   nothing is lost (`git branch -r --no-merged origin/main` should be empty).
-2. CI green on `main` (Actions → tests).
-3. Re-run the privacy audit on the full history:
-   `git log --all --name-only --format= | sort -u` (no data files) and
-   `git grep -n -i -E "nama|birth|lahir|onedrive" $(git rev-list --all)` (review hits).
-4. Update `CITATION.cff` (`version: 1.0.0`, `date-released`) and add a `CHANGELOG.md` entry.
+Status 8 Oct 2026:
+
+- [x] All work merged into `main`; every `claude/*` branch is contained in `main`
+      (`git branch -r --no-merged origin/main` is empty).
+- [x] CI green on `main` (Linux 3.11–3.13, macOS 3.13).
+- [x] Privacy audit of the full history: no data files; no participant names or dates of birth.
+- [x] `CHANGELOG.md` with the 1.0.0 entry; `CITATION.cff` validated (cffconvert, schema 1.2.0).
+- [ ] Author: GitHub → Settings → General → Default branch → `main`.
+- [ ] After that, delete the old branches (`claude/muse-polar-live-dashboard-te8izt`,
+      `claude/pensive-allen-aw72zm`, `claude/focused-gauss-5arkdx`); nothing is lost, all are in `main`.
+- [ ] At release time: `version: 1.0.0` and `date-released` in `CITATION.cff`, date in `CHANGELOG.md`.
 
 ## C. Going public (needs approval)
 
