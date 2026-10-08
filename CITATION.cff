@@ -22,5 +22,5 @@ keywords:
   - heart rate variability
   - Bluetooth Low Energy
   - psychophysiology
-# license: set after the author chooses MIT or Apache-2.0
+license: MIT
 # version, date-released and doi: filled in at the v1.0.0 release (see docs/RELEASE.md)

@@ -3,19 +3,23 @@
 Prepared, **not executed**. Each step that makes something public needs the author's explicit
 approval at the time it is done. The repository stays private until then.
 
-## A. Decisions the author must make first
+## A. Decisions
 
-1. Licence: MIT or Apache-2.0 (copyright holder: I Putu Adiartha Griadhi). Add `LICENSE` and the
-   `license:` field in `CITATION.cff`.
-2. Keep or remove `research/legacy/` (old front-ends kept for comparison; original import is
-   preserved in git history at commit `224f88e` either way).
-3. Research View heart pipeline: switch the display to the B1 pipeline (`ppg_b1.py`) or keep the
-   exploratory pipeline with its label (see README, "Heart-rate and pulse-rate variability").
-4. Condition labels (Tenang/Fokus/Teraktivasi from EEG + heart rate): confirm they do not conflict
-   with the decision of 1 Oct 2026 (no cortex–autonomic quadrant mapping claims), or remove them.
-5. Third-party items in `docs/THIRD-PARTY.md` checked, including the patent note on "Muse Dashboard".
-6. Whether the git history is published as is (it contains no participant data; see the audit in
-   the hand-over report) or squashed.
+Taken by the author on 8 Oct 2026:
+
+- Licence: **MIT**, copyright I Putu Adiartha Griadhi (`LICENSE`, `CITATION.cff`).
+- `research/legacy/` removed from `main` (the original import stays in git history, commit `224f88e`).
+- Research View heart analysis switched to the B1 pipeline (`ppg_b1.py`), Python and browser version.
+- Condition labels (Tenang/Fokus/Teraktivasi) removed from the Research View.
+
+Still open:
+
+1. Third-party items in `docs/THIRD-PARTY.md` checked, including the patent note on "Muse Dashboard".
+2. Whether the git history is published as is or only a squashed `main`. The history contains no
+   participant data, but older commits contain the removed condition labels and legacy front-ends,
+   and a local OneDrive path of the research data folder (no data) in an early version of
+   `research/app/api.py`.
+3. Project name: keep "Muse–Polar" (trademark question in `docs/THIRD-PARTY.md`) or rename.
 
 ## B. Before going public (in the private repository)
 

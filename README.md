@@ -92,18 +92,23 @@ user guide [`docs/panduan-dashboard-id.md`](docs/panduan-dashboard-id.md) and
 ## Heart rate and pulse-rate variability
 
 The Muse 2 forehead PPG gives **pulse-rate variability (PRV)**, not heart-rate variability (HRV);
-only the Polar H10 (ECG-derived RR) gives HRV. In the validation study B1 (Muse 2 vs Polar H10,
-28 sessions), Muse 2 agreed with Polar H10 for **heart rate**, but **ultra-short (60 s) RMSSD from the
+only the Polar H10 (ECG-derived RR) gives HRV. In the validation study B1 (Muse 2 vs Polar H10),
+Muse 2 agreed with Polar H10 for **heart rate**, but **ultra-short (60 s) RMSSD from the
 forehead PPG was overestimated**. Do not use Muse PRV indices as a substitute for HRV.
 
 - `research/src/muse2_pipeline/ppg_b1.py` is the pre-specified B1 pipeline (PPG_2/infrared,
   Butterworth 3rd order 0.6–3.5 Hz zero-phase, peaks ≥ 60/160 s apart with prominence 1.4826 × MAD,
   intervals 300–2000 ms and ≤ 20 % change from the preceding interval, RMSSD from successive valid
-  intervals only). It reproduces the B1 analysis functions exactly and is the only pipeline to use
-  for claims about PPG quality.
-- The Research View display (`hrv.py`, `web/engine.js`) currently uses a different, exploratory
-  setting (0.5–3.5 Hz, adaptive prominence, 25 % local-median rule) and the legacy `prv09.py` is
-  kept only for the legacy front-ends. Their numbers are not B1-validated.
+  intervals only). It reproduces the B1 analysis functions exactly (checked against the B1 analysis
+  script on synthetic signals) and is the only PPG pipeline.
+- The Research View (Python and the single-file browser version) uses this pipeline for the
+  forehead PPG and applies the same interval rule to Polar RR and ECG intervals; a test checks that
+  the browser engine gives the same pulse times as the Python code.
+- Known properties of the B1 pipeline on synthetic signals: pulse times are quantised to the 64 Hz
+  sample grid (≈16 ms), which by itself adds RMSSD of the order of 10 ms even for perfectly regular
+  pulses; and at low heart rates very narrow pulses on a flat, noise-free baseline can produce extra
+  detections (documented by an expected-failure test). Both are consistent with treating PPG RMSSD
+  with caution.
 
 ## Limitations
 
@@ -113,8 +118,8 @@ forehead PPG was overestimated**. Do not use Muse PRV indices as a substitute fo
 - The Muse 2 BLE protocol is not publicly documented by the manufacturer; it was implemented
   following the open-source muse-js and muselsl projects and may break with firmware updates.
 - Forehead PPG: see above (PRV ≠ HRV; ultra-short RMSSD overestimated).
-- The condition labels of the Research View are descriptive summaries of relative changes, not
-  validated psychological or clinical states.
+- The Research View reports band power, changes relative to a reference segment and statistics; it
+  does not assign condition or state labels.
 - User interface text is in Indonesian.
 
 ## Tests
@@ -148,7 +153,7 @@ its behaviour. The author takes responsibility for the software.
 ## Citation, licence and contributing
 
 - Cite as described in [`CITATION.cff`](CITATION.cff).
-- Licence: see [`LICENSE`](LICENSE).
+- Licence: MIT, see [`LICENSE`](LICENSE).
 - Contributions and bug reports: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Author: I Putu Adiartha Griadhi, Department of Physiology, Faculty of Medicine, Universitas Udayana,
