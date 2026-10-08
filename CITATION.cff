@@ -26,3 +26,18 @@ license: MIT
 version: "1.0.0"
 date-released: "2026-10-08"
 # doi: added after Zenodo archives the release
+references:
+  - type: article
+    title: "Muse 2 forehead photoplethysmography agrees with Polar H10 for heart rate but overestimates ultra-short RMSSD"
+    authors:
+      - family-names: Griadhi
+        given-names: I Putu Adiartha
+        orcid: "https://orcid.org/0000-0002-9895-9353"
+      - family-names: Suadnyana
+        given-names: Ida Ayu Astiti
+      - family-names: Wahyuni
+        given-names: Nila
+    journal: medRxiv
+    year: 2026
+    doi: 10.64898/2026.10.05.26364782
+    notes: "Preprint (not peer reviewed). Validation of the B1 PPG pipeline implemented in research/src/muse2_pipeline/ppg_b1.py."

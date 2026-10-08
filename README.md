@@ -94,9 +94,10 @@ user guide [`docs/panduan-dashboard-id.md`](docs/panduan-dashboard-id.md) and
 ## Heart rate and pulse-rate variability
 
 The Muse 2 forehead PPG gives **pulse-rate variability (PRV)**, not heart-rate variability (HRV);
-only the Polar H10 (ECG-derived RR) gives HRV. In the validation study B1 (Muse 2 vs Polar H10),
+only the Polar H10 (ECG-derived RR) gives HRV. In the validation study B1 (Griadhi, Suadnyana &
+Wahyuni, 2026, medRxiv preprint, [doi:10.64898/2026.10.05.26364782](https://doi.org/10.64898/2026.10.05.26364782)),
 Muse 2 agreed with Polar H10 for **heart rate**, but **ultra-short (60 s) RMSSD from the
-forehead PPG was overestimated**. Do not use Muse PRV indices as a substitute for HRV.
+forehead PPG was overestimated**. The preprint has not been peer reviewed. Do not use Muse PRV indices as a substitute for HRV.
 
 - `research/src/muse2_pipeline/ppg_b1.py` is the pre-specified B1 pipeline (PPG_2/infrared,
   Butterworth 3rd order 0.6–3.5 Hz zero-phase, peaks ≥ 60/160 s apart with prominence 1.4826 × MAD,
