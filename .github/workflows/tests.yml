@@ -1,0 +1,39 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }} (${{ matrix.deps }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, python: "3.11", deps: ranges }
+          - { os: ubuntu-latest, python: "3.12", deps: lock }
+          - { os: ubuntu-latest, python: "3.13", deps: lock }
+          - { os: macos-latest, python: "3.13", deps: lock }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ "${{ matrix.deps }}" = "lock" ]; then
+            pip install -r requirements-lock.txt
+          else
+            pip install -r requirements-dev.txt
+          fi
+      - name: Run tests (live dashboard with simulator, research pipeline, browser engine)
+        run: python -m pytest -q

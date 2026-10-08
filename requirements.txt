@@ -1,3 +1,4 @@
-bleak>=0.22
-aiohttp>=3.9
-numpy>=1.24
+# Live dashboard (musepolar). Exact versions tested in CI: requirements-lock.txt
+bleak>=0.22,<4
+aiohttp>=3.9,<4
+numpy>=1.24,<3
