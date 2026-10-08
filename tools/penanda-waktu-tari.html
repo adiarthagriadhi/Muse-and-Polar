@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Penanda Waktu Tari → EEG</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --panel: #1a2332;
+      --border: #2a3a4f;
+      --text: #e8eef6;
+      --muted: #8fa3b8;
+      --accent: #3d9cf0;
+      --accent2: #2ecc71;
+      --warn: #f0a030;
+      --danger: #e74c3c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 10px 16px;
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    header h1 {
+      font-size: 15px;
+      font-weight: 600;
+      margin: 0;
+      letter-spacing: 0.02em;
+    }
+    header h1 span { color: var(--accent); }
+    .file-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .file-btn input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    button, .file-btn, select, input[type="text"] {
+      background: #243044;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    button:hover, .file-btn:hover { border-color: var(--accent); }
+    button.primary { background: var(--accent); border-color: var(--accent); color: #061018; font-weight: 600; }
+    button.good { background: #1e6b3a; border-color: #2ecc71; }
+    button.warn { background: #5a3a10; border-color: var(--warn); }
+    button.danger { background: #5a1e18; border-color: var(--danger); }
+    .meta { color: var(--muted); font-size: 12px; }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      min-height: 0;
+    }
+    .player-wrap {
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: #000;
+    }
+    video {
+      width: 100%;
+      flex: 1;
+      max-height: calc(100vh - 180px);
+      background: #000;
+      outline: none;
+    }
+    .controls {
+      padding: 8px 12px 12px;
+      background: var(--panel);
+      border-top: 1px solid var(--border);
+    }
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 6px;
+    }
+    #clock {
+      font-variant-numeric: tabular-nums;
+      font-size: 18px;
+      font-weight: 600;
+      min-width: 140px;
+    }
+    input[type="range"] { flex: 1; accent-color: var(--accent); }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .speed { width: 72px; }
+    aside {
+      border-left: 1px solid var(--border);
+      background: var(--panel);
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .aside-head {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .aside-head h2 { margin: 0 0 8px; font-size: 13px; font-weight: 600; }
+    .label-row { display: flex; gap: 6px; }
+    .label-row input { flex: 1; }
+    .presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .presets button { padding: 4px 8px; font-size: 12px; }
+    .list {
+      flex: 1;
+      overflow: auto;
+      padding: 8px;
+    }
+    .mark {
+      display: grid;
+      grid-template-columns: 88px 1fr auto;
+      gap: 6px;
+      align-items: center;
+      padding: 6px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      margin-bottom: 6px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .mark:hover { border-color: var(--accent); }
+    .mark .t {
+      font-variant-numeric: tabular-nums;
+      color: var(--accent);
+      font-weight: 600;
+    }
+    .mark input {
+      width: 100%;
+      padding: 4px 6px;
+    }
+    .mark .del { padding: 2px 8px; font-size: 12px; }
+    .mark.active { border-color: var(--accent2); }
+    .likert {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+    .mark .likert { grid-column: 1 / -1; }
+    .likert .lk-title { font-size: 11px; color: var(--muted); margin-right: 2px; }
+    .likert button {
+      width: 28px;
+      padding: 3px 0;
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+    }
+    .likert button.on { color: #061018; }
+    .likert button.on[data-v="1"] { background: #e74c3c; border-color: #e74c3c; }
+    .likert button.on[data-v="2"] { background: #f0a030; border-color: #f0a030; }
+    .likert button.on[data-v="3"] { background: #f1c40f; border-color: #f1c40f; }
+    .likert button.on[data-v="4"] { background: #8bd346; border-color: #8bd346; }
+    .likert button.on[data-v="5"] { background: #2ecc71; border-color: #2ecc71; }
+    .likert .lk-desc { font-size: 11px; color: var(--muted); margin-left: 4px; }
+    .likert-head { margin-top: 10px; }
+    .summary { font-size: 12px; color: var(--muted); width: 100%; }
+    .empty { color: var(--muted); font-size: 13px; padding: 16px; text-align: center; }
+    .aside-foot {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    kbd {
+      background: #0f1419;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+    }
+    .help { font-size: 11px; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+    @media (max-width: 860px) {
+      main { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+      aside { border-left: none; border-top: 1px solid var(--border); max-height: 40vh; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Penanda Waktu <span>Tari → EEG</span></h1>
+    <label class="file-btn">
+      Pilih video…
+      <input type="file" id="file" accept="video/*" />
+    </label>
+    <span class="meta" id="filename">Belum ada video</span>
+    <span class="meta" id="duration"></span>
+  </header>
+  <main>
+    <div class="player-wrap">
+      <video id="vid" playsinline></video>
+      <div class="controls">
+        <div class="time-row">
+          <span id="clock">00:00.000</span>
+          <input type="range" id="seek" min="0" max="0" step="0.001" value="0" />
+          <span class="meta" id="durLabel">00:00.000</span>
+        </div>
+        <div class="btn-row">
+          <button id="btnPlay">Putar / Jeda <kbd>Spasi</kbd></button>
+          <button id="btnBack">−1s</button>
+          <button id="btnFwd">+1s</button>
+          <button id="btnFrameB">−frame</button>
+          <button id="btnFrameF">+frame</button>
+          <select id="speed" class="speed" title="Kecepatan">
+            <option value="0.25">0.25×</option>
+            <option value="0.5">0.5×</option>
+            <option value="0.75">0.75×</option>
+            <option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option>
+            <option value="1.5">1.5×</option>
+          </select>
+          <button class="primary" id="btnMark">Tandai sekarang <kbd>M</kbd></button>
+          <span class="likert" id="quickScore" title="Tandai sekarang + kualitas gerak"><span class="lk-title">Tandai + kualitas:</span><button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button></span>
+        </div>
+      </div>
+    </div>
+    <aside>
+      <div class="aside-head">
+        <h2>Label untuk tanda berikutnya</h2>
+        <div class="label-row">
+          <input type="text" id="nextLabel" placeholder="mis. mulai putaran / pose akhir" />
+        </div>
+        <div class="presets">
+          <button data-l="mulai gerakan">mulai gerakan</button>
+          <button data-l="pose">pose</button>
+          <button data-l="putaran">putaran</button>
+          <button data-l="lompatan">lompatan</button>
+          <button data-l="transisi">transisi</button>
+          <button data-l="akhir gerakan">akhir gerakan</button>
+          <button data-l="sinkron EEG">sinkron EEG</button>
+        </div>
+        <h2 class="likert-head">Kualitas gerak (Likert 1–5) — diinput saat menandai</h2>
+        <div class="likert" id="nextScore">
+          <button data-v="1" title="1 – Sangat kurang">1</button>
+          <button data-v="2" title="2 – Kurang">2</button>
+          <button data-v="3" title="3 – Cukup">3</button>
+          <button data-v="4" title="4 – Baik">4</button>
+          <button data-v="5" title="5 – Sangat baik">5</button>
+          <span class="lk-desc" id="nextScoreDesc">belum dinilai</span>
+        </div>
+        <div class="help">
+          Skala: 1 Sangat kurang · 2 Kurang · 3 Cukup · 4 Baik · 5 Sangat baik<br />
+          <kbd>1</kbd>–<kbd>5</kbd> tandai waktu saat ini <b>sekaligus</b> nilai kualitas gerak ·
+          <kbd>M</kbd> tandai dengan nilai terpilih di atas ·
+          <kbd>0</kbd> hapus nilai tanda aktif (hijau) ·
+          <kbd>←</kbd><kbd>→</kbd> geser 1 dtk ·
+          <kbd>,</kbd><kbd>.</kbd> frame ·
+          klik baris untuk loncat ke waktu itu
+        </div>
+      </div>
+      <div class="list" id="list">
+        <div class="empty" id="empty">Belum ada tanda. Putar video, lalu tekan 1–5 (kualitas gerak) atau M.</div>
+      </div>
+      <div class="aside-foot">
+        <div class="summary" id="summary"></div>
+        <button class="good" id="btnCsv">Unduh CSV</button>
+        <button id="btnJson">Unduh JSON</button>
+        <button class="warn" id="btnLoad">Muat CSV</button>
+        <button class="danger" id="btnClear">Hapus semua</button>
+        <input type="file" id="csvIn" accept=".csv,text/csv" hidden />
+      </div>
+    </aside>
+  </main>
+
+<script>
+(() => {
+  const vid = document.getElementById("vid");
+  const file = document.getElementById("file");
+  const seek = document.getElementById("seek");
+  const clock = document.getElementById("clock");
+  const durLabel = document.getElementById("durLabel");
+  const durationEl = document.getElementById("duration");
+  const filenameEl = document.getElementById("filename");
+  const listEl = document.getElementById("list");
+  const emptyEl = document.getElementById("empty");
+  const nextLabel = document.getElementById("nextLabel");
+  const speed = document.getElementById("speed");
+
+  const nextScoreEl = document.getElementById("nextScore");
+  const nextScoreDesc = document.getElementById("nextScoreDesc");
+  const summaryEl = document.getElementById("summary");
+
+  let marks = []; // {id, t, label, score}  score: 1–5 atau null
+  let videoName = "";
+  let nextScore = null;
+  let activeId = null; // tanda yang menerima nilai dari tombol 1–5
+  const FPS_FALLBACK = 30;
+  const LIKERT = { 1: "Sangat kurang", 2: "Kurang", 3: "Cukup", 4: "Baik", 5: "Sangat baik" };
+
+  function scoreText(s) { return s ? `${s} – ${LIKERT[s]}` : "belum dinilai"; }
+
+  function parseScore(v) {
+    const n = parseInt(v, 10);
+    return n >= 1 && n <= 5 ? n : null;
+  }
+
+  function renderNextScore() {
+    nextScoreEl.querySelectorAll("button").forEach(b => b.classList.toggle("on", +b.dataset.v === nextScore));
+    nextScoreDesc.textContent = scoreText(nextScore);
+  }
+
+  nextScoreEl.querySelectorAll("button").forEach(b => {
+    b.onclick = () => {
+      const v = +b.dataset.v;
+      nextScore = nextScore === v ? null : v; // klik ulang untuk membatalkan
+      renderNextScore();
+    };
+  });
+
+  document.querySelectorAll("#quickScore button").forEach(b => {
+    b.onclick = () => addMark(vid.currentTime, nextLabel.value, +b.dataset.v);
+  });
+
+  function setScore(id, v) {
+    const m = marks.find(x => x.id === id);
+    if (!m) return;
+    m.score = v;
+    render();
+  }
+
+  function fmt(t) {
+    if (!isFinite(t) || t < 0) t = 0;
+    const ms = Math.round((t % 1) * 1000);
+    const s = Math.floor(t) % 60;
+    const m = Math.floor(t / 60) % 60;
+    const h = Math.floor(t / 3600);
+    const core = `${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}.${String(ms).padStart(3,"0")}`;
+    return h > 0 ? `${h}:${core}` : core;
+  }
+
+  function parseTime(str) {
+    const p = String(str).trim().split(":");
+    if (p.length === 3) return (+p[0])*3600 + (+p[1])*60 + parseFloat(p[2]);
+    if (p.length === 2) return (+p[0])*60 + parseFloat(p[1]);
+    return parseFloat(str) || 0;
+  }
+
+  let dragging = false;   // slider sedang digeser pengguna
+  let fixingDuration = false;
+
+  // Durasi yang bisa dipakai: duration jika valid, jika tidak ujung rentang seekable.
+  function knownDuration() {
+    if (isFinite(vid.duration) && vid.duration > 0) return vid.duration;
+    const s = vid.seekable;
+    if (s && s.length && isFinite(s.end(s.length - 1))) return s.end(s.length - 1);
+    return 0;
+  }
+
+  function updateDuration() {
+    const d = knownDuration();
+    seek.max = d > 0 ? d : Math.max(1, vid.currentTime || 0);
+    durLabel.textContent = fmt(d);
+    durationEl.textContent = d > 0 ? "Durasi " + fmt(d) : "";
+  }
+
+  function tick() {
+    clock.textContent = fmt(vid.currentTime || 0);
+    if (!knownDuration() && vid.currentTime > +seek.max) seek.max = vid.currentTime;
+    if (!dragging) seek.value = vid.currentTime || 0;
+  }
+
+  vid.addEventListener("timeupdate", tick);
+  vid.addEventListener("seeked", tick);
+  requestAnimationFrame(function loop() { tick(); requestAnimationFrame(loop); });
+
+  vid.addEventListener("loadedmetadata", () => {
+    updateDuration();
+    // Sebagian file (mis. .webm hasil rekaman) tidak menyimpan durasi → duration = Infinity.
+    // Loncat jauh ke akhir memaksa browser menghitung durasinya, lalu kembali ke awal.
+    if (!isFinite(vid.duration)) {
+      fixingDuration = true;
+      vid.currentTime = 1e101;
+    }
+  });
+  vid.addEventListener("durationchange", () => {
+    updateDuration();
+    if (fixingDuration && isFinite(vid.duration)) {
+      fixingDuration = false;
+      vid.currentTime = 0;
+    }
+  });
+
+  file.addEventListener("change", () => {
+    const f = file.files[0];
+    if (!f) return;
+    videoName = f.name;
+    filenameEl.textContent = f.name;
+    fixingDuration = false;
+    dragging = false;
+    const url = URL.createObjectURL(f);
+    vid.src = url;
+    vid.play().catch(() => {});
+  });
+
+  // Tandai saat slider digeser agar tick() tidak menimpa posisinya (":active" tidak andal di Safari/layar sentuh).
+  seek.addEventListener("pointerdown", () => { dragging = true; });
+  window.addEventListener("pointerup", () => { dragging = false; });
+  window.addEventListener("pointercancel", () => { dragging = false; });
+  seek.addEventListener("input", () => {
+    vid.currentTime = +seek.value;
+    clock.textContent = fmt(+seek.value);
+  });
+  seek.addEventListener("change", () => { vid.currentTime = +seek.value; dragging = false; });
+  speed.addEventListener("change", () => { vid.playbackRate = +speed.value; });
+
+  document.getElementById("btnPlay").onclick = () => vid.paused ? vid.play() : vid.pause();
+  document.getElementById("btnBack").onclick = () => { vid.currentTime = Math.max(0, vid.currentTime - 1); };
+  document.getElementById("btnFwd").onclick = () => { vid.currentTime = Math.min(knownDuration() || Infinity, vid.currentTime + 1); };
+  document.getElementById("btnFrameB").onclick = () => { vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); };
+  document.getElementById("btnFrameF").onclick = () => { vid.pause(); vid.currentTime = vid.currentTime + 1/FPS_FALLBACK; };
+
+  document.querySelectorAll(".presets button").forEach(b => {
+    b.onclick = () => { nextLabel.value = b.dataset.l; nextLabel.focus(); };
+  });
+
+  function addMark(t, label, score = nextScore) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random());
+    marks.push({ id, t: +t.toFixed(3), label: label || nextLabel.value || "", score });
+    marks.sort((a,b) => a.t - b.t);
+    activeId = id;
+    render();
+  }
+
+  document.getElementById("btnMark").onclick = () => addMark(vid.currentTime, nextLabel.value);
+
+  function render() {
+    listEl.querySelectorAll(".mark").forEach(n => n.remove());
+    emptyEl.style.display = marks.length ? "none" : "block";
+    if (!marks.some(m => m.id === activeId)) activeId = marks.length ? marks[marks.length - 1].id : null;
+    marks.forEach(m => {
+      const row = document.createElement("div");
+      row.className = "mark" + (m.id === activeId ? " active" : "");
+      const lk = [1,2,3,4,5].map(v =>
+        `<button data-v="${v}" class="${m.score === v ? "on" : ""}" title="${v} – ${LIKERT[v]}">${v}</button>`
+      ).join("");
+      row.innerHTML = `
+        <span class="t">${fmt(m.t)}</span>
+        <input type="text" value="${m.label.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;")}" />
+        <button class="del danger">×</button>
+        <div class="likert">
+          <span class="lk-title">Kualitas gerak</span>${lk}
+          <span class="lk-desc">${scoreText(m.score)}</span>
+        </div>`;
+      row.querySelector("input").addEventListener("change", e => { m.label = e.target.value; });
+      row.querySelector("input").addEventListener("focus", () => {
+        activeId = m.id;
+        listEl.querySelectorAll(".mark").forEach(n => n.classList.remove("active"));
+        row.classList.add("active");
+      });
+      row.querySelectorAll(".likert button").forEach(b => {
+        b.onclick = ev => {
+          ev.stopPropagation();
+          const v = +b.dataset.v;
+          activeId = m.id;
+          setScore(m.id, m.score === v ? null : v);
+        };
+      });
+      row.querySelector(".del").onclick = ev => {
+        ev.stopPropagation();
+        marks = marks.filter(x => x.id !== m.id);
+        render();
+      };
+      row.addEventListener("click", ev => {
+        if (ev.target.tagName === "INPUT" || ev.target.tagName === "BUTTON") return;
+        vid.currentTime = m.t;
+        activeId = m.id;
+        render();
+      });
+      listEl.appendChild(row);
+    });
+    renderSummary();
+  }
+
+  function renderSummary() {
+    const scored = marks.filter(m => m.score);
+    if (!marks.length) { summaryEl.textContent = ""; return; }
+    if (!scored.length) { summaryEl.textContent = `${marks.length} tanda · belum ada nilai kualitas gerak`; return; }
+    const mean = scored.reduce((s, m) => s + m.score, 0) / scored.length;
+    const dist = [1,2,3,4,5].map(v => `${v}:${scored.filter(m => m.score === v).length}`).join(" ");
+    summaryEl.textContent =
+      `${marks.length} tanda · ${scored.length} dinilai · rata-rata ${mean.toFixed(2)} · sebaran ${dist}`;
+  }
+
+  function csvEscape(s) {
+    s = String(s ?? "");
+    if (/[",\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+    return s;
+  }
+
+  document.getElementById("btnCsv").onclick = () => {
+    const header = "urutan,waktu_detik,waktu_hhmmss,label,kualitas_gerak,kategori_kualitas,nama_video";
+    const rows = marks.map((m,i) =>
+      [i+1, m.t.toFixed(3), fmt(m.t), csvEscape(m.label),
+       m.score ?? "", m.score ? LIKERT[m.score] : "", csvEscape(videoName)].join(",")
+    );
+    download((videoName || "tanda") + "_timestamps.csv", [header, ...rows].join("\n"));
+  };
+
+  document.getElementById("btnJson").onclick = () => {
+    const payload = {
+      video: videoName,
+      duration_s: vid.duration || null,
+      movement_quality_scale: { type: "likert", min: 1, max: 5, labels: LIKERT },
+      marks: marks.map(m => ({
+        time_s: m.t, time_fmt: fmt(m.t), label: m.label,
+        movement_quality: m.score ?? null,
+        movement_quality_label: m.score ? LIKERT[m.score] : null
+      }))
+    };
+    download((videoName || "tanda") + "_timestamps.json", JSON.stringify(payload, null, 2));
+  };
+
+  function download(name, text) {
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    a.click();
+  }
+
+  document.getElementById("btnClear").onclick = () => {
+    if (marks.length && confirm("Hapus semua tanda?")) { marks = []; render(); }
+  };
+
+  document.getElementById("btnLoad").onclick = () => document.getElementById("csvIn").click();
+  document.getElementById("csvIn").addEventListener("change", e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const lines = String(reader.result).split(/\r?\n/).filter(Boolean);
+      if (!lines.length) return;
+      const hasHeader = lines[0].toLowerCase().includes("waktu");
+      const head = hasHeader ? parseCsvLine(lines[0]).map(h => h.trim().toLowerCase()) : [];
+      // cari kolom berdasarkan nama; fallback ke urutan lama (tanpa kualitas_gerak)
+      const col = (name, fallback) => { const k = head.indexOf(name); return k >= 0 ? k : fallback; };
+      const cT = col("waktu_detik", 1), cL = col("label", 3), cS = col("kualitas_gerak", col("nilai_gerak", -1));
+      const loaded = [];
+      for (let i = hasHeader ? 1 : 0; i < lines.length; i++) {
+        const cols = parseCsvLine(lines[i]);
+        const t = parseFloat(cols[cT]);
+        if (!isFinite(t)) continue;
+        loaded.push({
+          id: "load-" + i,
+          t: +t.toFixed(3),
+          label: cols[cL] || "",
+          score: cS >= 0 ? parseScore(cols[cS]) : null
+        });
+      }
+      marks = loaded.sort((a,b) => a.t - b.t);
+      render();
+    };
+    reader.readAsText(f);
+    e.target.value = "";
+  });
+
+  function parseCsvLine(line) {
+    const out = [];
+    let cur = "", q = false;
+    for (let i = 0; i < line.length; i++) {
+      const c = line[i];
+      if (q) {
+        if (c === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (c === '"') q = false;
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { out.push(cur); cur = ""; }
+      else cur += c;
+    }
+    out.push(cur);
+    return out;
+  }
+
+  window.addEventListener("keydown", e => {
+    const tag = (e.target.tagName || "").toLowerCase();
+    if (tag === "input" || tag === "textarea") return;
+    if (e.code === "Space") { e.preventDefault(); vid.paused ? vid.play() : vid.pause(); }
+    if (e.key === "m" || e.key === "M") { e.preventDefault(); addMark(vid.currentTime, nextLabel.value); }
+    if (e.key === "ArrowLeft") { e.preventDefault(); vid.currentTime = Math.max(0, vid.currentTime - (e.shiftKey ? 5 : 1)); }
+    if (e.key === "ArrowRight") { e.preventDefault(); vid.currentTime += (e.shiftKey ? 5 : 1); }
+    if (e.key === ",") { e.preventDefault(); vid.pause(); vid.currentTime = Math.max(0, vid.currentTime - 1/FPS_FALLBACK); }
+    if (e.key === ".") { e.preventDefault(); vid.pause(); vid.currentTime += 1/FPS_FALLBACK; }
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (/^[1-5]$/.test(e.key)) {
+      // tandai waktu saat ini sekaligus menilai kualitas gerak
+      e.preventDefault();
+      addMark(vid.currentTime, nextLabel.value, parseScore(e.key));
+    }
+    if (e.key === "0" && activeId) { e.preventDefault(); setScore(activeId, null); }
+  });
+})();
+</script>
+</body>
+</html>
