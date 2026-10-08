@@ -148,6 +148,9 @@ File ini tidak dianalisis sendiri, tetapi **digabung dengan rekaman EEG**:
 - **Jantung.** PPG inframerah difilter 0,5–3,5 Hz lalu dideteksi puncaknya dengan prominensi adaptif (per 10 s).
   Interval PPG dan RR Polar di luar 35–180 bpm, atau berbeda > 25 % dari median sekitarnya, ditandai tidak valid.
   RMSSD hanya dari pasangan interval valid yang berurutan. PRV dahi ≠ HRV Polar.
+  **Catatan:** pengaturan tampilan ini eksploratif dan **bukan** pipeline B1. Untuk klaim mutu PPG dahi
+  gunakan `src/muse2_pipeline/ppg_b1.py` (pipeline B1 yang telah ditetapkan; lihat README utama). Pada B1,
+  denyut Muse 2 sesuai dengan Polar H10, tetapi RMSSD ultra-singkat dari PPG dahi ditaksir berlebih.
 
 ## Struktur
 
@@ -165,7 +168,8 @@ research/
     edf.py                 pembaca/penulis EDF, EDF+ (anotasi) dan BDF tanpa dependensi tambahan
     montage.py             nama & posisi elektroda 10-20/10-10, pasangan frontal, area kepala
     eeg.py                 filter, spektrum potongan & jendela (plus fungsi lama)
-    hrv.py                 deteksi denyut PPG dan puncak R EKG, pembersihan interval, HRV/PRV
+    ppg_b1.py              pipeline PPG acuan naskah B1 (satu-satunya untuk klaim mutu PPG)
+    hrv.py                 deteksi denyut PPG (eksploratif, bukan B1) dan puncak R EKG, pembersihan interval, HRV/PRV
     analysis.py            analisis per sesi/ruas, label, uji statistik
     report.py              ekspor CSV (ZIP), gambar PNG, laporan Word
     prv09.py, segments.py, maps.py   metode lama (dipakai legacy/)

@@ -1,4 +1,7 @@
-"""Muse 2 research pipeline for musepolar recordings (CSV path + 09-lite PRV)."""
+"""Muse 2 research pipeline for musepolar recordings.
+
+The B1 reference PPG pipeline is ``muse2_pipeline.ppg_b1``; ``compute_prv_09`` is legacy.
+"""
 
 from .io import list_samples, load_sample, unpack_zip, marker_titik, DEFAULT_RECORDINGS
 from .prv09 import compute_prv_09

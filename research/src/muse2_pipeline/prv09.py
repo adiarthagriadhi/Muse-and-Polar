@@ -1,3 +1,10 @@
+"""Legacy "09-lite" PRV from the original muse2-research-app (used only by ``legacy/``).
+
+NOT the B1 pipeline: peaks are found on the unfiltered signal with prominence = 1 x MAD,
+minimum distance 0.30 s, no interval artefact rule and RMSSD across gaps. Kept for
+comparison with the legacy front-ends; use ``ppg_b1.py`` for any PPG result.
+"""
+
 from __future__ import annotations
 
 import numpy as np

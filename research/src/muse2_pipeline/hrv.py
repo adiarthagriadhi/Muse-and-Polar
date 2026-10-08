@@ -5,6 +5,12 @@ prominence, and every interval is checked against its neighbours so that missed 
 extra beats do not inflate RMSSD. Polar RR intervals go through the same checks.
 PRV (forehead pulse) and HRV (chest ECG) are reported separately: they are related
 but not interchangeable.
+
+NOT the B1 pipeline. The PPG settings here (2nd-order 0.5-3.5 Hz band-pass, adaptive
+prominence per 10 s, 35-180 bpm and 25 % local-median rule) are an exploratory display
+pipeline of the Research View and differ from the pre-specified B1 pipeline in
+``ppg_b1.py``. Numbers from this module must not be reported as forehead-PPG validity
+results; use ``ppg_b1`` for any claim about PPG quality.
 """
 
 from __future__ import annotations
