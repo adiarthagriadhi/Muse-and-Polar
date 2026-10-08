@@ -37,7 +37,8 @@ Status 8 Oct 2026:
 - [ ] Author: GitHub → Settings → General → Default branch → `main`.
 - [ ] After that, delete the old branches (`claude/muse-polar-live-dashboard-te8izt`,
       `claude/pensive-allen-aw72zm`, `claude/focused-gauss-5arkdx`); nothing is lost, all are in `main`.
-- [ ] At release time: `version: 1.0.0` and `date-released` in `CITATION.cff`, date in `CHANGELOG.md`.
+- [x] `version: 1.0.0` and `date-released` in `CITATION.cff`, date in `CHANGELOG.md`; tag `v1.0.0`.
+- [x] Patent: author decided on 8 Oct 2026 to proceed with the open release (patent potential judged low).
 
 ## C. Going public (needs approval)
 

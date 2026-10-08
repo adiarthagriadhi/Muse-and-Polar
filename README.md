@@ -1,5 +1,7 @@
 # Muse–Polar
 
+[![tests](https://github.com/adiarthagriadhi/Muse-and-Polar/actions/workflows/tests.yml/badge.svg)](https://github.com/adiarthagriadhi/Muse-and-Polar/actions/workflows/tests.yml)
+
 Open research software for **recording and analysing a Muse 2 EEG headband together with a Polar H10
 chest strap**. It has three parts:
 

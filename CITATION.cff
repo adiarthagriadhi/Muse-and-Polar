@@ -23,4 +23,6 @@ keywords:
   - Bluetooth Low Energy
   - psychophysiology
 license: MIT
-# version, date-released and doi: filled in at the v1.0.0 release (see docs/RELEASE.md)
+version: "1.0.0"
+date-released: "2026-10-08"
+# doi: added after Zenodo archives the release
