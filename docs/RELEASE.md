@@ -40,6 +40,12 @@ Status 8 Oct 2026:
 - [x] `version: 1.0.0` and `date-released` in `CITATION.cff`, date in `CHANGELOG.md`; tag `v1.0.0`.
 - [x] Patent: author decided on 8 Oct 2026 to proceed with the open release (patent potential judged low).
 
+## Done (8–9 Oct 2026)
+
+Default branch `main`; repository public; Zenodo GitHub integration on; release v1.0.0 published;
+concept DOI 10.5281/zenodo.23252791 in `CITATION.cff` and the README badge.
+Old `claude/*` branches can be deleted by the author (all contained in `main`).
+
 ## C. Going public (needs approval)
 
 1. GitHub → Settings → General → Danger zone → *Change repository visibility* → Public.

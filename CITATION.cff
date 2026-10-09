@@ -25,7 +25,11 @@ keywords:
 license: MIT
 version: "1.0.0"
 date-released: "2026-10-08"
-# doi: added after Zenodo archives the release
+doi: 10.5281/zenodo.23252791
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23252791
+    description: "Concept DOI (all versions), Zenodo"
 references:
   - type: article
     title: "Muse 2 forehead photoplethysmography agrees with Polar H10 for heart rate but overestimates ultra-short RMSSD"

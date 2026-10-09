@@ -1,6 +1,7 @@
 # Muse–Polar
 
 [![tests](https://github.com/adiarthagriadhi/Muse-and-Polar/actions/workflows/tests.yml/badge.svg)](https://github.com/adiarthagriadhi/Muse-and-Polar/actions/workflows/tests.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23252791.svg)](https://doi.org/10.5281/zenodo.23252791)
 
 Open research software for **recording and analysing a Muse 2 EEG headband together with a Polar H10
 chest strap**. It has three parts:
@@ -155,7 +156,7 @@ its behaviour. The author takes responsibility for the software.
 
 ## Citation, licence and contributing
 
-- Cite as described in [`CITATION.cff`](CITATION.cff).
+- Cite as described in [`CITATION.cff`](CITATION.cff): Griadhi, I. P. A. (2026). *Muse–Polar* (software). Zenodo. https://doi.org/10.5281/zenodo.23252791
 - Licence: MIT, see [`LICENSE`](LICENSE).
 - Contributions and bug reports: see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
