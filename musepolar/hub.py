@@ -10,6 +10,7 @@ import time
 from collections import deque
 from pathlib import Path
 
+from . import cass
 from .analysis import EegBands, Hrv, estimate_offset
 from .recorder import Recorder
 from .streams import STREAMS
@@ -18,8 +19,12 @@ log = logging.getLogger(__name__)
 
 
 class Hub:
-    def __init__(self, data_dir: Path, send_interval: float = 0.05, metrics_interval: float = 0.5):
+    def __init__(self, data_dir: Path, send_interval: float = 0.05, metrics_interval: float = 0.5,
+                 cass_url: str = "http://127.0.0.1:8766/"):
         self.data_dir = Path(data_dir)
+        self.cass_url = cass_url
+        self.cass: dict = {"busy": False}
+        self._cass_task: asyncio.Task | None = None
         self.send_interval = send_interval
         self.metrics_interval = metrics_interval
         self.clients: set = set()
@@ -140,6 +145,34 @@ class Hub:
         self._events.append({"type": "sync", "sync": self.sync})
         log.info("sync: %s", res)
 
+    # -- CASS Wellness ---------------------------------------------------
+    def start_cass_send(self) -> None:
+        if self._cass_task and not self._cass_task.done():
+            return
+        self._cass_task = asyncio.create_task(self._cass_send())
+
+    async def _cass_send(self) -> None:
+        rec = self.last_recording
+        self.cass = {"busy": True, "step": "menyiapkan berkas"}
+        self._events.append({"type": "cass", "cass": self.cass})
+        try:
+            if self.recorder:
+                raise cass.CassError("hentikan rekaman dulu")
+            if not rec:
+                raise cass.CassError("belum ada rekaman di sesi ini")
+            zip_path = await asyncio.to_thread(cass.export_session, Path(rec["dir"]))
+            self.cass = {"busy": True, "step": "mengirim ke CASS Wellness", "zip": str(zip_path)}
+            self._events.append({"type": "cass", "cass": self.cass})
+            res = await cass.upload(zip_path, self.cass_url)
+            self.cass = {"busy": False, "ok": True, "zip": str(zip_path), "dir": rec["dir"], "result": res}
+        except cass.CassError as e:
+            self.cass = {"busy": False, "ok": False, "error": str(e), **({"zip": self.cass["zip"]} if "zip" in self.cass else {})}
+        except Exception as e:  # noqa: BLE001
+            log.exception("CASS transfer failed")
+            self.cass = {"busy": False, "ok": False, "error": f"{type(e).__name__}: {e}"}
+        log.info("CASS: %s", self.cass)
+        self._events.append({"type": "cass", "cass": self.cass})
+
     # -- data out ----------------------------------------------------------
     def hello(self) -> dict:
         return {
@@ -148,6 +181,7 @@ class Hub:
             "status": self.status,
             "recording": self.recorder.info() if self.recorder else self.last_recording,
             "sync": self.sync,
+            "cass": {**self.cass, "url": self.cass_url},
             "server_time": time.time(),
         }
 

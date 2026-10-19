@@ -164,6 +164,10 @@ figcaption > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .sync-result .st { font-weight: 600; }
 .sync-val b { font-size: 20px; margin-right: 6px; }
 
+.cass-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.cass-row .btn:disabled { cursor: default; opacity: 0.6; }
+.cass-result a { color: var(--series-1); font-weight: 600; }
+
 .markers { flex: 1; }
 .marker-row { display: flex; gap: 6px; }
 .marker-row input { flex: 1; min-width: 0; }

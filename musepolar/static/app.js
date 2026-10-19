@@ -369,7 +369,47 @@ function renderRecording() {
     $('recPath').textContent = active ? `→ ${p}` : `Tersimpan: ${p}`;
     $('recPath').title = p;
   }
+  renderCass();
 }
+
+// ---------------------------------------------------------------- CASS Wellness
+let cass = { busy: false, url: '' };
+let cassRunning = null;
+function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function renderCass() {
+  const chip = $('cassState');
+  chip.className = `chip ${cassRunning ? 'streaming' : 'disconnected'}`;
+  chip.textContent = cassRunning == null ? 'memeriksa…' : cassRunning ? 'berjalan' : 'tidak berjalan';
+  chip.title = cass.url || '';
+  const canSend = recording && !recording.active && !cass.busy;
+  $('cassSend').disabled = !canSend;
+  $('cassSend').textContent = cass.busy ? 'Mengirim…' : 'Kirim rekaman ke CASS';
+  $('cassSend').title = recording && recording.active ? 'Hentikan rekaman dulu'
+    : !recording ? 'Rekam dulu satu sesi' : `Kirim ${recording.dir} ke CASS Wellness`;
+  const out = $('cassResult');
+  out.classList.add('cass-result');
+  if (cass.busy) out.innerHTML = `<span class="st">${esc(cass.step || 'memproses')}…</span><span class="muted">CASS menghitung jendela 5 s; bisa ±1 menit.</span>`;
+  else if (cass.ok) {
+    const r = cass.result || {};
+    const s0 = (r.sessions || [])[0] || {};
+    out.innerHTML = `<span class="st good">✓ Terkirim</span>`
+      + `<span>${esc(s0.session_id || '')} · ${s0.n_windows ?? '?'} jendela, Y valid ${s0.n_y_valid ?? '?'}</span>`
+      + ((r.problems || []).length ? `<span class="st warning">${esc(r.problems.join('; '))}</span>` : '')
+      + (r.html_url ? `<a href="${esc(r.html_url)}" target="_blank" rel="noopener">Buka hasil di Explorer ↗</a>` : '');
+  } else if (cass.ok === false) {
+    out.innerHTML = `<span class="st critical">✕ Gagal</span><span>${esc(cass.error)}</span>`
+      + (cass.zip ? `<span class="muted ellipsis" title="${esc(cass.zip)}">ZIP: ${esc(cass.zip)} (bisa diunggah manual)</span>` : '');
+  } else out.innerHTML = '';
+}
+async function checkCass() {
+  try {
+    const r = await (await fetch('/api/cass')).json();
+    cass.url = r.url; cassRunning = r.running;
+  } catch { cassRunning = false; }
+  renderCass();
+}
+checkCass();
+setInterval(checkCass, 5000);
 
 function renderMetrics(m) {
   if (m.hrv) {
@@ -493,6 +533,7 @@ function connect() {
       case 'hello':
         syncClock(m.server_time); status = m.status; renderStatus();
         if (m.recording) { recording = m.recording; renderRecording(); }
+        if (m.cass) { cass = m.cass; renderCass(); }
         if (m.sync) renderSync(m.sync);
         break;
       case 'status': status = m.status; renderStatus(); break;
@@ -500,6 +541,7 @@ function connect() {
       case 'metrics': syncClock(m.server_time); renderMetrics(m); break;
       case 'recording': recording = m.recording; renderRecording(); break;
       case 'sync': renderSync(m.sync); break;
+      case 'cass': cass = { url: cass.url, ...m.cass }; renderCass(); break;
     }
   };
 }
@@ -530,6 +572,8 @@ document.addEventListener('keydown', (e) => {
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= QUICK_MARKERS.length) sendMarker(QUICK_MARKERS[n - 1]);
 });
+$('cassSend').addEventListener('click', () => send({ cmd: 'cass_send' }));
+$('cassOpen').addEventListener('click', () => window.open(cass.url || 'http://127.0.0.1:8766/', '_blank', 'noopener'));
 $('syncBtn').addEventListener('click', () => send({ cmd: 'sync', duration: 10 }));
 $('eegScale').addEventListener('change', (e) => { settings.eegScale = +e.target.value; });
 $('notch').addEventListener('change', (e) => { settings.notch = +e.target.value; refilter('muse_eeg'); });

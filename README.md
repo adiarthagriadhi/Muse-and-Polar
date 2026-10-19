@@ -126,6 +126,7 @@ Opsi baris perintah (`python -m musepolar --help`):
 | `--no-ecg` | matikan EKG Polar |
 | `--no-polar-acc` | matikan akselerometer Polar (sinkronisasi tidak bisa dipakai) |
 | `--no-browser` | jangan buka browser otomatis |
+| `--cass-url URL` | alamat CASS Wellness (default `http://127.0.0.1:8766/`) |
 | `-v` | log detail |
 
 Mencari nama/alamat perangkat di sekitar:
@@ -135,6 +136,28 @@ python -m musepolar.scan
 ```
 
 Di macOS, "alamat" berupa UUID CoreBluetooth (bukan MAC) yang tetap sama untuk Mac yang sama.
+
+## Kirim ke CASS Wellness
+
+Panel **CASS Wellness** di kolom kanan dashboard punya dua tombol:
+
+- **Kirim rekaman ke CASS** — rekaman terakhir (setelah *Stop rekam*) diubah ke format
+  CASS (`EEG_raw.csv`, `PPG_raw.csv` dengan PPG_2 = inframerah, `recording_metadata.json`),
+  dikemas jadi `cass_<folder sesi>.zip` di folder sesi, lalu diunggah ke CASS Wellness.
+  Setelah selesai muncul tautan **Buka hasil di Explorer**. `polar_rr.csv` dan
+  `marker.csv` ikut di dalam ZIP tetapi belum dipakai CASS.
+- **Buka CASS Wellness** — membuka portal CASS di tab baru.
+
+CASS Wellness dijalankan terpisah dari folder toolkit-nya, di port **8766** (8765 dipakai
+dashboard ini):
+
+```bash
+./jalankan.sh --port 8766
+```
+
+Tanda di panel: *berjalan* / *tidak berjalan*. Bila CASS belum berjalan, ZIP tetap dibuat dan
+bisa diseret manual ke portal CASS. Nama peserta diambil dari nama sesi; marker dikosongkan,
+ruas 30 s, PRV 20 s (nilai bawaan CASS).
 
 ## Format data rekaman
 
@@ -199,6 +222,7 @@ musepolar/
   ble.py        loop scan/connect/reconnect bersama (bleak)
   analysis.py   daya pita EEG, kualitas sinyal, HRV, estimasi selisih waktu (sinkronisasi)
   recorder.py   penulisan CSV + session.json
+  cass.py       ekspor rekaman ke format CASS Wellness + unggah
   simulator.py  perangkat sintetis untuk --sim
   static/       dashboard (HTML/CSS/JS tanpa dependensi eksternal, bisa offline)
 tests/          uji decoder, analisis, perekam, dan end-to-end dengan simulator
