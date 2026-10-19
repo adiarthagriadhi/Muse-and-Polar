@@ -39,6 +39,10 @@
       <button class="btn rec-btn" id="recBtn"><span class="rec-dot"></span><span id="recLabel">Mulai rekam</span></button>
     </div>
     <div class="rec-row small">
+      <a class="btn" href="/cass" style="text-decoration:none;display:inline-block">Tampilan CASS · Semua Sesi</a>
+      <button class="btn" id="cassExportBtn" type="button" disabled>Ekspor sesi ke CASS</button>
+    </div>
+    <div class="rec-row small">
       <span id="recTimer" class="mono">00:00:00</span>
       <span id="recPath" class="muted ellipsis" title=""></span>
     </div>
@@ -138,6 +142,26 @@
   </div>
 </main>
 
+<script>
+(function(){
+ const button=document.getElementById('cassExportBtn');
+ const path=document.getElementById('recPath');
+ async function update(){
+  try{
+   const r=await fetch('/api/cass/sessions');if(!r.ok)throw Error('Tidak tersedia');
+   const data=await r.json();const rows=data.sessions||[];
+   const current=path.textContent.trim();
+   const matched=rows.find(s=>current && (current.endsWith('/'+s.id)||current.endsWith('\\'+s.id)||current===s.id));
+   const session=matched || rows[0];
+   button.disabled=!session || document.getElementById('recLabel').textContent.trim()!=='Mulai rekam';
+   button.dataset.session=session?.id||'';
+   button.title=session?'Ekspor '+session.name:'Belum ada sesi dengan EEG dan RR Polar';
+  }catch(e){button.disabled=true;button.title=e.message}
+ }
+ button.addEventListener('click',()=>{if(button.disabled||!button.dataset.session)return;window.location.href='/api/cass/export/'+encodeURIComponent(button.dataset.session)});
+ setInterval(update,2500);update();
+})();
+</script>
 <script src="/static/app.js"></script>
 </body>
 </html>
