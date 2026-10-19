@@ -1,6 +1,6 @@
 """Safe export and cumulative session registry for the experimental CASS–Polar workflow."""
 from __future__ import annotations
-import csv
+import asyncio
 import io
 import json
 import re
@@ -64,17 +64,39 @@ def add_routes(app, data_dir):
             },indent=2))
         return web.Response(body=out.getvalue(),content_type="application/zip",
                             headers={"Content-Disposition":f'attachment; filename="{folder.name}_CASS_Polar.zip"'})
+    async def analysis(request):
+        folder = resolve_session(root, request.match_info["session"])
+        try:
+            r0_end = float(request.query.get("r0", "60"))
+            if not (10 <= r0_end <= 86400):
+                raise ValueError("Akhir baseline R0 harus antara 10 dan 86400 detik.")
+            from .engine import analyze
+            payload = await asyncio.to_thread(analyze, folder, r0_end)
+            return web.json_response(payload, headers={"Cache-Control": "no-store"})
+        except (ValueError, OSError) as exc:
+            return web.json_response({"error": str(exc)}, status=422)
+        except Exception:
+            import logging
+            logging.getLogger(__name__).exception("CASS analysis failed")
+            return web.json_response({"error": "Kesalahan pemrosesan CASS; periksa log Terminal."}, status=500)
+
+    async def session_view(_request):
+        html = Path(__file__).resolve().parent.parent / "musepolar" / "static" / "cass_session.html"
+        return web.FileResponse(html, headers={"Cache-Control": "no-cache"})
+
     async def explorer(_request):
         return web.Response(text=EXPLORER,content_type="text/html",charset="utf-8")
     app.router.add_get("/api/cass/sessions",listing)
     app.router.add_get("/api/cass/export/{session}",export)
+    app.router.add_get("/api/cass/analysis/{session}",analysis)
+    app.router.add_get("/cass/session/{session}",session_view)
     app.router.add_get("/cass",explorer)
 
 EXPLORER = """<!doctype html><html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CASS–Polar | Sesi penelitian</title><style>
 body{font:15px system-ui;background:#f4f6fa;color:#172338;margin:0}header{background:#162c4b;color:white;padding:24px max(20px,5vw)}main{max-width:1050px;margin:30px auto;padding:0 20px}.card{background:white;padding:20px;margin:12px 0;border-radius:12px;box-shadow:0 2px 10px #18294318}a{color:#1665bc}header a{color:#fff}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:12px;border-bottom:1px solid #ddd}small{color:#607080}.notice{border-left:4px solid #ce8c22;padding:12px;background:#fff6e6}
-</style></head><body><header><a href="/">← Muse–Polar Live</a><h1>CASS–Polar · Sesi Penelitian</h1><p>Daftar kumulatif sesi yang memiliki EEG Muse dan RR Polar H10</p></header><main><div class="notice">Tampilan ini adalah indeks kumulatif rekaman, <b>bukan</b> peta state CASS gabungan. Perhitungan CASS lintas-sesi memerlukan baseline R0, segmentasi dan pemrosesan yang tervalidasi per sesi; hasil tidak boleh digabung tanpa normalisasi yang sesuai.</div><div class="card"><h2>Rekaman yang tersedia</h2><div id="result">Memuat…</div></div></main><script>
+</style></head><body><header><a href="/">← Muse–Polar Live</a><h1>CASS–Polar · Sesi Penelitian</h1><p>Daftar kumulatif sesi yang memiliki EEG Muse dan RR Polar H10</p></header><main><div class="notice">Tampilan ini adalah indeks kumulatif rekaman. Gunakan <b>Lihat CASS</b> untuk visualisasi per sesi. Perhitungan CASS lintas-sesi memerlukan baseline R0, segmentasi dan pemrosesan yang tervalidasi per sesi; hasil tidak boleh digabung tanpa normalisasi yang sesuai.</div><div class="card"><h2>Rekaman yang tersedia</h2><div id="result">Memuat…</div></div></main><script>
 fetch('/api/cass/sessions').then(r=>{if(!r.ok)throw Error('HTTP '+r.status);return r.json()}).then(data=>{
-let rows=data.sessions.map(s=>{let id=encodeURIComponent(s.id);let td=document.createElement('tr');let n=document.createElement('td');n.textContent=s.name;let state=document.createElement('td');state.textContent=s.has_cass_state?'CSV CASS–Polar tersedia':'Belum dianalisis';let dl=document.createElement('td');let a=document.createElement('a');a.href='/api/cass/export/'+id;a.textContent='Ekspor ZIP';dl.append(a);td.append(n,state,dl);return td});
-let box=document.getElementById('result');box.textContent='';if(!rows.length){box.textContent='Belum ada rekaman Muse EEG + Polar RR.';return}let table=document.createElement('table');table.innerHTML='<thead><tr><th>Sesi</th><th>Status analisis</th><th>Ekspor</th></tr></thead>';let body=document.createElement('tbody');rows.forEach(r=>body.append(r));table.append(body);box.append(table);
+let rows=data.sessions.map(s=>{let id=encodeURIComponent(s.id);let td=document.createElement('tr');let n=document.createElement('td');n.textContent=s.name;let state=document.createElement('td');state.textContent=s.has_cass_state?'CSV CASS–Polar tersedia':'Siap dianalisis dari rekaman';let view=document.createElement('td');let v=document.createElement('a');v.href='/cass/session/'+id;v.textContent='Lihat CASS';v.style.fontWeight='700';view.append(v);let dl=document.createElement('td');let a=document.createElement('a');a.href='/api/cass/export/'+id;a.textContent='Ekspor ZIP';dl.append(a);td.append(n,state,view,dl);return td});
+let box=document.getElementById('result');box.textContent='';if(!rows.length){box.textContent='Belum ada rekaman Muse EEG + Polar RR.';return}let table=document.createElement('table');table.innerHTML='<thead><tr><th>Sesi</th><th>Status analisis</th><th>CASS</th><th>Ekspor</th></tr></thead>';let body=document.createElement('tbody');rows.forEach(r=>body.append(r));table.append(body);box.append(table);
 }).catch(e=>document.getElementById('result').textContent='Gagal memuat: '+e.message);
 </script></body></html>"""
