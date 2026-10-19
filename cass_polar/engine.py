@@ -13,6 +13,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 from scipy.signal import butter, iirnotch, sosfiltfilt, tf2sos, welch
+from scipy.integrate import trapezoid
 
 from .polar_adapter import hrv_window, read_rr
 
@@ -82,7 +83,7 @@ def _bandpower(eeg):
             f, pxx = welch(filtered[start:stop, i], fs=FS_EEG, nperseg=win)
             for band, (low, high) in BANDS.items():
                 keep = (f >= low) & (f < high)
-                row[f"{channel}_{band}"] = float(np.trapz(pxx[keep], f[keep]))
+                row[f"{channel}_{band}"] = float(trapezoid(pxx[keep], f[keep]))
         rows.append(row)
     if not rows:
         raise CASSInputError("Tidak ada window EEG yang lolos penolakan artefak NB06.")
