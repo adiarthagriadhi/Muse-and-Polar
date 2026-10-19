@@ -12,6 +12,7 @@ from pathlib import Path
 from aiohttp import WSMsgType, web
 
 from .hub import Hub
+from cass_polar.live_routes import add_routes
 
 log = logging.getLogger("musepolar")
 STATIC = Path(__file__).parent / "static"
@@ -105,6 +106,7 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
     app = web.Application()
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
+    add_routes(app, hub.data_dir)
     app.router.add_static("/static", STATIC)
     return app
 
