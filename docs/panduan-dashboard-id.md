@@ -128,7 +128,6 @@ Opsi baris perintah (`python -m musepolar --help`):
 | `--no-ecg` | matikan EKG Polar |
 | `--no-polar-acc` | matikan akselerometer Polar (sinkronisasi tidak bisa dipakai) |
 | `--no-browser` | jangan buka browser otomatis |
-| `--cass-url URL` | alamat CASS Wellness (default `http://127.0.0.1:8766/`) |
 | `-v` | log detail |
 
 Mencari nama/alamat perangkat di sekitar:
@@ -139,30 +138,22 @@ python -m musepolar.scan
 
 Di macOS, "alamat" berupa UUID CoreBluetooth (bukan MAC) yang tetap sama untuk Mac yang sama.
 
-## Kirim ke CASS Wellness
+## CASS (EEG Muse × RR Polar)
 
-Panel **CASS Wellness** di kolom kanan dashboard punya dua tombol:
+Panel **CASS** di kolom kanan dashboard. Tidak perlu menjalankan skrip lain di Terminal:
+perhitungan CASS berjalan di server dashboard ini.
 
-- **Kirim rekaman ke CASS** — rekaman terakhir (setelah *Stop rekam*) diubah ke format
-  CASS (`EEG_raw.csv`, `PPG_raw.csv` dengan PPG_2 = inframerah, `recording_metadata.json`),
-  dikemas jadi `cass_<folder sesi>.zip` di folder sesi, lalu diunggah ke CASS Wellness.
-  Setelah selesai muncul tautan **Buka hasil di Explorer**. `polar_rr.csv` dan
-  `marker.csv` ikut di dalam ZIP tetapi belum dipakai CASS.
-- **Buka CASS Wellness** — membuka portal CASS di tab baru.
+1. Rekam sesi dengan Muse **dan** Polar terhubung, lalu tekan *Stop rekam*.
+2. **Ekspor sesi** — menyimpan `<folder sesi>_CASS_Polar.zip` di folder rekaman, berisi
+   `muse_eeg.csv`, `muse_ppg.csv`, `polar_rr.csv`, `polar_ecg.csv`, `marker.csv`, `session.json`.
+3. **Tampilkan CASS ↗** — membuka tampilan CASS sesi itu di tab baru dan langsung menghitung:
+   peta keadaan X × Y, trajektori waktu, heatmap kortikal, okupansi kuadran, unduh CSV.
 
-CASS Wellness dijalankan terpisah dari folder toolkit-nya, di port **8766** (8765 dipakai
-dashboard ini):
-
-```bash
-./jalankan.sh --port 8766
-```
-
-Tanda di panel: *berjalan* / *tidak berjalan*. Bila CASS belum berjalan, ZIP tetap dibuat dan
-bisa diseret manual ke portal CASS. Nama peserta diambil dari nama sesi; marker dikosongkan,
-ruas 30 s, PRV 20 s (nilai bawaan CASS).
-
-Catatan: CASS Wellness saat ini menghitung sumbu Y dari PPG Muse (PRV), bukan dari RR Polar
-(HRV). Lihat bagian *Heart rate and pulse-rate variability* di README.
+Sumbu X = robust-z log(β/α) EEG Muse (jendela 5 s, langkah 2,5 s); sumbu Y = RMSSD dari
+**RR Polar H10** (rentang 20 s, minimal 8 RR). PPG Muse ikut disimpan tetapi tidak dipakai untuk
+sumbu Y. Batas baseline R0 bawaan 60 s hanya untuk pratinjau; ubah sesuai protokol lalu tekan
+*Hitung CASS*. Tautan **semua sesi** membuka daftar semua rekaman yang punya EEG dan RR.
+Rekaman perlu lebih panjang dari R0 + 5 s. Detail metode: [`cass_polar/README.md`](../cass_polar/README.md).
 
 ## Format data rekaman
 
@@ -234,7 +225,7 @@ musepolar/
   ble.py        loop scan/connect/reconnect bersama (bleak)
   analysis.py   daya pita EEG, kualitas sinyal, HRV, estimasi selisih waktu (sinkronisasi)
   recorder.py   penulisan CSV + session.json
-  cass.py       ekspor rekaman ke format CASS Wellness + unggah
+cass_polar/     analisis CASS (X EEG Muse, Y RR Polar) + rute /cass di dashboard
   simulator.py  perangkat sintetis untuk --sim
   static/       dashboard (HTML/CSS/JS tanpa dependensi eksternal, bisa offline)
 tests/          uji decoder, analisis, perekam, dan end-to-end dengan simulator

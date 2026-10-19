@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CASS–Polar | Analisis Sesi</title>
+<style>
+:root{font:15px system-ui,-apple-system,sans-serif;background:#f2f5fa;color:#1b2c41}
+body{margin:0}header{background:#132842;color:white;padding:24px max(20px,5vw)}header a{color:#bce0ff}
+main{max-width:1200px;margin:auto;padding:16px}.card{background:white;border-radius:12px;padding:18px;margin:16px 0;box-shadow:0 2px 12px #12243812}
+h1{margin:12px 0 5px}h2{font-size:1.15rem;margin:0 0 13px}
+fieldset{border:0;padding:0;display:flex;gap:12px;align-items:end;flex-wrap:wrap}
+input{font:inherit;padding:9px;border:1px solid #aebdcc;border-radius:6px;width:115px;display:block;margin-top:5px}
+button{font:inherit;background:#1267b7;color:white;border:0;border-radius:7px;padding:10px 15px;cursor:pointer}
+button:disabled{opacity:.45;cursor:default}.secondary{background:#dfeafa;color:#163c64}
+.warning{border-left:4px solid #d19729;background:#fff4df;padding:14px;border-radius:4px;margin:14px 0}
+.error{color:#84222a;background:#ffe6e6;padding:12px;border-radius:6px;white-space:pre-line}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}.muted{color:#647486}
+canvas{display:block;width:100%;height:320px;border:1px solid #dbe3ec;border-radius:8px}
+#heatmap{height:220px}.stats{display:flex;flex-wrap:wrap;gap:10px}
+.stats div{background:#eaf3ff;padding:11px;border-radius:8px;min-width:140px;flex:1}
+.stats strong{display:block;font-size:1.5rem}.chips{display:flex;flex-wrap:wrap;gap:9px;margin-top:12px}
+.chips span{background:#edf1f7;padding:9px 13px;border-radius:8px}
+a{color:#1267b7}.hidden{display:none}@media(max-width:760px){.grid{grid-template-columns:1fr}}
+</style></head><body>
+<header><a href="/cass">← Semua sesi penelitian</a> · <a href="/">Muse–Polar Live</a>
+<h1>CASS–Polar H10 · <span id="name"></span></h1>
+<p>EEG Muse 2: cortical X · ECG-derived Polar H10 RR: autonomic Y</p></header>
+<main><div class="warning"><b>Penelitian eksploratif, bukan diagnosis.</b> Tentukan batas baseline R0 berdasarkan protokol penelitian. Nilai awal 60 detik (dihitung otomatis saat halaman dibuka) hanya untuk pratinjau, bukan baseline yang diputuskan otomatis. RMSSD 20 detik tidak setara dengan HRV 5 menit.</div>
+<section class="card"><fieldset><label>Akhir baseline R0 (detik)<input id="r0" type="number" min="10" step=".5" value="60"></label>
+<button id="analyze">Hitung CASS</button><button id="export" class="secondary" disabled>Unduh hasil CSV</button></fieldset>
+<p id="status" class="muted">Siap menghitung setelah baseline R0 dipilih.</p><div id="error" class="error hidden"></div></section>
+<div id="results" class="hidden">
+<section class="card"><h2>Ringkasan sesi</h2><div id="stats" class="stats"></div><div id="occupancy" class="chips"></div><p id="warnings"></p></section>
+<div class="grid">
+<section class="card"><h2>CASS state map (X × Y)</h2><canvas id="state"></canvas><p class="muted">Garis menghubungkan window yang valid; data kosong tidak diasumsikan nol.</p></section>
+<section class="card"><h2>Trajektori waktu</h2><canvas id="trend"></canvas><p class="muted"><span style="color:#147caf">■</span> EEG cortical X &nbsp; <span style="color:#d87829">■</span> Polar autonomic Y</p></section>
+</div>
+<section class="card"><h2>Heatmap kortikal Muse 2</h2><canvas id="heatmap"></canvas><p class="muted">Nilai robust-z log(beta/alpha) TP9, AF7, AF8, TP10; bukan interpolasi anatomi kepala.</p></section>
+<section class="card"><h2>Metode dan asal data</h2><pre id="method" style="white-space:pre-wrap;overflow-wrap:anywhere"></pre></section>
+</div></main>
+<script>
+'use strict';
+const id=decodeURIComponent(location.pathname.split('/').pop());
+document.getElementById('name').textContent=id;
+const $=id=>document.getElementById(id);
+let data=null;
+const valid=x=>typeof x==='number'&&Number.isFinite(x);
+function draw(id, painter){
+ const cv=$(id), rect=cv.getBoundingClientRect(), w=Math.max(320,rect.width),h=rect.height,d=window.devicePixelRatio||1;
+ cv.width=Math.round(w*d);cv.height=Math.round(h*d);
+ const c=cv.getContext('2d');c.setTransform(d,0,0,d,0,0);c.fillStyle='#fff';c.fillRect(0,0,w,h);painter(c,w,h);
+}
+function axis(c,w,h,xlabel,ylabel){
+ c.strokeStyle='#dae2eb';c.lineWidth=1;c.beginPath();c.moveTo(48,14);c.lineTo(48,h-40);c.lineTo(w-15,h-40);c.stroke();
+ c.fillStyle='#42546a';c.font='12px system-ui';c.fillText(xlabel,w-105,h-12);c.fillText(ylabel,8,15);
+}
+function bounds(nums){let arr=nums.filter(valid);if(!arr.length)return [-1,1];let min=Math.min(...arr),max=Math.max(...arr);let pad=Math.max((max-min)*.1,.5);return [min-pad,max+pad]}
+function state(){
+ draw('state',(c,w,h)=>{axis(c,w,h,'Cortical X','Autonomic Y');let pts=data.windows.filter(r=>valid(r.cortical)&&valid(r.autonomic));
+ if(!pts.length){c.fillStyle='#666';c.fillText('Tidak ada pasangan X/Y valid',70,70);return}
+ const [xmin,xmax]=bounds([...pts.map(p=>p.cortical),0]),[ymin,ymax]=bounds([...pts.map(p=>p.autonomic),0]);
+ const x=v=>48+(v-xmin)/(xmax-xmin)*(w-65), y=v=>h-40-(v-ymin)/(ymax-ymin)*(h-56);
+ c.strokeStyle='#d4dbe5';c.setLineDash([4,4]);c.beginPath();c.moveTo(x(0),14);c.lineTo(x(0),h-40);c.moveTo(48,y(0));c.lineTo(w-15,y(0));c.stroke();c.setLineDash([]);
+ c.strokeStyle='#526b89';c.lineWidth=1.5;c.beginPath();pts.forEach((p,i)=>i?c.lineTo(x(p.cortical),y(p.autonomic)):c.moveTo(x(p.cortical),y(p.autonomic)));c.stroke();
+ const colors={Q1:'#19856b',Q2:'#3b7dc2',Q3:'#b86852',Q4:'#855aa9'};
+ pts.forEach(p=>{c.beginPath();c.fillStyle=colors[p.quadrant]||'#888';c.arc(x(p.cortical),y(p.autonomic),3.2,0,Math.PI*2);c.fill()});
+ });
+}
+function trend(){
+ draw('trend',(c,w,h)=>{axis(c,w,h,'Waktu (detik)','Z relatif R0');
+ const pts=data.windows;if(!pts.length)return;
+ const [lo,hi]=bounds(pts.flatMap(p=>[p.cortical,p.autonomic]).concat(0));
+ const min=Math.min(...pts.map(p=>p.tm)),max=Math.max(...pts.map(p=>p.tm));const x=t=>48+(t-min)/(max-min||1)*(w-65),y=v=>h-40-(v-lo)/(hi-lo)*(h-56);
+ [[p=>p.cortical,'#147caf'],[p=>p.autonomic,'#d87829']].forEach(([fn,color])=>{
+ c.strokeStyle=color;c.lineWidth=2;c.beginPath();let started=false;
+ pts.forEach(p=>{let v=fn(p);if(!valid(v)){started=false;return}if(started)c.lineTo(x(p.tm),y(v));else c.moveTo(x(p.tm),y(v));started=true});c.stroke();
+ });
+ });
+}
+function heatmap(){
+ draw('heatmap',(c,w,h)=>{const pts=data.windows,channels=['TP9','AF7','AF8','TP10'];const left=45,top=15,right=15,bottom=25;
+ const cellw=(w-left-right)/Math.max(1,pts.length),cellh=(h-top-bottom)/4;
+ channels.forEach((ch,j)=>{c.fillStyle='#34465b';c.font='12px system-ui';c.fillText(ch,5,top+(j+.6)*cellh);
+ pts.forEach((p,i)=>{const z=p.channels[ch],v=valid(z)?Math.max(-3,Math.min(3,z)):null;
+ c.fillStyle=v===null?'#d8dce1':v>=0?`rgba(194,65,58,${.18+.75*Math.abs(v)/3})`:`rgba(34,95,184,${.18+.75*Math.abs(v)/3})`;
+ c.fillRect(left+i*cellw,top+j*cellh,Math.max(1,cellw),Math.max(1,cellh))})
+ });c.fillStyle='#526278';c.fillText('Awal rekaman',left,h-6);c.fillText('Akhir',Math.max(left,w-48),h-6);
+ });
+}
+function metric(name,value){let d=document.createElement('div'),strong=document.createElement('strong');strong.textContent=value;d.textContent=name;d.prepend(strong);return d}
+function show(){
+ $('results').classList.remove('hidden');const s=$('stats');s.replaceChildren(
+ metric('Durasi',(valid(data.duration_s)?data.duration_s.toFixed(1):'?')+' s'),metric('Window CASS',data.n_windows),
+ metric('Window X/Y valid',data.n_valid),
+ metric('R0 PRE',data.method.r0_end_s+' s'));
+ const occ=$('occupancy');occ.replaceChildren();const total=data.n_valid;
+ ['Q1','Q2','Q3','Q4'].forEach(q=>{let x=document.createElement('span');const n=data.occupancy[q]||0;x.textContent=q+': '+n+' ('+(total?Math.round(n/total*100):0)+'%)';occ.append(x)});
+ $('warnings').replaceChildren(...data.warnings.map(w=>{let d=document.createElement('div');d.textContent='⚠ '+w;return d}));
+ $('method').textContent=JSON.stringify(data.method,null,2);state();trend();heatmap();
+ $('export').disabled=false;
+}
+$('analyze').addEventListener('click',async()=>{
+ const r0=Number($('r0').value);if(!Number.isFinite(r0)||r0<10){$('status').textContent='Baseline R0 minimal 10 detik.';return}
+ const btn=$('analyze');btn.disabled=true;$('status').textContent='Menghitung bandpower Muse dan HRV Polar…';
+ $('error').classList.add('hidden');$('results').classList.add('hidden');$('export').disabled=true;
+ try{
+ const response=await fetch('/api/cass/analysis/'+encodeURIComponent(id)+'?r0='+encodeURIComponent(r0),{cache:'no-store'});
+ const p=await response.json();if(!response.ok)throw Error(p.error||'HTTP '+response.status);
+ data=p;show();$('status').textContent='Analisis selesai. Data dari sesi ini, bukan data demo.';
+ }catch(e){$('error').textContent=e.message;$('error').classList.remove('hidden');$('status').textContent='Analisis gagal.'}
+ finally{btn.disabled=false}
+});
+$('export').addEventListener('click',()=>{
+ if(!data)return;
+ const h=['tm','phase','cortical','autonomic','quadrant','rmssd','n_ibi','TP9','AF7','AF8','TP10'];
+ const cell=x=>x===null||x===undefined?'':String(x);
+ const lines=[h.join(',')].concat(data.windows.map(p=>[p.tm,p.phase,p.cortical,p.autonomic,p.quadrant,p.rmssd,p.n_ibi,
+ ...['TP9','AF7','AF8','TP10'].map(ch=>p.channels[ch])].map(cell).join(',')));
+ const url=URL.createObjectURL(new Blob([lines.join('\n')+'\n'],{type:'text/csv;charset=utf-8'}));
+ const a=document.createElement('a');a.href=url;a.download=id+'_CASS_Polar_R0_'+data.method.r0_end_s+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),2000);
+});
+window.addEventListener('resize',()=>{if(data){state();trend();heatmap()}});
+// opened from the dashboard: compute straight away (R0 from ?r0=, else the field's default)
+const r0q=new URLSearchParams(location.search).get('r0');if(r0q)$('r0').value=r0q;
+$('analyze').click();
+</script></body></html>

@@ -7,6 +7,9 @@ if [ ! -d .venv ]; then
   echo "Membuat virtualenv (.venv) ..."
   python3 -m venv .venv
   ./.venv/bin/pip install --upgrade pip >/dev/null
-  ./.venv/bin/pip install -r requirements.txt
+fi
+# (re)install when requirements.txt changed, e.g. pandas/scipy added for CASS
+if [ ! -f .venv/.req-installed ] || [ requirements.txt -nt .venv/.req-installed ]; then
+  ./.venv/bin/pip install -r requirements.txt && touch .venv/.req-installed
 fi
 exec ./.venv/bin/python -m musepolar "$@"

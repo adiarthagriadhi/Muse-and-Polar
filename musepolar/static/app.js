@@ -372,44 +372,46 @@ function renderRecording() {
   renderCass();
 }
 
-// ---------------------------------------------------------------- CASS Wellness
-let cass = { busy: false, url: '' };
-let cassRunning = null;
+// ---------------------------------------------------------------- CASS (EEG Muse × RR Polar)
+let cassExported = null;  // { id, zip } of the last export
 function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function cassSession() {
+  if (!recording || !recording.dir) return { why: 'Rekam dulu satu sesi' };
+  if (recording.active) return { why: 'Hentikan rekaman dulu' };
+  const id = recording.dir.split(/[\\/]/).pop();
+  const c = recording.counts || {};
+  if (!c.muse_eeg) return { id, why: 'Rekaman terakhir tidak berisi EEG Muse' };
+  if (!c.polar_rr) return { id, why: 'Rekaman terakhir tidak berisi RR Polar' };
+  return { id };
+}
 function renderCass() {
-  const chip = $('cassState');
-  chip.className = `chip ${cassRunning ? 'streaming' : 'disconnected'}`;
-  chip.textContent = cassRunning == null ? 'memeriksa…' : cassRunning ? 'berjalan' : 'tidak berjalan';
-  chip.title = cass.url || '';
-  const canSend = recording && !recording.active && !cass.busy;
-  $('cassSend').disabled = !canSend;
-  $('cassSend').textContent = cass.busy ? 'Mengirim…' : 'Kirim rekaman ke CASS';
-  $('cassSend').title = recording && recording.active ? 'Hentikan rekaman dulu'
-    : !recording ? 'Rekam dulu satu sesi' : `Kirim ${recording.dir} ke CASS Wellness`;
+  const s = cassSession();
+  for (const b of ['cassExport', 'cassShow']) {
+    $(b).disabled = !!s.why;
+    $(b).title = s.why || `Sesi ${s.id}`;
+  }
   const out = $('cassResult');
   out.classList.add('cass-result');
-  if (cass.busy) out.innerHTML = `<span class="st">${esc(cass.step || 'memproses')}…</span><span class="muted">CASS menghitung jendela 5 s; bisa ±1 menit.</span>`;
-  else if (cass.ok) {
-    const r = cass.result || {};
-    const s0 = (r.sessions || [])[0] || {};
-    out.innerHTML = `<span class="st good">✓ Terkirim</span>`
-      + `<span>${esc(s0.session_id || '')} · ${s0.n_windows ?? '?'} jendela, Y valid ${s0.n_y_valid ?? '?'}</span>`
-      + ((r.problems || []).length ? `<span class="st warning">${esc(r.problems.join('; '))}</span>` : '')
-      + (r.html_url ? `<a href="${esc(r.html_url)}" target="_blank" rel="noopener">Buka hasil di Explorer ↗</a>` : '');
-  } else if (cass.ok === false) {
-    out.innerHTML = `<span class="st critical">✕ Gagal</span><span>${esc(cass.error)}</span>`
-      + (cass.zip ? `<span class="muted ellipsis" title="${esc(cass.zip)}">ZIP: ${esc(cass.zip)} (bisa diunggah manual)</span>` : '');
-  } else out.innerHTML = '';
+  if (cassExported && cassExported.id === s.id) {
+    out.innerHTML = cassExported.error
+      ? `<span class="st critical">✕ Ekspor gagal</span><span>${esc(cassExported.error)}</span>`
+      : `<span class="st good">✓ Diekspor</span><span class="muted ellipsis" title="${esc(cassExported.zip)}">${esc(cassExported.zip)}</span>`;
+  } else out.innerHTML = s.why && recording ? `<span class="muted">${esc(s.why)}</span>` : '';
 }
-async function checkCass() {
+$('cassExport').addEventListener('click', async () => {
+  const { id } = cassSession();
+  $('cassExport').disabled = true;
   try {
-    const r = await (await fetch('/api/cass')).json();
-    cass.url = r.url; cassRunning = r.running;
-  } catch { cassRunning = false; }
+    const r = await fetch(`/api/cass/export/${encodeURIComponent(id)}`, { method: 'POST' });
+    const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+    cassExported = r.ok ? { id, zip: j.zip } : { id, error: j.error || `HTTP ${r.status}` };
+  } catch (e) { cassExported = { id, error: e.message }; }
   renderCass();
-}
-checkCass();
-setInterval(checkCass, 5000);
+});
+$('cassShow').addEventListener('click', () => {
+  const { id } = cassSession();
+  if (id) window.open(`/cass/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
+});
 
 function renderMetrics(m) {
   if (m.hrv) {
@@ -533,7 +535,6 @@ function connect() {
       case 'hello':
         syncClock(m.server_time); status = m.status; renderStatus();
         if (m.recording) { recording = m.recording; renderRecording(); }
-        if (m.cass) { cass = m.cass; renderCass(); }
         if (m.sync) renderSync(m.sync);
         break;
       case 'status': status = m.status; renderStatus(); break;
@@ -541,7 +542,6 @@ function connect() {
       case 'metrics': syncClock(m.server_time); renderMetrics(m); break;
       case 'recording': recording = m.recording; renderRecording(); break;
       case 'sync': renderSync(m.sync); break;
-      case 'cass': cass = { url: cass.url, ...m.cass }; renderCass(); break;
     }
   };
 }
@@ -572,8 +572,6 @@ document.addEventListener('keydown', (e) => {
   const n = parseInt(e.key, 10);
   if (n >= 1 && n <= QUICK_MARKERS.length) sendMarker(QUICK_MARKERS[n - 1]);
 });
-$('cassSend').addEventListener('click', () => send({ cmd: 'cass_send' }));
-$('cassOpen').addEventListener('click', () => window.open(cass.url || 'http://127.0.0.1:8766/', '_blank', 'noopener'));
 $('syncBtn').addEventListener('click', () => send({ cmd: 'sync', duration: 10 }));
 $('eegScale').addEventListener('change', (e) => { settings.eegScale = +e.target.value; });
 $('notch').addEventListener('change', (e) => { settings.notch = +e.target.value; refilter('muse_eeg'); });
@@ -582,4 +580,5 @@ window.addEventListener('beforeunload', (e) => {
   if (recording && recording.active) { e.preventDefault(); e.returnValue = ''; }
 });
 renderStatus();
+renderCass();
 renderMetrics({});

@@ -11,8 +11,8 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
-from . import cass
 from .hub import Hub
+from cass_polar.live_routes import add_routes
 
 log = logging.getLogger("musepolar")
 STATIC = Path(__file__).parent / "static"
@@ -77,8 +77,6 @@ async def handle_command(hub: Hub, slots: dict[str, DeviceSlot], msg: dict) -> N
         hub.stop_recording()
     elif cmd == "sync":
         hub.start_sync(float(msg.get("duration", 10)))
-    elif cmd == "cass_send":
-        hub.start_cass_send()
     elif cmd == "marker":
         hub.marker(str(msg.get("label", "")))
     else:
@@ -107,17 +105,14 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
 
     app = web.Application()
     app.router.add_get("/", index)
-    async def cass_status(_request):
-        return web.json_response({"url": hub.cass_url, "running": await cass.is_running(hub.cass_url)})
-
     app.router.add_get("/ws", ws_handler)
-    app.router.add_get("/api/cass", cass_status)
+    add_routes(app, hub.data_dir)
     app.router.add_static("/static", STATIC)
     return app
 
 
 async def serve(args) -> None:
-    hub = Hub(Path(args.data_dir), cass_url=args.cass_url)
+    hub = Hub(Path(args.data_dir))
     slots = make_slots(hub, args)
     app = build_app(hub, slots)
     runner = web.AppRunner(app)
@@ -157,8 +152,6 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--no-ppg", action="store_true", help="disable Muse PPG (EEG-only preset p21)")
     p.add_argument("--no-ecg", action="store_true", help="disable Polar ECG")
     p.add_argument("--no-polar-acc", action="store_true", help="disable Polar accelerometer (needed for sync)")
-    p.add_argument("--cass-url", default="http://127.0.0.1:8766/",
-                   help="address of CASS Wellness (start it with ./jalankan.sh --port 8766)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     logging.basicConfig(
