@@ -1,0 +1,2956 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muse 2 Research View</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Ccircle cx='11' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='21' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='7.5' cy='19' r='2.2' fill='white'/%3E%3Ccircle cx='24.5' cy='19' r='2.2' fill='white'/%3E%3C/svg%3E">
+  <style>
+/* Muse 2 Research View. Colour tokens shared with the musepolar live dashboard. */
+:root {
+  color-scheme: light;
+  --bg: #f4f4f1;
+  --surface-1: #fcfcfb;
+  --surface-2: #f0efec;
+  --border: #dddcd6;
+  --grid: #e7e6e1;
+  --axis: #8a8983;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7973;
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
+  --marker: #4a3aa7;
+  --accent: #2a78d6;
+  --good: #0ca30c;
+  --warning: #fab219;
+  --critical: #d03b3b;
+  --ref-fill: rgba(122, 121, 115, 0.10);
+  --seg-fill: rgba(42, 120, 214, 0.035);
+  --win-fill: rgba(42, 120, 214, 0.16);
+  --lab-ind: #7a7973;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #111110; --surface-1: #1a1a19; --surface-2: #232321; --border: #33332f; --grid: #2a2a27;
+    --axis: #8f8e86; --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+    --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+    --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+    --marker: #9085e9; --accent: #3987e5;
+    --ref-fill: rgba(143, 142, 134, 0.12); --seg-fill: rgba(57, 135, 229, 0.05); --win-fill: rgba(57, 135, 229, 0.22);
+    --lab-ind: #8f8e86;
+    --shadow: none;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #111110; --surface-1: #1a1a19; --surface-2: #232321; --border: #33332f; --grid: #2a2a27;
+  --axis: #8f8e86; --text-primary: #ffffff; --text-secondary: #c3c2b7; --text-muted: #8f8e86;
+  --series-1: #3987e5; --series-2: #d95926; --series-3: #199e70; --series-4: #c98500;
+  --series-5: #d55181; --series-6: #008300; --series-7: #9085e9; --series-8: #e66767;
+  --marker: #9085e9; --accent: #3987e5;
+  --ref-fill: rgba(143, 142, 134, 0.12); --seg-fill: rgba(57, 135, 229, 0.05); --win-fill: rgba(57, 135, 229, 0.22);
+  --lab-ind: #8f8e86;
+  --shadow: none;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { background: var(--bg); }
+body {
+  margin: 0; padding: 12px 16px 28px;
+  background: var(--bg); color: var(--text-primary);
+  font: 13px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-variant-numeric: tabular-nums;
+  display: flex; flex-direction: column; gap: 12px;
+}
+h1, h2 { margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: 17px; font-weight: 650; }
+h2 { font-size: 13px; font-weight: 600; }
+code { font-size: 12px; background: var(--surface-2); padding: 0 4px; border-radius: 4px; }
+.muted { color: var(--text-muted); font-weight: 400; }
+.hint { color: var(--text-muted); font-size: 12px; margin: 0; }
+em.hint { font-style: normal; }
+
+.card {
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 14px; box-shadow: var(--shadow); min-width: 0;
+}
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.tools { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+
+/* controls */
+.btn {
+  appearance: none; border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+  border-radius: 8px; padding: 6px 11px; font: inherit; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px; min-height: 32px;
+}
+.btn:hover { background: var(--surface-2); }
+.btn:focus-visible, .seg button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.sm { min-height: 28px; padding: 3px 9px; }
+.btn.icon { width: 32px; justify-content: center; padding: 0; }
+.btn:disabled { opacity: .45; cursor: default; }
+select, input[type=text], input[type=number] {
+  font: inherit; color: var(--text-primary); background: var(--surface-1);
+  border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; min-height: 32px; min-width: 0;
+}
+input[type=range] { width: 100%; accent-color: var(--accent); }
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.field > span { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.field.grow { flex: 1; }
+.row { display: flex; gap: 6px; align-items: center; }
+.row.end { justify-content: flex-end; }
+.row.unit input { width: 76px; }
+.row.unit em { font-style: normal; color: var(--text-muted); }
+label.inline { display: inline-flex; align-items: center; gap: 6px; color: var(--text-secondary); font-size: 12px; }
+.seg { display: inline-flex; background: var(--surface-2); border-radius: 9px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+.seg button {
+  border: 0; background: transparent; color: var(--text-secondary); font: inherit; padding: 4px 10px;
+  border-radius: 7px; cursor: pointer; min-height: 26px;
+}
+.seg button:disabled { opacity: .4; cursor: not-allowed; }
+.seg button.on { background: var(--surface-1); color: var(--text-primary); font-weight: 600; box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.seg.sm button { padding: 2px 8px; font-size: 12px; min-height: 24px; }
+
+/* top bar */
+.topbar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.brand { min-width: 200px; }
+.sub { margin: 2px 0 0; color: var(--text-secondary); font-size: 12px; }
+.source { display: flex; align-items: flex-end; gap: 8px; flex: 1; min-width: 280px; }
+.source select { width: 100%; }
+.exports { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.controls { display: flex; gap: 16px; align-items: flex-end; flex-wrap: wrap; }
+.controls .titik { flex: 1 1 280px; }
+.controls .titik input { flex: 1; }
+.controls .small { flex: 0 0 auto; }
+
+/* KPI tiles */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.kpi { padding: 10px 12px; }
+.kpi .k { font-size: 11px; color: var(--text-secondary); font-weight: 500; }
+.kpi .v { font-size: 22px; font-weight: 650; letter-spacing: -0.02em; line-height: 1.2; margin-top: 2px; }
+.kpi .v small { font-size: 12px; font-weight: 500; color: var(--text-muted); margin-left: 2px; }
+.kpi .d { font-size: 11.5px; color: var(--text-muted); margin-top: 2px; }
+.status { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 600; }
+.status i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.status.ok i { background: var(--good); }
+.status.warn i { background: var(--warning); }
+.status.bad i { background: var(--critical); }
+.status.none i { background: var(--axis); }
+
+/* segment cards */
+.segments { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; }
+.seg-card { display: grid; grid-template-columns: 1fr 84px; gap: 4px 10px; padding: 10px 12px; cursor: pointer; }
+.seg-card:hover { border-color: var(--axis); }
+.seg-card.ref { background: linear-gradient(0deg, var(--ref-fill), var(--ref-fill)), var(--surface-1); }
+.seg-card .t { font-size: 11px; color: var(--text-secondary); }
+.seg-card .nm { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seg-card canvas { grid-row: 1 / span 4; grid-column: 2; width: 84px; height: 84px; align-self: center; }
+.seg-card .facts { font-size: 11.5px; color: var(--text-secondary); line-height: 1.45; }
+.seg-card .facts b { color: var(--text-primary); font-weight: 600; }
+.label-chip { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; font-size: 13px; }
+.label-chip i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: var(--lab-ind); }
+.label-chip.REFERENCE i { background: transparent; border: 2px solid var(--text-secondary); }
+
+/* main area */
+.main { display: grid; grid-template-columns: minmax(0, 2.1fr) minmax(300px, 1fr); gap: 12px; align-items: start; }
+.chart { position: relative; height: var(--h, 160px); margin-top: 6px; touch-action: none; }
+.chart canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.charts .hint { margin: -2px 0 2px; }
+.col, .side { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.side { position: sticky; top: 8px; }
+.mapcard { display: flex; flex-direction: column; gap: 8px; }
+.map-title { margin: 0; font-size: 12px; color: var(--text-secondary); min-height: 17px; }
+.topo-wrap { display: flex; justify-content: center; }
+#mapBig { width: 100%; max-width: 320px; aspect-ratio: 1; height: auto; }
+.colorbar { display: grid; gap: 3px; }
+.colorbar .bar { height: 10px; border-radius: 3px; border: 1px solid var(--border); }
+.colorbar .ticks { display: flex; justify-content: space-between; font-size: 11px; color: var(--text-secondary); }
+.colorbar .cap { font-size: 11px; color: var(--text-muted); text-align: center; }
+.map-ctrl { display: flex; gap: 10px; align-items: flex-end; }
+.mini-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.mini-table td, .mini-table th { padding: 3px 4px; border-bottom: 1px solid var(--grid); text-align: right; }
+.mini-table th { text-align: left; font-weight: 500; color: var(--text-secondary); }
+.sw { display: inline-block; width: 10px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+
+/* tables */
+.bottom { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.bottom .wide { grid-column: 1 / -1; }
+.table-wrap { overflow-x: auto; }
+table.data { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.data th {
+  text-align: right; font-weight: 500; color: var(--text-secondary); font-size: 11.5px;
+  padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; background: var(--surface-1);
+}
+table.data td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+table.data th:first-child, table.data td:first-child, table.data td.l, table.data th.l { text-align: left; }
+table.data tr.ref td { background: var(--ref-fill); }
+table.data td.na { color: var(--text-muted); }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 99px; font-size: 11px; font-weight: 600; border: 1px solid var(--border); color: var(--text-secondary); }
+.badge.sig { border-color: var(--accent); color: var(--accent); }
+.measure-pick select { min-width: 200px; }
+.omnibus { margin: 8px 0 0; font-size: 12px; color: var(--text-secondary); }
+.notes summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 8px; }
+.notes summary::before { content: "▸"; color: var(--text-muted); }
+.notes[open] summary::before { content: "▾"; }
+.notes summary h2 { display: inline; }
+.notes-body { columns: 2 360px; column-gap: 28px; color: var(--text-secondary); font-size: 12.5px; }
+.notes-body p { margin: 8px 0; break-inside: avoid; }
+.bottom .notes { grid-column: 1 / -1; }
+
+/* overlays */
+.tooltip {
+  position: fixed; z-index: 30; pointer-events: none; background: var(--surface-1); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 6px 9px; font-size: 12px; box-shadow: 0 4px 14px rgba(0,0,0,.14);
+  min-width: 120px;
+}
+.tooltip .tt-h { color: var(--text-secondary); font-size: 11px; margin-bottom: 3px; }
+.tooltip .tt-r { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.tooltip .tt-r span:first-child { color: var(--text-secondary); }
+.tooltip .tt-r b { font-weight: 600; }
+.busy {
+  position: fixed; right: 16px; bottom: 16px; z-index: 40; background: var(--surface-1); border: 1px solid var(--border);
+  border-radius: 99px; padding: 6px 14px; font-size: 12px; color: var(--text-secondary); box-shadow: 0 2px 10px rgba(0,0,0,.12);
+}
+.toast {
+  position: fixed; left: 50%; top: 14px; transform: translateX(-50%); z-index: 50; max-width: min(640px, 92vw);
+  background: var(--surface-1); border: 1px solid var(--critical); border-left-width: 4px; border-radius: 8px;
+  padding: 8px 14px; box-shadow: 0 4px 16px rgba(0,0,0,.16);
+}
+.toast.info { border-color: var(--accent); }
+dialog { border: 1px solid var(--border); border-radius: 12px; background: var(--surface-1); color: var(--text-primary); padding: 0; width: min(560px, 92vw); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+.dlg { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.dlg input { width: 100%; }
+.copy-fallback { position: fixed; z-index: 60; left: 50%; top: 12%; transform: translateX(-50%); width: min(640px, 92vw); display: grid; gap: 8px; box-shadow: 0 8px 30px rgba(0,0,0,.2); }
+.copy-fallback textarea { width: 100%; font: 12px ui-monospace, monospace; color: var(--text-primary); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; }
+.empty { padding: 26px; text-align: center; color: var(--text-secondary); }
+
+@media (max-width: 1100px) {
+  .main { grid-template-columns: 1fr; }
+  .side { position: static; }
+}
+@media (max-width: 640px) {
+  body { padding: 10px 12px 24px; }
+  .source { min-width: 100%; }
+  .kpi .v { font-size: 19px; }
+}
+@media print {
+  body { background: #fff; padding: 0; gap: 8px; }
+  .exports, .source .btn, .controls .btn, .tools, .charts .hint, .map-ctrl, .busy, .toast, #themeBtn { display: none !important; }
+  .card { box-shadow: none; break-inside: avoid; }
+  .main { grid-template-columns: 1.8fr 1fr; }
+  .side { position: static; }
+  .notes { display: block; }
+  .notes-body { display: block; }
+}
+
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Muse 2 Research View</h1>
+    <p class="sub" id="sessionSub">Memuat daftar sesi…</p>
+  </div>
+  <div class="source">
+    <label class="field grow">
+      <span>Sesi</span>
+      <select id="sessionSel" aria-label="Pilih sesi"></select>
+    </label>
+    <button class="btn" id="folderBtn" title="Pilih folder rekaman (sesi musepolar dan/atau file EDF)">Folder…</button>
+    <input type="file" id="dirInput" webkitdirectory multiple hidden>
+    <label class="btn" title="Buka file EDF/EDF+/BDF, CSV (Mind Monitor, muselsl, OpenBCI, CSV dengan kanal 10-20), file .txt Polar Sensor Logger, atau ZIP berisi rekaman. Pilih EEG dan Polar sekaligus untuk menggabungkannya.">Buka file<input type="file" id="zipInput" accept=".zip,.edf,.bdf,.csv,.txt" hidden></label>
+    <button class="btn web-only" id="demoBtn" title="Muat dua rekaman contoh (Muse 4 kanal dan EDF 16 kanal)" hidden>Data contoh</button>
+  </div>
+  <div class="exports" role="group" aria-label="Ekspor">
+    <button class="btn server-only" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
+    <button class="btn" data-export="export" title="Tabel ruas, uji, jendela & denyut (.zip berisi CSV)">Data CSV</button>
+    <button class="btn server-only" data-export="figure" title="Gambar ringkasan (.png)">Gambar</button>
+    <button class="btn" id="printBtn" title="Cetak halaman atau simpan sebagai PDF">Cetak</button>
+    <button class="btn icon" id="themeBtn" title="Ganti tema terang/gelap" aria-label="Ganti tema">◐</button>
+  </div>
+</header>
+
+<section class="controls card" aria-label="Pengaturan analisis">
+  <label class="field titik">
+    <span>Titik observasi (detik) <em class="hint">memisahkan ruas, mis. 60, 120</em></span>
+    <div class="row">
+      <input id="titik" type="text" inputmode="decimal" placeholder="kosong = seluruh sesi satu ruas">
+      <button class="btn" id="useMarkers" title="Isi dengan waktu penanda sesi">Pakai penanda</button>
+    </div>
+  </label>
+  <div class="field">
+    <span>Pita EEG</span>
+    <div class="seg" id="bandSeg" role="radiogroup">
+      <button data-v="delta">δ delta</button><button data-v="theta">θ theta</button>
+      <button data-v="alpha" class="on">α alpha</button><button data-v="beta">β beta</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Satuan daya</span>
+    <div class="seg" id="metricSeg" role="radiogroup">
+      <button data-v="abs" class="on" title="Daya absolut (µV²), skala log">Absolut</button>
+      <button data-v="rel" title="Persen dari daya 1–40 Hz">Relatif %</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Kanal EEG <em class="hint" id="chansInfo"></em></span>
+    <div class="seg" id="chansSeg" role="radiogroup" aria-label="Jumlah kanal">
+      <button data-v="all" class="on">Semua kanal</button>
+      <button data-v="muse4">4 kanal (Muse)</button>
+    </div>
+  </div>
+  <label class="field">
+    <span>Data jantung</span>
+    <select id="heartSel" aria-label="Sumber data jantung">
+      <option value="all">PPG + EKG/Polar</option>
+      <option value="ppg">Hanya PPG</option>
+      <option value="ecg">Hanya EKG/Polar</option>
+      <option value="none">Tanpa data jantung</option>
+    </select>
+  </label>
+  <label class="field small" id="pshiftField" hidden title="Koreksi bila jam ponsel Polar berbeda dari jam alat EEG (positif = data Polar digeser ke kanan)">
+    <span>Geser Polar</span>
+    <div class="row unit"><input id="pshift" type="number" step="0.1" value="0"><em>s</em></div>
+  </label>
+  <label class="field">
+    <span>Ruas acuan</span>
+    <select id="refSel"></select>
+  </label>
+  <label class="field small">
+    <span>Ambang artefak</span>
+    <div class="row unit"><input id="art" type="number" min="20" max="1000" step="10" value="100"><em>µV</em></div>
+  </label>
+</section>
+
+<section class="kpis" id="kpis" aria-label="Ringkasan sesi"></section>
+
+<section class="segments" id="segCards" aria-label="Ruas"></section>
+
+<section class="main">
+  <div class="col">
+  <div class="card charts">
+    <div class="card-head">
+      <h2>Sinyal <span class="muted" id="viewInfo"></span></h2>
+      <div class="tools">
+        <label class="inline">Skala EEG
+          <select id="eegScale"><option value="50">±50 µV</option><option value="100" selected>±100 µV</option><option value="200">±200 µV</option><option value="400">±400 µV</option></select>
+        </label>
+        <button class="btn sm" id="zoomOut" title="Perkecil">−</button>
+        <button class="btn sm" id="zoomIn" title="Perbesar">+</button>
+        <button class="btn sm" id="zoomAll" title="Tampilkan seluruh sesi">Semua</button>
+      </div>
+    </div>
+    <p class="hint">Seret di grafik untuk memperbesar · klik untuk memilih waktu peta · klik ganda untuk kembali ke seluruh sesi. Jendela berartefak tampil kosong.</p>
+    <div class="chart" id="chEeg" style="--h:260px"></div>
+    <div class="chart" id="chBand" style="--h:220px"></div>
+    <div class="chart" id="chHeart" style="--h:190px"></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Spektrum per ruas</h2>
+      <select id="psdCh" aria-label="Kanal spektrum">
+        <option value="AF">AF7 + AF8 (dahi)</option><option value="TP">TP9 + TP10 (telinga)</option>
+        <option value="TP9">TP9</option><option value="AF7">AF7</option><option value="AF8">AF8</option><option value="TP10">TP10</option>
+      </select>
+    </div>
+    <div class="chart" id="chPsd" style="--h:240px"></div>
+  </div>
+  </div>
+
+  <div class="side">
+  <div class="card mapcard">
+    <div class="card-head">
+      <h2>Peta kepala</h2>
+      <div class="seg sm" id="mapModeSeg" role="radiogroup">
+        <button data-v="value" class="on" title="Nilai daya pita">Nilai</button>
+        <button data-v="change" title="Perubahan terhadap ruas acuan (z)">Perubahan vs acuan</button>
+      </div>
+    </div>
+    <p class="map-title" id="mapTitle">–</p>
+    <div class="topo-wrap"><canvas id="mapBig" width="320" height="320" aria-label="Peta kepala"></canvas></div>
+    <div class="colorbar" id="colorbar"><div class="bar"></div><div class="ticks"><span></span><span></span><span></span></div><div class="cap"></div></div>
+    <div class="map-ctrl">
+      <label class="field grow"><span id="mapTLabel">Mulai jendela: 0 s</span><input id="mapT" type="range" min="0" max="100" step="1" value="0"></label>
+      <label class="field small"><span>Lebar</span>
+        <select id="mapWin"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="60">60 s</option></select>
+      </label>
+    </div>
+    <table class="mini-table" id="mapTable" aria-label="Nilai per kanal"></table>
+  </div>
+  </div>
+</section>
+
+<section class="bottom">
+  <div class="card wide">
+    <div class="card-head"><h2>Per ruas</h2><span class="muted" id="segUnit"></span></div>
+    <div class="table-wrap"><table class="data" id="segTable"></table></div>
+  </div>
+  <div class="card wide">
+    <div class="card-head">
+      <h2>Uji antar ruas</h2>
+      <div class="seg sm" id="measureSeg" role="radiogroup"></div>
+    </div>
+    <p class="hint" id="testNote"></p>
+    <div class="table-wrap"><table class="data" id="testTable"></table></div>
+    <p class="omnibus" id="omnibus"></p>
+  </div>
+  <details class="card notes">
+    <summary><h2>Metode &amp; cara membaca</h2></summary>
+    <div class="notes-body">
+      <p><b>Data.</b> EEG 4 kanal Muse (256 Hz) difilter notch 50 Hz dan bandpass 1–40 Hz. Daya pita dihitung per jendela 4 detik
+        (geser 2 detik) dengan metode Welch. Jendela sebuah kanal dibuang bila amplitudonya melewati <i>ambang artefak</i>
+        (kedip, gerak) atau terlalu datar (&lt; 0,5 µV, sensor tidak menempel).</p>
+      <p><b>Ruas.</b> <i>Titik observasi</i> memotong sesi menjadi ruas. Nilai ruas = median jendela bersih.
+        <i>Relatif %</i> = daya pita dibagi daya 1–40 Hz, lebih tahan terhadap perbedaan kontak elektroda antar sesi.
+        Asimetri AF = (AF8 − AF7) / (AF8 + AF7); positif berarti kanan lebih besar.</p>
+      <p><b>Perubahan vs acuan.</b> Nilai z per kanal = (median ruas − median ruas acuan) / sebaran jendela acuan.
+        Aplikasi tidak memberi label kondisi atau keadaan; nilai ditampilkan apa adanya.</p>
+      <p><b>Uji.</b> Mann–Whitney dua sisi antar ruas memakai jendela yang tidak tumpang tindih (tiap jendela 4 detik dihitung sekali),
+        p dikoreksi Holm per ukuran, dan δ Cliff sebagai besar efek (|δ| &lt; 0,15 sangat kecil, &lt; 0,33 kecil, &lt; 0,47 sedang, selebihnya besar).
+        Kruskal–Wallis ditampilkan bila ada ≥ 3 ruas.</p>
+      <p><b>Jantung.</b> Pipeline B1: PPG inframerah (kolom <code>ir</code>/PPG_2), filter Butterworth orde 3 0,6–3,5 Hz fase nol,
+        puncak berjarak ≥ 60/160 s dengan prominensi 1,4826 × MAD. Interval PPG, RR Polar dan EKG dianggap tidak valid bila
+        di luar 300–2000 ms atau berubah &gt; 20 % dari interval sebelumnya; RMSSD hanya dari pasangan interval valid berurutan.
+        Polar digeser dengan hasil sinkronisasi gerak bila ada. PPG dahi = PRV, bukan HRV; pada studi B1 denyut Muse 2 sesuai
+        dengan Polar H10, tetapi RMSSD ultra-singkat dari PPG dahi ditaksir berlebih.</p>
+      <p><b>EDF / banyak kanal.</b> File EDF, EDF+ atau BDF dibaca langsung. Kanal dikenali dari namanya menurut sistem 10-20/10-10
+        (mis. <code>EEG Fp1-REF</code>, T3 = T7); kanal EKG dipakai untuk denyut dan anotasi EDF+ menjadi penanda.
+        Pasangan frontal untuk asimetri dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
+        Dengan banyak kanal, grafik daya menampilkan rata-rata per area kepala.</p>
+      <p><b>CSV.</b> Dikenali otomatis: rekaman musepolar, Mind Monitor (<code>RAW_TP9</code>…, penanda dari kolom <code>Elements</code>),
+        muselsl (<code>timestamps, TP9…</code>), format aplikasi lama (<code>EEG_raw.csv</code> + <code>PPG_raw.csv</code>), OpenBCI GUI
+        (<code>EXG Channel</code>, sample rate dari header), atau CSV apa pun dengan kolom waktu dan kanal bernama 10-20, plus kolom
+        ECG/PPG/marker bila ada. Nilai dianggap µV. Frekuensi sampel diambil dari header atau dihitung dari kolom waktu (minimal 100 Hz).</p>
+      <p><b>Polar Sensor Logger (.txt).</b> Pilih file EEG bersama file <code>…_RR.txt</code> (atau <code>…_ECG.txt</code>) dari aplikasi
+        Polar Sensor Logger, atau letakkan dalam satu folder. Data Polar digabung dengan rekaman EEG yang waktunya tumpang tindih,
+        dicocokkan lewat jam (kolom <i>Phone timestamp</i> dan waktu mulai EEG), lalu menjadi sumber denyut dan HRV. Interval RR dipakai
+        langsung; EKG dipakai bila tidak ada file RR. <code>…_MARKER.txt</code> menjadi penanda. Bila jam ponsel dan alat EEG berbeda,
+        koreksi dengan <i>Geser Polar</i>. Bila rekaman EEG tidak punya jam (mis. CSV tanpa waktu), satu file Polar yang dipilih bersamanya
+        disejajarkan di awal. Membuka file Polar saja akan menggabungkannya ke rekaman yang sedang dibuka.</p>
+      <p><b>4 kanal (Muse).</b> Rekaman banyak kanal dibuat meniru Muse 2: sensor TP9, AF7, AF8, TP10 dibangun ulang dari elektroda
+        di sekitarnya (AF7 = rata-rata Fp1 &amp; F7, AF8 = Fp2 &amp; F8, TP9 = T7 &amp; P7, TP10 = T8 &amp; P8, atau elektrodanya sendiri bila ada),
+        lalu dirujuk ulang ke Fpz seperti Muse bila kanal Fpz tersedia. Tampilan, tata letak peta, dan ukuran uji sama dengan sesi Muse.
+        Karena merata-rata dua elektroda, daya absolutnya cenderung sedikit lebih kecil; untuk membandingkan dengan Muse sungguhan,
+        <i>Relatif %</i> lebih adil.</p>
+      <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
+        Peta dibuat berlapis (12 pita warna tipis). Setiap peta memakai skala warnanya sendiri, seperti tampilan lama:
+        biru = nilai terendah, merah = tertinggi di peta itu. Bandingkan antar peta lewat angka di elektroda.</p>
+    </div>
+  </details>
+</section>
+
+<dialog id="folderDlg">
+  <form method="dialog" class="dlg">
+    <h2>Folder rekaman</h2>
+    <p class="hint">Folder berisi sesi musepolar (<code>recordings/</code>) dan/atau file EDF/BDF, satu folder sesi, atau satu file EDF.</p>
+    <input id="rootInput" type="text" spellcheck="false">
+    <div class="row end">
+      <button class="btn" value="default" id="rootDefault">Default</button>
+      <button class="btn" value="cancel">Batal</button>
+      <button class="btn primary" value="ok" id="rootOk">Muat</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="busy" id="busy" hidden>Menghitung…</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+// Research View engine for the browser: a JavaScript port of research/src/muse2_pipeline
+// (EDF/CSV reading, filtering, spectra, artifact rejection, segment analysis, statistics,
+// heart beats, Muse-like 4-channel view). It answers the same requests as app/server.py, so
+// the same app.js runs with no Python: window.ENGINE.handle('/api/analysis/<id>?...').
+
+const ENGINE = (() => {
+  // ---------------------------------------------------------------- numbers
+  const BANDS = { delta: [1, 4], theta: [4, 8], alpha: [8, 13], beta: [13, 30] };
+  const BAND_NAMES = Object.keys(BANDS);
+  const nan = NaN;
+  const fin = (v) => v !== null && v !== undefined && Number.isFinite(v);
+  const num = (v, d = 4) => (fin(v) ? (Math.abs(v) < 1e-9 ? 0 : +(+v).toPrecision(d)) : null);
+  const arr = (a, d = 4) => Array.from(a, (v) => num(v, d));
+  function sorted(a) { return Float64Array.from(a.filter(fin)).sort(); }
+  function median(a) { const s = sorted(a); if (!s.length) return nan; const m = s.length >> 1; return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; }
+  function percentile(a, q) {
+    const s = sorted(a); if (!s.length) return nan;
+    const p = (q / 100) * (s.length - 1), i = Math.floor(p), f = p - i;
+    return i + 1 < s.length ? s[i] + (s[i + 1] - s[i]) * f : s[i];
+  }
+  function mean(a) { let s = 0, n = 0; for (const v of a) if (fin(v)) { s += v; n++; } return n ? s / n : nan; }
+  function std(a, ddof = 0) {
+    const m = mean(a); let s = 0, n = 0;
+    for (const v of a) if (fin(v)) { s += (v - m) ** 2; n++; }
+    return n - ddof > 0 ? Math.sqrt(s / (n - ddof)) : nan;
+  }
+
+  // ---------------------------------------------------------------- filters (zero phase)
+  function butterBandSOS(order, f1, f2, fs) {
+    // analog Butterworth prototype -> band-pass -> bilinear (like scipy.signal.butter(..., 'bandpass', output='sos'))
+    const w1 = 2 * fs * Math.tan(Math.PI * f1 / fs), w2 = 2 * fs * Math.tan(Math.PI * f2 / fs);
+    const bw = w2 - w1, w0sq = w1 * w2, K = 2 * fs;
+    const poles = [];
+    for (let k = 1; k <= order; k++) {
+      const th = Math.PI * (2 * k + order - 1) / (2 * order);
+      const pr = Math.cos(th) * bw / 2, pi = Math.sin(th) * bw / 2; // p*bw/2
+      // sqrt((p bw/2)^2 - w0^2)
+      const re = pr * pr - pi * pi - w0sq, im = 2 * pr * pi;
+      const mag = Math.hypot(re, im), sr = Math.sqrt((mag + re) / 2), si = Math.sign(im || 1) * Math.sqrt((mag - re) / 2);
+      for (const [a, b] of [[pr + sr, pi + si], [pr - sr, pi - si]]) {
+        // bilinear z = (K + s) / (K - s)
+        const dr = K - a, di = -b, nr = K + a, ni = b, d = dr * dr + di * di;
+        poles.push([(nr * dr + ni * di) / d, (ni * dr - nr * di) / d]);
+      }
+    }
+    const sos = poles.filter((p) => p[1] > 1e-9).map(([r, i]) => [1, 0, -1, -2 * r, r * r + i * i]);
+    // odd orders: the real prototype pole can give two real band-pass poles; they form one more section
+    const real = poles.filter((p) => Math.abs(p[1]) <= 1e-9).map((p) => p[0]);
+    for (let k = 0; k + 1 < real.length; k += 2) sos.push([1, 0, -1, -(real[k] + real[k + 1]), real[k] * real[k + 1]]);
+    // unity gain at the geometric centre frequency
+    const wc = 2 * Math.atan(Math.sqrt(w0sq) / K);
+    let g = 1;
+    for (const s of sos) g *= Math.hypot(...cplxResp(s, wc));
+    sos[0] = sos[0].map((v, j) => (j < 3 ? v / g : v));
+    return sos;
+  }
+  function cplxResp(s, w) {
+    const c1 = Math.cos(w), s1 = -Math.sin(w), c2 = Math.cos(2 * w), s2 = -Math.sin(2 * w);
+    const nr = s[0] + s[1] * c1 + s[2] * c2, ni = s[1] * s1 + s[2] * s2;
+    const dr = 1 + s[3] * c1 + s[4] * c2, di = s[3] * s1 + s[4] * s2, d = dr * dr + di * di;
+    return [(nr * dr + ni * di) / d, (ni * dr - nr * di) / d];
+  }
+  function notchSOS(f0, Q, fs) {
+    const w0 = 2 * Math.PI * f0 / fs, bwr = w0 / Q, beta = Math.tan(bwr / 2), g = 1 / (1 + beta);
+    return [[g, -2 * g * Math.cos(w0), g, -2 * g * Math.cos(w0), 2 * g - 1]];
+  }
+  function sosfilt(sos, x) {
+    const y = Float64Array.from(x);
+    for (const [b0, b1, b2, a1, a2] of sos) {
+      let z1 = 0, z2 = 0;
+      for (let n = 0; n < y.length; n++) {
+        const xn = y[n], yn = b0 * xn + z1;
+        z1 = b1 * xn - a1 * yn + z2; z2 = b2 * xn - a2 * yn; y[n] = yn;
+      }
+    }
+    return y;
+  }
+  function filtfilt(sos, x, pad) {
+    const n = x.length; pad = Math.min(pad, n - 1);
+    if (pad < 1) return Float64Array.from(x);
+    const ext = new Float64Array(n + 2 * pad);
+    for (let i = 0; i < pad; i++) { ext[i] = 2 * x[0] - x[pad - i]; ext[n + pad + i] = 2 * x[n - 1] - x[n - 2 - i]; }
+    ext.set(x, pad);
+    let y = sosfilt(sos, ext); y.reverse(); y = sosfilt(sos, y); y.reverse();
+    return y.subarray(pad, pad + n);
+  }
+  function filterEEG(x, fs, notch = 50) {
+    let y = x;
+    if (notch && notch < fs / 2) y = filtfilt(notchSOS(notch, 30, fs), y, Math.round(3 * fs));
+    return Float64Array.from(filtfilt(butterBandSOS(4, 1, Math.min(40, 0.45 * fs), fs), y, Math.round(3 * fs)));
+  }
+
+  // ---------------------------------------------------------------- FFT (radix 2)
+  const fftCache = {};
+  function fftPlan(N) {
+    if (fftCache[N]) return fftCache[N];
+    const rev = new Uint32Array(N), bits = Math.log2(N);
+    for (let i = 0; i < N; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); rev[i] = r; }
+    const cos = new Float64Array(N / 2), sin = new Float64Array(N / 2);
+    for (let i = 0; i < N / 2; i++) { cos[i] = Math.cos(2 * Math.PI * i / N); sin[i] = -Math.sin(2 * Math.PI * i / N); }
+    return (fftCache[N] = { rev, cos, sin });
+  }
+  function fft(re, im) {
+    const N = re.length, { rev, cos, sin } = fftPlan(N);
+    for (let i = 0; i < N; i++) { const j = rev[i]; if (j > i) { [re[i], re[j]] = [re[j], re[i]]; [im[i], im[j]] = [im[j], im[i]]; } }
+    for (let size = 2; size <= N; size <<= 1) {
+      const half = size >> 1, step = N / size;
+      for (let s = 0; s < N; s += size) {
+        for (let k = 0; k < half; k++) {
+          const c = cos[k * step], si = sin[k * step], a = s + k, b = a + half;
+          const tr = re[b] * c - im[b] * si, ti = re[b] * si + im[b] * c;
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- spectra
+  // Periodograms of 2 s Hann sub-segments (0.25 s hop); a 4 s window averages its clean ones.
+  function subsegmentSpectra(t, xs, fs, segS = 2, hopS = 0.25) {
+    const nch = xs.length, L = Math.round(segS * fs), hop = Math.max(1, Math.floor(hopS * fs + 1e-9)); // rounded down, as in Python
+    const Lp = 1 << Math.ceil(Math.log2(L)), df = fs / Lp;
+    const freqsAll = Array.from({ length: Lp / 2 + 1 }, (_, k) => k * df);
+    const keepIdx = freqsAll.map((f, k) => (f >= 1 && f <= 40 ? k : -1)).filter((k) => k >= 0);
+    const nf = keepIdx.length;
+    const n = xs[0].length >= L ? Math.floor((xs[0].length - L) / hop) + 1 : 0;
+    const win = Float64Array.from({ length: L }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (L - 1)));
+    const scale = 1 / (fs * win.reduce((a, v) => a + v * v, 0));
+    const bandIdx = BAND_NAMES.map((b) => freqsAll.map((f, k) => (f >= BANDS[b][0] && f < BANDS[b][1] ? k : -1)).filter((k) => k >= 0));
+    const totIdx = freqsAll.map((f, k) => (f >= 1 && f < 40 ? k : -1)).filter((k) => k >= 0);
+    const psd = new Float32Array(n * nch * nf), total = new Float64Array(n * nch);
+    const power = Object.fromEntries(BAND_NAMES.map((b) => [b, new Float64Array(n * nch)]));
+    const maxAbs = new Float64Array(n * nch), sd = new Float64Array(n * nch), t0 = new Float64Array(n);
+    const re = new Float64Array(Lp), im = new Float64Array(Lp), p = new Float64Array(Lp / 2 + 1);
+    for (let s = 0; s < n; s++) {
+      const a = s * hop; t0[s] = t[a];
+      for (let c = 0; c < nch; c++) {
+        const x = xs[c]; let m = 0, mx = 0;
+        for (let i = 0; i < L; i++) { const v = x[a + i]; m += v; if (Math.abs(v) > mx) mx = Math.abs(v); }
+        m /= L; let vv = 0;
+        re.fill(0); im.fill(0);
+        for (let i = 0; i < L; i++) { const d = x[a + i] - m; vv += d * d; re[i] = d * win[i]; }
+        const q = s * nch + c; maxAbs[q] = mx; sd[q] = Math.sqrt(vv / L);
+        fft(re, im);
+        for (let k = 0; k <= Lp / 2; k++) p[k] = (re[k] * re[k] + im[k] * im[k]) * scale * (k === 0 || k === Lp / 2 ? 1 : 2);
+        for (let j = 0; j < nf; j++) psd[q * nf + j] = p[keepIdx[j]];
+        bandIdx.forEach((idx, bi) => { let sum = 0; for (const k of idx) sum += p[k]; power[BAND_NAMES[bi]][q] = sum * df; });
+        let tot = 0; for (const k of totIdx) tot += p[k]; total[q] = tot * df;
+      }
+    }
+    return { t0, n, nch, nf, psd, freqs: keepIdx.map((k) => freqsAll[k]), power, total, maxAbs, sd, segS, hopS: hop / fs };
+  }
+  function windowSpectra(sub, art = 100, flat = 0.5, winS = 4, stepS = 2) {
+    const { n, nch } = sub, clean = new Uint8Array(n * nch);
+    for (let q = 0; q < n * nch; q++) clean[q] = sub.maxAbs[q] <= art && sub.sd[q] >= flat ? 1 : 0;
+    const perWin = Math.round((winS - sub.segS) / sub.hopS) + 1, stride = Math.round(stepS / sub.hopS);
+    const nwin = n >= perWin ? Math.floor((n - perWin) / stride) + 1 : 0;
+    const cum = (vals) => { // cumulative sums per channel over sub-segments of clean values
+      const c = new Float64Array((n + 1) * nch);
+      for (let s = 0; s < n; s++) for (let ch = 0; ch < nch; ch++) {
+        const q = s * nch + ch; c[(s + 1) * nch + ch] = c[s * nch + ch] + (clean[q] ? (vals ? vals[q] : 1) : 0);
+      }
+      return c;
+    };
+    const cc = cum(null), cp = Object.fromEntries(BAND_NAMES.map((b) => [b, cum(sub.power[b])])), ct = cum(sub.total);
+    const power = Object.fromEntries(BAND_NAMES.map((b) => [b, new Float64Array(nwin * nch)]));
+    const total = new Float64Array(nwin * nch), cnt = new Float64Array(nwin * nch), bad = new Uint8Array(nwin * nch);
+    const tStart = new Float64Array(nwin), tMid = new Float64Array(nwin);
+    for (let w = 0; w < nwin; w++) {
+      const i0 = w * stride, i1 = i0 + perWin;
+      tStart[w] = sub.t0[i0]; tMid[w] = tStart[w] + winS / 2;
+      for (let ch = 0; ch < nch; ch++) {
+        const q = w * nch + ch, k = cc[i1 * nch + ch] - cc[i0 * nch + ch];
+        cnt[q] = k; bad[q] = k < 1 ? 1 : 0;
+        for (const b of BAND_NAMES) power[b][q] = k ? (cp[b][i1 * nch + ch] - cp[b][i0 * nch + ch]) / k : nan;
+        total[q] = k ? (ct[i1 * nch + ch] - ct[i0 * nch + ch]) / k : nan;
+      }
+    }
+    return { nwin, nch, tStart, tMid, power, total, cnt, bad, clean, winS, stepS };
+  }
+
+  // ---------------------------------------------------------------- montage
+  const MUSE_CH = ['TP9', 'AF7', 'AF8', 'TP10'];
+  const MUSE_POS = { AF7: [-0.5, 0.48], AF8: [0.5, 0.48], TP9: [-0.82, -0.2], TP10: [0.82, -0.2] };
+  const ROWS = { FP: [90, 0], AF: [67.5, 0], F: [45, 0], FC: [22.5, 0], FT: [null, 0], C: [0, 0], T: [null, 0], CP: [22.5, 180],
+    TP: [null, 180], P: [45, 180], PO: [67.5, 180], O: [90, 180], I: [112.5, 180] };
+  const EQ_AZ = { FP: 18, AF: 36, F: 54, FT: 72, FC: 72, C: 90, T: 90, CP: 108, TP: 108, P: 126, PO: 144, O: 162, I: 162 };
+  const OLD = { T3: 'T7', T4: 'T8', T5: 'P7', T6: 'P8' };
+  const LABEL_RE = /^(FP|AF|FC|FT|CP|TP|PO|F|C|T|P|O|I)(Z|\d{1,2})$/;
+  const REGIONS = { Frontal: ['FP', 'AF', 'F'], Sentral: ['FC', 'C', 'CP'], Temporal: ['FT', 'T', 'TP'], Parietal: ['P'], Oksipital: ['PO', 'O', 'I'] };
+  const FRONTAL_PAIRS = [['F3', 'F4'], ['AF7', 'AF8'], ['AF3', 'AF4'], ['Fp1', 'Fp2'], ['F7', 'F8'], ['F1', 'F2']];
+  const MUSE_SOURCES = {
+    TP9: [['TP9'], ['T7', 'P7'], ['TP7'], ['T7'], ['P7']],
+    AF7: [['AF7'], ['Fp1', 'F7'], ['AF3'], ['Fp1'], ['F7']],
+    AF8: [['AF8'], ['Fp2', 'F8'], ['AF4'], ['Fp2'], ['F8']],
+    TP10: [['TP10'], ['T8', 'P8'], ['TP8'], ['T8'], ['P8']],
+  };
+  function canonical(label) {
+    let s = String(label).trim().toUpperCase().replace(/\s/g, '');
+    if (s.startsWith('EEG')) s = s.slice(3);
+    s = s.replace(/^[:_-]+/, '');
+    const parts = s.split(/[-/:]/);
+    if (!parts[0]) return null;
+    if (parts.length > 1 && LABEL_RE.test(OLD[parts[1]] || parts[1])) return null; // bipolar
+    const head = OLD[parts[0]] || parts[0], m = head.match(LABEL_RE);
+    if (!m) return null;
+    return (m[1] === 'FP' ? 'Fp' : m[1]) + (m[2] === 'Z' ? 'z' : m[2]);
+  }
+  function position(name) {
+    const m = name.toUpperCase().match(LABEL_RE); if (!m) return null;
+    const row = m[1], col = m[2];
+    let k = col === 'Z' ? 0 : Math.floor((+col + 1) / 2);
+    const side = col === 'Z' ? 0 : (+col % 2 ? -1 : 1);
+    let [thMid, azMid] = ROWS[row]; const azEq = EQ_AZ[row];
+    if (['FP', 'O', 'I'].includes(row) && k >= 1) k = 4;
+    if (['T', 'FT', 'TP'].includes(row)) { thMid = 90; k = Math.max(k, 4); }
+    let r, az;
+    if (k <= 4) {
+      const f = k / 4, rMid = thMid / 90 * 0.92;
+      if (row === 'C') { r = f * 0.92; az = azEq; } else { r = rMid + (0.92 - rMid) * f; az = azMid + (azEq - azMid) * f; }
+    } else { r = 112.5 / 90 * 0.92; az = azEq; }
+    r = Math.min(r, 0.97);
+    const a = az * Math.PI / 180 * (side || 1);
+    return [+(r * Math.sin(a)).toFixed(4), +(r * Math.cos(a)).toFixed(4)];
+  }
+  function positions(ch) {
+    if (ch.every((c) => MUSE_CH.includes(c))) return Object.fromEntries(ch.map((c) => [c, MUSE_POS[c]]));
+    const out = {}; for (const c of ch) { const p = position(c); if (p) out[c] = p; } return out;
+  }
+  function frontalPair(ch) {
+    const have = Object.fromEntries(ch.map((c) => [c.toUpperCase(), c]));
+    for (const [a, b] of FRONTAL_PAIRS) if (have[a.toUpperCase()] && have[b.toUpperCase()]) return [have[a.toUpperCase()], have[b.toUpperCase()]];
+    return null;
+  }
+  function regions(ch) {
+    const out = {};
+    for (const c of ch) {
+      const m = c.toUpperCase().match(LABEL_RE); if (!m) continue;
+      const reg = Object.keys(REGIONS).find((r) => REGIONS[r].includes(m[1]));
+      if (reg) (out[reg] = out[reg] || []).push(c);
+    }
+    return out;
+  }
+  function museSources(ch) {
+    const have = Object.fromEntries(ch.map((c) => [c.toUpperCase(), c]));
+    const out = {};
+    for (const [m, opts] of Object.entries(MUSE_SOURCES)) {
+      const pick = opts.find((o) => o.every((c) => have[c.toUpperCase()]));
+      if (!pick) return null;
+      out[m] = pick.map((c) => have[c.toUpperCase()]);
+    }
+    return out;
+  }
+  const museRef = (ch) => ch.find((c) => c.toUpperCase() === 'FPZ') || null;
+  const museEquivalent = (ch) => { const s = museSources(ch); return s ? Object.fromEntries(Object.entries(s).map(([m, c]) => [m, c.join('+')])) : null; };
+
+  // ---------------------------------------------------------------- heart
+  function findPeaks(x, { distance = 1, prominence = null, height = null } = {}) {
+    let pk = [];
+    for (let i = 1; i < x.length - 1;) {
+      if (x[i - 1] < x[i]) {
+        let j = i + 1; while (j < x.length - 1 && x[j] === x[i]) j++;
+        if (x[j] < x[i]) pk.push((i + j - 1) >> 1);
+        i = j;
+      } else i++;
+    }
+    if (height !== null) pk = pk.filter((p) => x[p] >= height);
+    if (distance > 1 && pk.length) {
+      const keep = new Uint8Array(pk.length).fill(1);
+      const order = pk.map((_, i) => i).sort((a, b) => x[pk[a]] - x[pk[b]] || a - b).reverse();
+      for (const i of order) {
+        if (!keep[i]) continue;
+        for (let k = i - 1; k >= 0 && pk[i] - pk[k] < distance; k--) keep[k] = 0;
+        for (let k = i + 1; k < pk.length && pk[k] - pk[i] < distance; k++) keep[k] = 0;
+      }
+      pk = pk.filter((_, i) => keep[i]);
+    }
+    if (prominence !== null) {
+      pk = pk.filter((p) => {
+        let lmin = x[p], rmin = x[p];
+        for (let i = p - 1; i >= 0 && x[i] <= x[p]; i--) if (x[i] < lmin) lmin = x[i];
+        for (let i = p + 1; i < x.length && x[i] <= x[p]; i++) if (x[i] < rmin) rmin = x[i];
+        return x[p] - Math.max(lmin, rmin) >= prominence;
+      });
+    }
+    return pk;
+  }
+  const IBI_MIN = 60 / 180;
+  // B1 reference PPG pipeline (src/muse2_pipeline/ppg_b1.py): PPG_2, zeros interpolated, Butterworth 3rd order
+  // 0.6-3.5 Hz zero-phase (scipy filtfilt in transfer-function form: odd padding of 21 samples and lfilter_zi
+  // initial state), peaks >= 60/160 s apart with prominence 1.4826 x MAD.
+  function polyMul(p, q) { const r = new Array(p.length + q.length - 1).fill(0); p.forEach((x, i) => q.forEach((y, j) => { r[i + j] += x * y; })); return r; }
+  function lfilter(b, a, x, zi) {
+    const n = b.length - 1, z = Float64Array.from(zi), y = new Float64Array(x.length);
+    for (let k = 0; k < x.length; k++) {
+      const xn = x[k], yn = b[0] * xn + z[0];
+      for (let i = 0; i < n - 1; i++) z[i] = b[i + 1] * xn + z[i + 1] - a[i + 1] * yn;
+      z[n - 1] = b[n] * xn - a[n] * yn; y[k] = yn;
+    }
+    return y;
+  }
+  function lfilterZi(b, a) { // scipy.signal.lfilter_zi: solve (I - companion(a).T) zi = b[1:] - a[1:] b[0]
+    const n = a.length - 1, M = Array.from({ length: n }, (_, i) => Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)));
+    for (let i = 0; i < n; i++) { M[i][0] += a[i + 1]; if (i + 1 < n) M[i][i + 1] -= 1; }
+    const v = Array.from({ length: n }, (_, i) => b[i + 1] - a[i + 1] * b[0]);
+    for (let c = 0; c < n; c++) {
+      let p = c; for (let r = c + 1; r < n; r++) if (Math.abs(M[r][c]) > Math.abs(M[p][c])) p = r;
+      [M[c], M[p]] = [M[p], M[c]]; [v[c], v[p]] = [v[p], v[c]];
+      for (let r = 0; r < n; r++) if (r !== c) { const f = M[r][c] / M[c][c]; for (let k = c; k < n; k++) M[r][k] -= f * M[c][k]; v[r] -= f * v[c]; }
+    }
+    return v.map((x, i) => x / M[i][i]);
+  }
+  function filtfiltBA(b, a, x) {
+    const n = x.length, pad = 3 * Math.max(a.length, b.length);
+    const ext = new Float64Array(n + 2 * pad);
+    for (let i = 0; i < pad; i++) { ext[i] = 2 * x[0] - x[pad - i]; ext[n + pad + i] = 2 * x[n - 1] - x[n - 2 - i]; }
+    ext.set(x, pad);
+    const zi = lfilterZi(b, a);
+    let y = lfilter(b, a, ext, zi.map((v) => v * ext[0])); y.reverse();
+    y = lfilter(b, a, y, zi.map((v) => v * y[0])); y.reverse();
+    return y.subarray(pad, pad + n);
+  }
+  function ppgBeatsB1(sig, t, fs = 64) {
+    if (sig.length < 22) return [];
+    const s = Float64Array.from(sig), good = [];
+    for (let i = 0; i < s.length; i++) if (s[i] !== 0) good.push(i);
+    if (good.length && good.length < s.length) {
+      let g = 0;
+      for (let i = 0; i < s.length; i++) {
+        if (s[i] !== 0) continue;
+        while (g < good.length - 1 && good[g + 1] < i) g++;
+        const l = good[g], r = good[Math.min(g + 1, good.length - 1)];
+        s[i] = i <= good[0] ? s[good[0]] : i >= good[good.length - 1] ? s[good[good.length - 1]] : s[l] + (s[r] - s[l]) * (i - l) / (r - l);
+      }
+    }
+    const sos = butterBandSOS(3, 0.6, 3.5, fs);
+    const b = sos.reduce((p, q) => polyMul(p, q.slice(0, 3)), [1]), a = sos.reduce((p, q) => polyMul(p, [1, q[3], q[4]]), [1]);
+    const x = filtfiltBA(b, a, s), md = median(x), mad = median(Array.from(x, (v) => Math.abs(v - md)));
+    return findPeaks(x, { distance: Math.round(fs * 60 / 160), prominence: 1.4826 * mad }).filter((p) => p > 0 && p < x.length - 1).map((p) => t[p]);
+  }
+  function validB1(ibiS) { // 300-2000 ms and <= 20 % change from the preceding interval
+    return ibiS.map((v, i) => v >= 0.3 && v <= 2 && (i === 0 || Math.abs(v - ibiS[i - 1]) / ibiS[i - 1] <= 0.2));
+  }
+  function intervalSeries(tb, ibi = null) {
+    let t;
+    if (ibi === null) { ibi = tb.slice(1).map((v, i) => v - tb[i]); t = tb.slice(1); } else t = tb;
+    return { t, ibi, valid: validB1(ibi) };
+  }
+  function ecgBeats(sig, t, fs) {
+    if (sig.length < 4 * fs || fs < 50) return [];
+    const md = median(sig), y = filtfilt(butterBandSOS(2, 5, Math.min(25, 0.45 * fs), fs), sig.map((v) => v - md), Math.round(3 * fs));
+    const w = Math.max(1, Math.round(0.08 * fs)), e = new Float64Array(y.length);
+    let acc = 0; const sq = y.map((v) => v * v);
+    const h = (w - 1) >> 1; // centred moving average, as numpy.convolve(..., mode='same')
+    for (let i = 0; i < y.length + h; i++) {
+      if (i < y.length) acc += sq[i];
+      if (i - w >= 0) acc -= sq[i - w];
+      const c = i - h; if (c >= 0 && c < y.length) e[c] = acc / w;
+    }
+    const blk = Math.round(10 * fs), lv = [];
+    for (let i = 0; i + blk <= e.length; i += blk) lv.push(percentile(e.subarray(i, i + blk), 98));
+    if (!lv.length) lv.push(percentile(e, 98));
+    const pk = findPeaks(e, { distance: Math.max(1, Math.round(IBI_MIN * fs)), height: 0.3 * median(lv) });
+    const r = Math.max(1, Math.round(0.06 * fs)), out = new Set();
+    for (const p of pk) {
+      let best = Math.max(0, p - r);
+      for (let i = Math.max(0, p - r); i <= Math.min(y.length - 1, p + r); i++) if (Math.abs(y[i]) > Math.abs(y[best])) best = i;
+      out.add(best);
+    }
+    return [...out].sort((a, b) => a - b).map((i) => t[i]);
+  }
+  function hrvStats(ser, t0 = null, t1 = null) {
+    const m = ser.t.map((t) => (t0 === null || t >= t0) && (t1 === null || t < t1));
+    const nAll = m.filter(Boolean).length, good = m.map((v, i) => v && ser.valid[i]);
+    const x = ser.ibi.filter((_, i) => good[i]), d = [];
+    for (let i = 1; i < good.length; i++) if (good[i] && good[i - 1]) d.push(ser.ibi[i] - ser.ibi[i - 1]);
+    const out = { n: x.length, n_total: nAll, valid_frac: nAll ? x.length / nAll : null, hr: null, sdnn: null, rmssd: null, pnn50: null, ok: false };
+    if (x.length >= 8) {
+      Object.assign(out, {
+        hr: 60 / mean(x), sdnn: std(x, 1) * 1000,
+        rmssd: d.length >= 5 ? Math.sqrt(mean(d.map((v) => v * v))) * 1000 : null,
+        pnn50: d.length >= 5 ? (d.filter((v) => Math.abs(v) > 0.05).length / d.length) * 100 : null, ok: true,
+      });
+    }
+    return out;
+  }
+  // ---------------------------------------------------------------- statistics
+  function erfc(x) { // Numerical Recipes erfcc, |error| < 1.2e-7
+    const z = Math.abs(x), t = 1 / (1 + 0.5 * z);
+    const r = t * Math.exp(-z * z - 1.26551223 + t * (1.00002368 + t * (0.37409196 + t * (0.09678418 + t * (-0.18628806 +
+      t * (0.27886807 + t * (-1.13520398 + t * (1.48851587 + t * (-0.82215223 + t * 0.17087277)))))))));
+    return x >= 0 ? r : 2 - r;
+  }
+  function gammaincc(a, x) { // regularized upper incomplete gamma Q(a, x)
+    if (x <= 0) return 1;
+    const gln = lgamma(a);
+    if (x < a + 1) { let sum = 1 / a, del = sum, ap = a; for (let i = 0; i < 500; i++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-14) break; } return 1 - sum * Math.exp(-x + a * Math.log(x) - gln); }
+    let b = x + 1 - a, c = 1e300, d = 1 / b, h = d;
+    for (let i = 1; i < 500; i++) { const an = -i * (i - a); b += 2; d = an * d + b; if (Math.abs(d) < 1e-300) d = 1e-300; c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; d = 1 / d; const del = d * c; h *= del; if (Math.abs(del - 1) < 1e-14) break; }
+    return Math.exp(-x + a * Math.log(x) - gln) * h;
+  }
+  function lgamma(z) {
+    const g = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    let x = z, y = z, tmp = x + 5.5; tmp -= (x + 0.5) * Math.log(tmp); let ser = 1.000000000190015;
+    for (const c of g) ser += c / ++y;
+    return -tmp + Math.log(2.5066282746310005 * ser / x);
+  }
+  function ranks(values) { // average ranks + tie counts
+    const idx = values.map((v, i) => [v, i]).sort((a, b) => a[0] - b[0]), r = new Array(values.length), ties = [];
+    for (let i = 0; i < idx.length;) {
+      let j = i; while (j + 1 < idx.length && idx[j + 1][0] === idx[i][0]) j++;
+      const avg = (i + j) / 2 + 1; for (let k = i; k <= j; k++) r[idx[k][1]] = avg;
+      if (j > i) ties.push(j - i + 1); i = j + 1;
+    }
+    return { r, ties };
+  }
+  function mwTest(a, b) {
+    a = a.filter(fin); b = b.filter(fin);
+    const n1 = a.length, n2 = b.length;
+    if (n1 < 5 || n2 < 5) return [null, null];
+    const { r, ties } = ranks(a.concat(b));
+    const R1 = r.slice(0, n1).reduce((s, v) => s + v, 0), U1 = R1 - n1 * (n1 + 1) / 2, U2 = n1 * n2 - U1;
+    let p;
+    if ((n1 <= 8 || n2 <= 8) && !ties.length) { // exact distribution
+      const f = uDist(n1, n2), tot = f.reduce((s, v) => s + v, 0), u = Math.round(U1);
+      let le = 0, ge = 0; for (let k = 0; k < f.length; k++) { if (k <= u) le += f[k]; if (k >= u) ge += f[k]; }
+      p = Math.min(1, 2 * Math.min(le, ge) / tot);
+    } else {
+      const n = n1 + n2, tc = ties.reduce((s, t) => s + t ** 3 - t, 0);
+      const sd = Math.sqrt(n1 * n2 / 12 * ((n + 1) - tc / (n * (n - 1))));
+      const z = (Math.max(U1, U2) - n1 * n2 / 2 - 0.5) / sd;
+      p = sd > 0 ? Math.min(1, erfc(z / Math.SQRT2)) : 1;
+    }
+    return [p, 2 * U2 / (n1 * n2) - 1];
+  }
+  function uDist(n1, n2) { // number of arrangements giving each U (dynamic programming)
+    let f = [[1]];
+    const memo = new Map(), get = (m, n) => {
+      const key = m + ',' + n; if (memo.has(key)) return memo.get(key);
+      let res;
+      if (m === 0 || n === 0) res = [1];
+      else { const a = get(m - 1, n), b = get(m, n - 1); res = new Array(m * n + 1).fill(0); a.forEach((v, k) => { res[k + n] += v; }); b.forEach((v, k) => { res[k] += v; }); }
+      memo.set(key, res); return res;
+    };
+    f = get(n1, n2); return f;
+  }
+  function kruskal(groups) {
+    const all = groups.flat(), n = all.length, { r, ties } = ranks(all);
+    let off = 0, H = 0;
+    for (const g of groups) { const R = r.slice(off, off + g.length).reduce((s, v) => s + v, 0); H += R * R / g.length; off += g.length; }
+    H = 12 / (n * (n + 1)) * H - 3 * (n + 1);
+    const tc = 1 - ties.reduce((s, t) => s + t ** 3 - t, 0) / (n ** 3 - n);
+    H /= tc || 1;
+    return gammaincc((groups.length - 1) / 2, H / 2);
+  }
+  function holm(ps) {
+    const idx = ps.map((p, i) => i).filter((i) => ps[i] !== null).sort((a, b) => ps[a] - ps[b]);
+    const out = ps.map(() => null); let run = 0;
+    idx.forEach((i, rank) => { run = Math.max(run, Math.min(1, (idx.length - rank) * ps[i])); out[i] = run; });
+    return out;
+  }
+  const cliffWord = (d) => (d === null ? '-' : Math.abs(d) < 0.147 ? 'sangat kecil' : Math.abs(d) < 0.33 ? 'kecil' : Math.abs(d) < 0.474 ? 'sedang' : 'besar');
+
+  // ---------------------------------------------------------------- analysis
+  const EMPTY = { t: [], ibi: [], valid: [] };
+
+  function parseMarks(text, tmax) {
+    const v = String(text).replace(/;/g, ',').split(',').map((s) => s.trim()).filter(Boolean).map(Number).filter((x) => fin(x) && x > 0 && x < tmax);
+    return [0, ...[...new Set(v)].sort((a, b) => a - b), tmax];
+  }
+  function markerTitik(markers) {
+    return [...new Set(markers.filter((m) => !String(m.label).startsWith('SYNC') && m.t > 0).map((m) => Math.round(m.t).toFixed(0)))].join(', ');
+  }
+
+  class Session {
+    constructor(rec) {
+      this.rec = rec;
+      this.ch = [...rec.channels]; this.allCh = [...rec.channels]; this.nch = this.ch.length; this.fs = rec.fs;
+      this.t = rec.t; this.x = rec.x; this.tmax = rec.t[rec.t.length - 1];
+      this.sub = subsegmentSpectra(this.t, this.x, this.fs);
+      this.specs = {};
+      this.grid = this.spec(100);
+      this.ppg = rec.ppg ? intervalSeries(ppgBeatsB1(rec.ppg.v, rec.ppg.t, rec.ppg.fs)) : EMPTY;
+      this.polar = rec.rr ? intervalSeries(Array.from(rec.rr.t), Array.from(rec.rr.ms, (v) => v / 1000)) : EMPTY;
+      this.hasPolar = this.polar.valid.filter(Boolean).length >= 20;
+      this.hasPpgData = this.ppg.t.length > 0; this.hasHeartData = this.polar.t.length > 0;
+      this.chans = 'all'; this.heart = 'all'; this.pshift = 0; this.museMap = null; this.museRefCh = null; this.views = {};
+      this.setupChannels();
+    }
+    setupChannels() {
+      this.pair = frontalPair(this.ch);
+      if (this.pair) {
+        this.pairIdx = this.pair.map((c) => this.ch.indexOf(c));
+        const muse = this.pair.includes('AF7') && this.pair.includes('AF8') && this.ch.every((c) => MUSE_CH.includes(c));
+        this.pairLabel = muse ? 'AF' : `${this.pair[0]}/${this.pair[1]}`;
+        this.mPair = muse ? 'AF' : `${this.pair[0]}+${this.pair[1]}`;
+        this.mAsym = `Asimetri ${this.pairLabel}`;
+      } else { this.pairIdx = this.ch.map((_, i) => i); this.pairLabel = 'semua kanal'; this.mPair = 'Rata-rata'; this.mAsym = null; }
+      this.measures = [this.mPair, ...this.ch, ...(this.mAsym ? [this.mAsym] : [])];
+      this.measureLabels = { [this.mPair]: this.mPair === 'AF' ? 'AF rata-rata' : this.pair ? `${this.mPair} rata-rata` : 'Rata-rata semua kanal' };
+      if (this.mAsym) this.measureLabels[this.mAsym] = this.mAsym;
+    }
+    spec(art) {
+      const key = Math.round(art * 10) / 10;
+      if (!this.specs[key]) { if (Object.keys(this.specs).length > 6) this.specs = {}; this.specs[key] = windowSpectra(this.sub, key); }
+      return this.specs[key];
+    }
+    view(chans, heart, pshift = 0) {
+      chans = chans === 'muse4' ? 'muse4' : 'all'; heart = ['ppg', 'ecg', 'none'].includes(heart) ? heart : 'all';
+      pshift = Math.round((+pshift || 0) * 1000) / 1000;
+      if (chans === 'all' && heart === 'all' && !pshift) return this;
+      const key = chans + '|' + heart + '|' + pshift;
+      if (this.views[key]) return this.views[key];
+      const v = Object.assign(Object.create(Session.prototype), this);
+      v.views = {}; v.chans = chans; v.heart = heart;
+      if (chans === 'muse4') {
+        const src = museSources(this.ch);
+        if (src && this.ch.length > 4) {
+          const ref = museRef(this.ch), xs = MUSE_CH.map((m) => {
+            const idx = src[m].map((c) => this.ch.indexOf(c)), out = new Float64Array(this.t.length);
+            for (let i = 0; i < out.length; i++) { let s = 0; for (const j of idx) s += this.x[j][i]; out[i] = s / idx.length - (ref ? this.x[this.ch.indexOf(ref)][i] : 0); }
+            return out;
+          });
+          v.museMap = Object.fromEntries(Object.entries(src).map(([m, c]) => [m, c.join('+')]));
+          v.museRefCh = ref; v.ch = [...MUSE_CH]; v.nch = 4; v.x = xs;
+          v.sub = subsegmentSpectra(this.t, xs, this.fs); v.specs = {}; v.grid = v.spec(100);
+          v.setupChannels();
+        }
+      }
+      if (pshift && this.polar.t.length) v.polar = { ...this.polar, t: this.polar.t.map((x) => x + pshift) }; // Polar clock correction
+      v.pshift = pshift;
+      if (heart === 'ppg' || heart === 'none') { v.polar = EMPTY; v.hasPolar = false; }
+      if (heart === 'ecg' || heart === 'none') v.ppg = EMPTY;
+      return (this.views[key] = v);
+    }
+    overview() {
+      const r = this.rec, g = this.grid, ser = (s) => ({ t: arr(s.t, 6), ibi: arr(s.ibi.map((v) => v * 1000), 5), valid: s.valid.map(Boolean) });
+      return {
+        name: r.participant, note: r.condition, folder: r.id, label: r.label, kind: r.kind, fs: this.fs,
+        start: r.start, duration: num(this.tmax, 6), channels: this.ch, positions: positions(this.ch), regions: regions(this.ch),
+        pair: this.pair, pair_label: this.pairLabel, heart_name: r.heartName, chans: this.chans, heart: this.heart,
+        pshift: this.pshift, polar_info: r.polarInfo || null,
+        options: {
+          n_all: this.allCh.length,
+          muse4: this.allCh.length > 4 ? museEquivalent(this.allCh) : Object.fromEntries(this.allCh.map((c) => [c, c])),
+          muse_ref: this.allCh.length > 4 ? museRef(this.allCh) : 'Fpz', ppg: this.hasPpgData, ecg: this.hasHeartData,
+        },
+        bands: BANDS, quality: r.quality, sync_offset_ms: fin(r.syncOffset) ? num(r.syncOffset * 1000) : null,
+        markers: r.markers.map((m) => ({ t: num(m.t, 6), label: m.label })), marker_titik: markerTitik(r.markers),
+        windows: { win_s: g.winS, t_start: arr(g.tStart, 6), t_mid: arr(g.tMid, 6) },
+        ppg: ser(this.ppg), polar: this.polar.t.length ? ser(this.polar) : null,
+        hrv: { ppg: hrvStats(this.ppg), polar: this.hasPolar ? hrvStats(this.polar) : null },
+      };
+    }
+    signal(t0, t1, n) {
+      const t = this.t; let i0 = lb(t, t0), i1 = lb(t, t1);
+      i0 = Math.max(0, i0 - 1); i1 = Math.min(t.length, i1 + 1);
+      n = Math.max(50, Math.min(Math.round(n), 5000));
+      const len = i1 - i0;
+      if (len <= 2 * n) return { kind: 'raw', t: arr(t.subarray(i0, i1), 7), y: this.x.map((x) => arr(x.subarray(i0, i1), 4)) };
+      const size = Math.floor(len / n), tb = new Array(n);
+      for (let b = 0; b < n; b++) { let s = 0; for (let i = 0; i < size; i++) s += t[i0 + b * size + i]; tb[b] = num(s / size, 7); }
+      const lo = [], hi = [];
+      for (const x of this.x) {
+        const l = new Array(n), h = new Array(n);
+        for (let b = 0; b < n; b++) { let mn = Infinity, mx = -Infinity; for (let i = 0; i < size; i++) { const v = x[i0 + b * size + i]; if (v < mn) mn = v; if (v > mx) mx = v; } l[b] = num(mn); h[b] = num(mx); }
+        lo.push(l); hi.push(h);
+      }
+      return { kind: 'env', t: tb, lo, hi };
+    }
+    windowValues(spec, band, metric) {
+      const p = spec.power[band]; if (metric !== 'rel') return p;
+      return p.map((v, q) => 100 * v / spec.total[q]);
+    }
+    analyze(titik = '', band = 'alpha', metric = 'abs', ref = 0, art = 100) {
+      if (!BANDS[band]) band = 'alpha'; metric = metric === 'rel' ? 'rel' : 'abs';
+      const spec = this.spec(art), nch = this.nch, nw = spec.nwin;
+      const edges = parseMarks(titik, this.tmax), nseg = edges.length - 1;
+      ref = ref >= 0 && ref < nseg ? +ref : 0;
+      const bad = (w, c) => spec.bad[w * nch + c] === 1;
+      const vals = this.windowValues(spec, band, metric), val = (w, c) => vals[w * nch + c];
+      const segOf = Array.from(spec.tMid, (t) => Math.min(nseg - 1, lbR(edges, t) - 1));
+      const af = this.pairIdx, afClean = Array.from({ length: nw }, (_, w) => af.every((c) => !bad(w, c)));
+      const mval = (w, c) => { const v = val(w, c); return metric === 'abs' ? (v > 0 ? Math.log10(v) : nan) : v; };
+      const refMean = [], refSd = [];
+      for (let c = 0; c < nch; c++) {
+        const v = []; for (let w = 0; w < nw; w++) if (segOf[w] === ref && !bad(w, c) && fin(mval(w, c))) v.push(mval(w, c));
+        refMean.push(v.length >= 3 ? median(v) : nan);
+        refSd.push(v.length >= 3 ? Math.max(std(v, 1), metric === 'abs' ? 0.05 : 0.5) : nan);
+      }
+      const hrSource = this.hasPolar ? 'polar' : this.ppg.valid.filter(Boolean).length >= 20 ? 'ppg' : null;
+      const segs = [];
+      for (let i = 0; i < nseg; i++) {
+        const a = edges[i], b = edges[i + 1], ws = [];
+        for (let w = 0; w < nw; w++) if (segOf[w] === i) ws.push(w);
+        const chVals = [], chZ = [], chClean = [];
+        for (let c = 0; c < nch; c++) {
+          const good = ws.filter((w) => !bad(w, c));
+          chVals.push(median(good.map((w) => val(w, c))));
+          chZ.push((median(good.map((w) => mval(w, c))) - refMean[c]) / refSd[c]);
+          chClean.push(good.length);
+        }
+        let asym = nan;
+        if (this.pair) { const l = chVals[af[0]], r = chVals[af[1]]; asym = fin(l) && fin(r) && l + r ? (r - l) / (r + l) : nan; }
+        const nAf = ws.filter((w) => afClean[w]).length;
+        let name = '';
+        for (const m of this.rec.markers) if (Math.abs(m.t - a) <= 1.5 && !String(m.label).startsWith('SYNC')) name = String(m.label);
+        segs.push({
+          i, t0: num(a, 6), t1: num(b, 6), name, n_win: ws.length, n_clean: chClean, n_pair: nAf,
+          values: arr(chVals), z: arr(chZ, 3), asym: num(asym, 3),
+          ppg: hrvStats(this.ppg, a, b), polar: this.hasPolar ? hrvStats(this.polar, a, b) : null,
+          is_ref: i === ref,
+          psd: Array.from({ length: nch }, (_, c) => arr(this.meanPsd(spec, a, b, c))),
+        });
+      }
+      const cleanFrac = Array.from({ length: nch }, (_, c) => { let s = 0; for (let q = 0; q < this.sub.n; q++) s += spec.clean[q * nch + c]; return this.sub.n ? s / this.sub.n : null; });
+      const chArr = (a) => Array.from({ length: nch }, (_, c) => arr(Array.from({ length: nw }, (_, w) => a[w * nch + c])));
+      return {
+        band, metric, ref, art_uv: art, channels: this.ch, pair: this.pair, pair_label: this.pairLabel,
+        measures: this.measures, measure_labels: this.measureLabels, unit: metric === 'rel' ? '%' : 'µV²',
+        edges: arr(edges, 6),
+        bad: Array.from({ length: nw }, (_, w) => Array.from({ length: nch }, (_, c) => (bad(w, c) ? '1' : '0')).join('')),
+        clean_frac: arr(cleanFrac, 3),
+        windows: { power: Object.fromEntries(BAND_NAMES.map((bn) => [bn, chArr(spec.power[bn])])), total: chArr(spec.total) },
+        ref_mean: arr(refMean), ref_sd: arr(refSd), hr_source: hrSource, freqs: arr(this.sub.freqs, 4),
+        segments: segs, tests: this.tests(spec, val, bad, segOf, nseg, edges),
+      };
+    }
+    meanPsd(spec, a, b, c) {
+      const { n, nch, nf, psd, t0, segS } = this.sub, out = new Float64Array(nf); let k = 0;
+      for (let s = 0; s < n; s++) {
+        const mid = t0[s] + segS / 2;
+        if (mid >= a && mid < b && spec.clean[s * nch + c]) { for (let j = 0; j < nf; j++) out[j] += psd[(s * nch + c) * nf + j]; k++; }
+      }
+      return k ? out.map((v) => v / k) : out.fill(nan);
+    }
+    tests(spec, val, bad, segOf, nseg, edges) {
+      const k = Math.max(1, Math.round(spec.winS / spec.stepS)), idx = this.pairIdx, nw = spec.nwin;
+      const names = edges.slice(0, -1).map((a, i) => `${a.toFixed(0)}–${edges[i + 1].toFixed(0)} s`);
+      const pairs = [], omnibus = [];
+      for (const meas of this.measures) {
+        const groups = Array.from({ length: nseg }, () => []);
+        for (let w = 0; w < nw; w += k) {
+          let v, ok;
+          if (this.ch.includes(meas)) { const c = this.ch.indexOf(meas); v = val(w, c); ok = !bad(w, c); }
+          else {
+            ok = idx.every((c) => !bad(w, c));
+            if (meas === this.mAsym) { const l = val(w, idx[0]), r = val(w, idx[1]); v = (r - l) / (r + l); }
+            else v = idx.reduce((s, c) => s + val(w, c), 0) / idx.length;
+          }
+          if (ok && fin(v)) groups[segOf[w]].push(v);
+        }
+        const rows = [];
+        for (let i = 0; i < nseg - 1; i++) for (let j = i + 1; j < nseg; j++) {
+          const [p, d] = mwTest(groups[i], groups[j]);
+          rows.push({ measure: meas, a: i, b: j, pair: `${names[i]} vs ${names[j]}`, n_a: groups[i].length, n_b: groups[j].length,
+            med_a: num(median(groups[i])), med_b: num(median(groups[j])), p, delta: num(d, 3), effect: cliffWord(d) });
+        }
+        holm(rows.map((r) => r.p)).forEach((ph, i) => { const r = rows[i]; r.p_holm = num(ph, 3); r.p = num(r.p, 3); r.sig = ph !== null && ph < 0.05; });
+        pairs.push(...rows);
+        const good = groups.filter((g) => g.length >= 5);
+        if (nseg >= 3 && good.length >= 3) omnibus.push({ measure: meas, p: num(kruskal(good), 3), k: good.length });
+      }
+      return { pairs, omnibus, n_step: k };
+    }
+  }
+  function lb(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] < x) lo = m + 1; else hi = m; } return lo; }
+  function lbR(a, x) { let lo = 0, hi = a.length; while (lo < hi) { const m = (lo + hi) >> 1; if (a[m] <= x) lo = m + 1; else hi = m; } return lo; }
+
+  // ---------------------------------------------------------------- readers
+  const UNIT = { UV: 1, 'µV': 1, 'ΜV': 1, MICROV: 1, MV: 1000, V: 1e6, NV: 1e-3 };
+  function readEDF(buf, name) {
+    const dv = new DataView(buf), dec = new TextDecoder('latin1'), txt = (o, n) => dec.decode(new Uint8Array(buf, o, n)).trim();
+    const bdf = dv.getUint8(0) === 0xff, ns = parseInt(txt(252, 4), 10);
+    if (!(ns > 0 && ns < 1024)) throw new Error(`${name}: bukan file EDF`);
+    const f = (off, w) => Array.from({ length: ns }, (_, i) => txt(256 + off * ns + i * w, w));
+    const labels = f(0, 16), o = 96, dims = f(o, 8), pmin = f(o + 8, 8).map(Number), pmax = f(o + 16, 8).map(Number);
+    const dmin = f(o + 24, 8).map(Number), dmax = f(o + 32, 8).map(Number), nsamp = f(o + 120, 8).map((v) => parseInt(v, 10));
+    const hb = parseInt(txt(184, 8), 10), recS = parseFloat(txt(244, 8)) || 1, bps = bdf ? 3 : 2;
+    const recSamp = nsamp.reduce((a, b) => a + b, 0), recBytes = recSamp * bps;
+    let nrec = Math.floor((buf.byteLength - hb) / recBytes); const hdrN = parseInt(txt(236, 8), 10); if (hdrN > 0) nrec = Math.min(nrec, hdrN);
+    let start = null;
+    try { const [dd, mm, yy] = txt(168, 8).split('.').map(Number), [H, M, S] = txt(176, 8).split('.').map(Number); start = `${yy < 85 ? 2000 + yy : 1900 + yy}-${String(mm).padStart(2, '0')}-${String(dd).padStart(2, '0')}T${String(H).padStart(2, '0')}:${String(M).padStart(2, '0')}:${String(S).padStart(2, '0')}`; if (start.includes('NaN')) start = null; } catch { start = null; }
+    const sig = {}, ann = [];
+    const offs = []; let acc = 0; for (const n of nsamp) { offs.push(acc); acc += n; }
+    labels.forEach((lab, i) => {
+      const n = nsamp[i], isAnn = /^(EDF|BDF) ANNOTATION/i.test(lab.replace('+', ''));
+      if (isAnn) {
+        const bytes = [];
+        for (let r = 0; r < nrec; r++) { const base = hb + r * recBytes + offs[i] * bps; for (let k = 0; k < n * bps; k++) bytes.push(dv.getUint8(base + k)); }
+        parseTAL(new Uint8Array(bytes), ann); return;
+      }
+      const g = (pmax[i] - pmin[i]) / ((dmax[i] - dmin[i]) || 1), out = new Float64Array(n * nrec);
+      for (let r = 0; r < nrec; r++) {
+        const base = hb + r * recBytes + offs[i] * bps;
+        for (let k = 0; k < n; k++) {
+          let d;
+          if (bdf) { const p = base + 3 * k; d = dv.getUint8(p) | (dv.getUint8(p + 1) << 8) | (dv.getUint8(p + 2) << 16); if (d >= 1 << 23) d -= 1 << 24; }
+          else d = dv.getInt16(base + 2 * k, true);
+          out[r * n + k] = (d - dmin[i]) * g + pmin[i];
+        }
+      }
+      sig[lab] = { fs: n / recS, v: out, dim: dims[i] };
+    });
+    const uniq = new Map(); for (const a of ann) uniq.set(a.t + '|' + a.label, a);
+    return { labels, sig, ann: [...uniq.values()].sort((a, b) => a.t - b.t), start, patient: txt(8, 80), recording: txt(88, 80) };
+  }
+  function parseTAL(bytes, out) {
+    const s = new TextDecoder('utf-8').decode(bytes);
+    for (const tal of s.split('\x00')) {
+      if (!tal || !'+-'.includes(tal[0])) continue;
+      const parts = tal.split('\x14'), t = parseFloat(parts[0].split('\x15')[0]);
+      if (!fin(t)) continue;
+      for (const txt of parts.slice(1)) if (txt.trim()) out.push({ t, label: txt.trim() });
+    }
+  }
+  function edfPatient(field) {
+    const p = field.split(/\s+/);
+    if (p.length >= 4 && ['M', 'F', 'X'].includes(p[1])) { const n = p.slice(3).join(' ').replace(/_/g, ' '); return n === 'X' ? '' : n; }
+    return ['X', ''].includes(field) ? '' : field;
+  }
+  function resample(v, f, fs) { // linear interpolation to fs (only when a channel has another rate)
+    const n = Math.floor(v.length * fs / f), out = new Float64Array(n);
+    for (let i = 0; i < n; i++) { const p = i * f / fs, j = Math.floor(p), a = p - j; out[i] = j + 1 < v.length ? v[j] * (1 - a) + v[j + 1] * a : v[v.length - 1]; }
+    return out;
+  }
+  function recordingFromEDF(buf, name, id) {
+    const d = readEDF(buf, name), eeg = {}; let ecg = null, ppg = null;
+    for (const [lab, s] of Object.entries(d.sig)) {
+      const c = canonical(lab), up = lab.toUpperCase();
+      if (c && !eeg[c]) eeg[c] = { fs: s.fs, v: s.v.map((x) => x * (UNIT[s.dim.replace(/\s/g, '').toUpperCase()] || 1)) };
+      else if (!ecg && (up.includes('ECG') || up.includes('EKG'))) ecg = s;
+      else if (!ppg && (up.includes('PPG') || up.includes('PLETH'))) ppg = s;
+    }
+    if (!Object.keys(eeg).length) for (const [lab, s] of Object.entries(d.sig)) {
+      const dim = s.dim.replace(/\s/g, '').toUpperCase();
+      if (['UV', 'µV', 'ΜV', 'MV', 'V'].includes(dim)) eeg[lab.trim()] = { fs: s.fs, v: s.v.map((x) => x * (UNIT[dim] || 1)) };
+    }
+    const chans = Object.keys(eeg);
+    if (!chans.length) throw new Error(`${name}: tidak ada kanal EEG`);
+    const rates = chans.map((c) => eeg[c].fs), fs = rates.sort((a, b) => rates.filter((r) => r === b).length - rates.filter((r) => r === a).length)[0];
+    const cols = chans.map((c) => (eeg[c].fs === fs ? eeg[c].v : resample(eeg[c].v, eeg[c].fs, fs)));
+    const n = Math.min(...cols.map((c) => c.length));
+    const t = Float64Array.from({ length: n }, (_, i) => i / fs);
+    let rr = null;
+    if (ecg) {
+      const et = Float64Array.from({ length: ecg.v.length }, (_, i) => i / ecg.fs), tb = ecgBeats(ecg.v, et, ecg.fs);
+      if (tb.length > 1) rr = { t: Float64Array.from(tb.slice(1)), ms: Float64Array.from(tb.slice(1).map((v, i) => (v - tb[i]) * 1000)) };
+    }
+    return {
+      id, kind: 'edf', label: name, participant: edfPatient(d.patient) || name.replace(/\.[^.]+$/, ''), condition: '',
+      start: d.start, channels: chans, fs, t, x: cols.map((c) => filterEEG(c.subarray(0, n), fs)),
+      ppg: ppg ? { t: Float64Array.from({ length: ppg.v.length }, (_, i) => i / ppg.fs), v: ppg.v, fs: ppg.fs } : null,
+      rr, heartName: 'EKG (EDF)', markers: d.ann, syncOffset: null,
+      quality: { eeg: { status: 'VALID', rate_hz: fs }, ppg: { status: ppg ? 'VALID' : '-', rate_hz: ppg ? ppg.fs : null } },
+      nChannels: chans.length, duration: n / fs, hasPpg: !!ppg, hasHeart: !!ecg,
+      absStart: d.start ? Date.parse(d.start) / 1000 : null, // EDF start is local clock time
+    };
+  }
+  function parseCSV(text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.length), head = splitCSV(lines[0]);
+    return { head, rows: lines.slice(1).map(splitCSV) };
+  }
+  function splitCSV(line) {
+    if (!line.includes('"')) return line.split(',');
+    const out = []; let cur = '', q = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (q) { if (ch === '"') { if (line[i + 1] === '"') { cur += '"'; i++; } else q = false; } else cur += ch; }
+      else if (ch === '"') q = true; else if (ch === ',') { out.push(cur); cur = ''; } else cur += ch;
+    }
+    out.push(cur); return out;
+  }
+  function columns(csv, names) {
+    const idx = names.map((n) => csv.head.indexOf(n));
+    const cols = names.map(() => []);
+    for (const r of csv.rows) {
+      const v = idx.map((i) => parseFloat(r[i]));
+      if (v.every(fin)) v.forEach((x, k) => cols[k].push(x));
+    }
+    return cols.map((c) => Float64Array.from(c));
+  }
+  function quality(ts, nominal) {
+    if (ts.length < 2 || ts[ts.length - 1] <= ts[0]) return { status: '-', rate_hz: null };
+    const rate = (ts.length - 1) / (ts[ts.length - 1] - ts[0]), r = rate / nominal;
+    return { status: r >= 0.9 ? 'VALID' : r >= 0.5 ? 'WARNING' : 'INVALID', rate_hz: +rate.toFixed(2) };
+  }
+  async function recordingFromMusepolar(files, folder, id) { // files: {name: File|Blob-like with .text()}
+    const text = async (n) => (files[n] ? files[n].text() : null);
+    const meta = JSON.parse((await text('session.json')) || '{}');
+    const [ts, ...eeg] = columns(parseCSV(await text('muse_eeg.csv')), ['timestamp', ...MUSE_CH]);
+    const t0 = ts[0], t = ts.map((v) => v - t0);
+    let ppg = null, rr = null, markers = [], pq = { status: '-', rate_hz: null };
+    const ppgTxt = await text('muse_ppg.csv');
+    if (ppgTxt) { const [pt, ir] = columns(parseCSV(ppgTxt), ['timestamp', 'ir']); if (pt.length) { ppg = { t: pt.map((v) => v - t0), v: ir, fs: 64 }; pq = quality(pt, 64); } }
+    const good = (meta.sync || []).filter((s) => s.ok && s.muse_minus_polar_s !== null && s.muse_minus_polar_s !== undefined);
+    const off = good.length ? good[0].muse_minus_polar_s : null;
+    const rrTxt = await text('polar_rr.csv');
+    if (rrTxt) { const [rt, ms] = columns(parseCSV(rrTxt), ['timestamp', 'rr_ms']); rr = { t: rt.map((v) => v + (off || 0) - t0), ms }; }
+    const mk = await text('marker.csv');
+    if (mk) { const c = parseCSV(mk), it = c.head.indexOf('timestamp'), il = c.head.indexOf('label'); markers = c.rows.map((r) => ({ t: parseFloat(r[it]) - t0, label: r[il] })).filter((m) => fin(m.t)); }
+    return {
+      id, kind: 'musepolar', label: folder, participant: meta.name || folder, condition: meta.note || '', start: meta.start_local || null,
+      channels: [...MUSE_CH], fs: 256, t, x: eeg.map((c) => filterEEG(c, 256)), ppg, rr, heartName: 'Polar RR', markers, syncOffset: off,
+      quality: { eeg: quality(ts, 256), ppg: pq }, nChannels: 4, duration: t[t.length - 1], hasPpg: !!ppg, hasHeart: !!rr,
+      absStart: t0,
+    };
+  }
+
+  // ---------------------------------------------------------------- other EEG CSV files
+  // Same rules as src/muse2_pipeline/csvload.py: Mind Monitor, muselsl, earlier app (EEG_raw.csv),
+  // OpenBCI GUI, or any CSV with a time column and 10-20 named channels.
+  const TIME_NAMES = ['timestamp', 'timestamps', 'timestamp_lsl', 'time', 'time_s', 'time (s)', 't', 'timestamp (s)'];
+  const MARKER_NAMES = ['marker', 'markers', 'label', 'event', 'events', 'annotation', 'annotations', 'elements'];
+  const IGNORED_ELEMENTS = ['/muse/elements/blink', '/muse/elements/jaw_clench', '/muse/elements/touching_forehead', '/muse/elements/horseshoe', '/muse/elements/is_good'];
+  const STANDARD_RATES = [128, 200, 250, 256, 500, 512, 1000, 1024, 2048];
+  const eegName = (col) => canonical(col.trim().replace(/^(RAW|EEG)[_ ]/i, ''));
+  const rawChannel = (col) => /^(EXG\s*Channel\s*\d+|CH(ANNEL)?[\s_]*\d+|EEG[\s_]*\d+)$/i.test(col.trim());
+  function estimateRate(t) {
+    const r = (t.length - 1) / (t[t.length - 1] - t[0]);
+    const near = STANDARD_RATES.reduce((a, b) => (Math.abs(b - r) < Math.abs(a - r) ? b : a));
+    return Math.abs(near - r) <= 0.03 * near ? near : Math.round(r);
+  }
+  function splitHeader(text) {
+    const lines = text.split(/\r?\n/); let i = 0;
+    while (i < lines.length && (lines[i].startsWith('%') || lines[i].startsWith('#') || !lines[i].trim())) i++;
+    return [lines.slice(0, i), lines.slice(i)];
+  }
+  function detectSep(line) { return [',', ';', '\t'].reduce((a, b) => (line.split(b).length > line.split(a).length ? b : a)); }
+  function splitSep(line, sep) { return sep === ',' ? splitCSV(line) : line.split(sep); }
+  function numericUnit(name, t) { // same order as csvload.numeric_unit: name, epoch size, plausible rate
+    const n = name.toLowerCase();
+    if (/(^|[^a-z])ms([^a-z]|$)|millis/.test(n)) return 1000;
+    if (/\(s\)|_s$|\bsec/.test(n)) return 1;
+    const f = t.filter(fin);
+    if (f.length < 2) return 1;
+    const big = Math.max(...f.map(Math.abs));
+    if (big > 1e11) return 1000;
+    if (big > 1e8) return 1;
+    const span = f[f.length - 1] - f[0];
+    if (span <= 0) return 1;
+    const rs = (f.length - 1) / span;
+    return rs < 50 && rs * 1000 >= 100 && rs * 1000 <= 5000 ? 1000 : 1;
+  }
+  function toSeconds(vals, name = '') {
+    const nums = vals.map((v) => (v.trim() === '' ? NaN : Number(v)));
+    if (nums.filter(fin).length > 0.9 * vals.length) {
+      const u = numericUnit(name, nums);
+      return { t: nums.map((v) => v / u), start: null };
+    }
+    const ms = vals.map((v) => { const s = v.trim(); return s ? Date.parse(s.replace(' ', 'T')) : NaN; });
+    if (ms.filter(fin).length > 0.9 * vals.length) {
+      const i0 = ms.findIndex(fin);
+      return { t: ms.map((v) => (v - ms[i0]) / 1000), start: vals[i0].trim().replace(' ', 'T').slice(0, 19), epoch0: ms[i0] / 1000 };
+    }
+    return null;
+  }
+  function recordingFromCSV(text, name, id, opt = {}) {
+    const [comments, lines] = splitHeader(text);
+    const body = lines.filter((l) => l.length);
+    if (body.length < 2) throw new Error('file CSV kosong');
+    const sep = detectSep(body[0]), cols = splitSep(body[0], sep).map((c) => c.trim().replace(/^"|"$/g, ''));
+    const rows = body.slice(1).map((l) => splitSep(l, sep));
+    let rate = null;
+    for (const c of comments) { const m = c.match(/sample\s*rate\s*[=:]\s*([\d.]+)/i); if (m) { rate = parseFloat(m[1]); break; } }
+    const low = cols.map((c) => c.toLowerCase());
+    let ti = TIME_NAMES.map((n) => low.indexOf(n)).find((i) => i >= 0);
+    if (ti === undefined) ti = low.findIndex((c) => c.includes('timestamp') || c.startsWith('time'));
+    const eeg = []; const seen = new Set();
+    cols.forEach((c, i) => { const n = eegName(c); if (n && !seen.has(n)) { seen.add(n); eeg.push([n, i]); } });
+    if (!eeg.length) cols.forEach((c, i) => { if (rawChannel(c)) eeg.push([c.trim(), i]); });
+    if (!eeg.length) throw new Error(`${name}: tidak ada kolom EEG (nama 10-20 seperti TP9/AF7/Fp1, RAW_TP9, EEG_TP9 atau EXG Channel)`);
+    const mi = MARKER_NAMES.map((n) => low.indexOf(n)).find((i) => i >= 0);
+    const ei = cols.findIndex((c) => /ECG|EKG/i.test(c)), pi = cols.findIndex((c) => /PPG|PLETH/i.test(c));
+    const time = ti >= 0 ? toSeconds(rows.map((r) => r[ti] || ''), cols[ti]) : null;
+    const markers = [];
+    if (mi !== undefined && time) rows.forEach((r, k) => {
+      const lab = (r[mi] || '').trim().replace(/^"|"$/g, '');
+      if (lab && lab.toLowerCase() !== 'nan' && fin(time.t[k]) && !IGNORED_ELEMENTS.some((p) => lab.toLowerCase().startsWith(p))) markers.push({ t: time.t[k], label: lab });
+    });
+    const keep = [];
+    rows.forEach((r, k) => { if (eeg.every(([, i]) => r[i] !== undefined && r[i].trim() !== '' && fin(Number(r[i])))) keep.push(k); });
+    if (keep.length < 10) throw new Error(`${name}: terlalu sedikit baris EEG`);
+    const t = time ? keep.map((k) => time.t[k]) : null;
+    let fs = rate;
+    if (!fs) fs = t && t.length > 2 && t[t.length - 1] > t[0] ? estimateRate(t) : 256;
+    if (fs < 100) throw new Error(`${name}: frekuensi sampel ${fs} Hz terlalu rendah untuk analisis EEG (minimal 100 Hz); rekam dengan data mentah (mis. Mind Monitor: Recording Interval = Constant)`);
+    const n = keep.length, t0 = t ? t[0] : 0;
+    const x = eeg.map(([, i]) => Float64Array.from(keep, (k) => Number(rows[k][i])));
+    let quality = { status: 'VALID', rate_hz: fs };
+    if (t && n > 2 && t[n - 1] > t[0]) {
+      const r = (n - 1) / (t[n - 1] - t[0]), ratio = r / fs;
+      quality = { status: ratio >= 0.9 ? 'VALID' : ratio >= 0.5 ? 'WARNING' : 'INVALID', rate_hz: +r.toFixed(2) };
+    }
+    const tt = Float64Array.from({ length: n }, (_, i) => i / fs);
+    let ppg = opt.ppg || null, rr = null;
+    if (!ppg && pi >= 0) {
+      const v = [], pt = [];
+      keep.forEach((k, j) => { const val = Number(rows[k][pi]); if (fin(val)) { v.push(val); pt.push(j / fs); } });
+      if (v.length) ppg = { t: Float64Array.from(pt), v: Float64Array.from(v), fs };
+    }
+    if (ei >= 0) {
+      const raw = keep.map((k) => Number(rows[k][ei])), good = raw.filter(fin), md = good.length ? median(good) : 0;
+      const tb = ecgBeats(Float64Array.from(raw, (v) => (fin(v) ? v : md)), tt, fs);
+      if (tb.length > 1) rr = { t: Float64Array.from(tb.slice(1)), ms: Float64Array.from(tb.slice(1).map((v, i) => (v - tb[i]) * 1000)) };
+    }
+    const meta = opt.meta || {};
+    return {
+      id, kind: opt.kind || 'csv', label: opt.label || name, participant: meta.name || name.replace(/\.[^.]+$/, ''), condition: meta.note || '',
+      start: meta.start || (time && time.start) || null, channels: eeg.map(([c]) => c), fs, t: tt, x: x.map((c) => filterEEG(c, fs)),
+      ppg, rr, heartName: 'EKG (CSV)', markers: markers.map((m) => ({ t: m.t - t0, label: m.label })), syncOffset: null,
+      quality: { eeg: quality, ppg: { status: ppg ? 'VALID' : '-', rate_hz: ppg ? ppg.fs : null } },
+      nChannels: eeg.length, duration: n / fs, hasPpg: !!ppg, hasHeart: !!rr,
+      absStart: time && fin(time.epoch0) ? time.epoch0 + t0 : (t0 > 1e8 ? t0 : null),
+    };
+  }
+  async function recordingFromLSL(files, dir, id) { // earlier app: EEG_raw.csv + PPG_raw.csv + metadata json
+    const txt = await files['EEG_raw.csv'].text();
+    let meta = {};
+    for (const nm of ['recording_metadata.json', 'baseline_metadata.json']) if (files[nm]) { try { meta = JSON.parse(await files[nm].text()); } catch { meta = {}; } break; }
+    const parts = dir.split('/'), part = parts.length > 1 ? parts[parts.length - 2] : parts[0], cond = parts[parts.length - 1];
+    let ppg = null;
+    if (files['PPG_raw.csv']) {
+      const e = parseCSV(txt), p = parseCSV(await files['PPG_raw.csv'].text());
+      const [te] = columns(e, ['Timestamp_LSL']), [tp, v2] = columns(p, ['Timestamp_LSL', 'PPG_2']);
+      if (tp.length) { const origin = te.length ? te[0] : tp[0]; ppg = { t: tp.map((x) => x - origin), v: v2, fs: 64 }; }
+    }
+    return recordingFromCSV(txt, 'EEG_raw.csv', id, { kind: 'lsl', label: `${part} / ${cond}`, ppg,
+      meta: { name: part, note: cond, start: meta.start_iso || null } });
+  }
+
+  // ---------------------------------------------------------------- Polar Sensor Logger (.txt)
+  // Same rules as src/muse2_pipeline/polar.py: RR file used directly, ECG only when there is no RR,
+  // MARKER file -> markers; joined to the EEG recording that overlaps it in clock time.
+  const POLAR_SETS = [];
+  const polarType = (name, header) => {
+    const m = name.match(/_(RR|ECG|HR|ACC|PPI|MARKER)\.txt$/i); if (m) return m[1].toUpperCase();
+    const h = header.toLowerCase();
+    if (h.includes('rr-interval') || /\brr\b/.test(h)) return 'RR';
+    if (h.includes('ecg')) return 'ECG';
+    if (h.includes('marker')) return 'MARKER';
+    return null;
+  };
+  const polarKey = (path) => path.replace(/_(RR|ECG|HR|ACC|PPI|MARKER)\.txt$/i, '');
+  const localEpoch = (s) => Date.parse(s.trim().replace(' ', 'T')) / 1000;
+  function polarRows(text) {
+    const lines = text.split(/\r?\n/).filter((l) => l.trim());
+    const sep = lines[0].split(';').length >= lines[0].split(',').length ? ';' : ',';
+    return [lines[0].split(sep).map((c) => c.trim().toLowerCase()), lines.slice(1).map((l) => l.split(sep))];
+  }
+  function parsePolarRR(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp'), ri = head.findIndex((c) => c.includes('rr'));
+    const ts = [], rr = [];
+    for (const r of rows) { const a = localEpoch(r[ti] || ''), b = parseFloat(r[ri]); if (fin(a) && fin(b)) { ts.push(a); rr.push(b); } }
+    const t = ts.slice();
+    for (let i = t.length - 2; i >= 0; i--) if (ts[i] === ts[i + 1]) t[i] = t[i + 1] - rr[i + 1] / 1000;
+    return { t, rr };
+  }
+  function parsePolarECG(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp');
+    const si = head.findIndex((c) => c.includes('sensor timestamp')), vi = head.findIndex((c) => c.includes('ecg'));
+    let t0 = null; const sens = [], v = [];
+    for (const r of rows) {
+      const a = localEpoch(r[ti] || ''), val = parseFloat(r[vi]);
+      if (!fin(val) || (t0 === null && !fin(a))) continue;
+      if (t0 === null) t0 = a;
+      sens.push(si >= 0 ? parseFloat(r[si]) : NaN); v.push(val);
+    }
+    let t, fs = 130;
+    if (si >= 0 && sens.every(fin) && sens.length > 1) {
+      t = sens.map((x) => t0 + (x - sens[0]) / 1e9);
+      if (t[t.length - 1] > t[0]) fs = (t.length - 1) / (t[t.length - 1] - t[0]);
+    } else t = v.map((_, i) => t0 + i / fs);
+    return { t: Float64Array.from(t), v: Float64Array.from(v), fs };
+  }
+  function parsePolarMarkers(text) {
+    const [head, rows] = polarRows(text), ti = head.indexOf('phone timestamp'), out = [];
+    for (const r of rows) { const a = localEpoch(r[ti] || ''); if (fin(a)) out.push({ t: a, label: r.filter((_, j) => j !== ti).join(';').trim() || 'marker' }); }
+    return out;
+  }
+  function loadPolarSet(name, files) {
+    let rr, source;
+    if (files.RR) { const p = parsePolarRR(files.RR); rr = { t: p.t, ms: p.rr }; source = 'RR'; }
+    else if (files.ECG) {
+      const e = parsePolarECG(files.ECG), tb = ecgBeats(e.v, e.t, e.fs);
+      if (tb.length < 2) return null;
+      rr = { t: tb.slice(1), ms: tb.slice(1).map((v, i) => (v - tb[i]) * 1000) }; source = 'ECG';
+    } else return null;
+    if (rr.t.length < 2) return null;
+    return { name, source, t: rr.t, ms: rr.ms, markers: files.MARKER ? parsePolarMarkers(files.MARKER) : [],
+      tFirst: rr.t[0] - rr.ms[0] / 1000, tLast: rr.t[rr.t.length - 1] };
+  }
+  function bestPolar(sets, absStart, dur) {
+    if (absStart === null || absStart === undefined || !sets.length) return null;
+    let best = null, bov = 0;
+    for (const s of sets) { const ov = Math.min(absStart + dur, s.tLast) - Math.max(absStart, s.tFirst); if (ov > bov) { best = s; bov = ov; } }
+    return best;
+  }
+  function attachPolar(rec, sets) {
+    let s = bestPolar(sets, rec.absStart, rec.duration), aligned = 'clock';
+    if (!s && (rec.absStart === null || rec.absStart === undefined) && sets.length === 1) { s = sets[0]; aligned = 'start'; }
+    if (!s) return false;
+    const origin = aligned === 'clock' ? rec.absStart : s.tFirst;
+    rec.rr = { t: Float64Array.from(s.t, (v) => v - origin), ms: Float64Array.from(s.ms) };
+    rec.heartName = 'Polar H10'; rec.hasHeart = true;
+    rec.markers = rec.markers.filter((m) => !String(m.label).startsWith('Polar: '))
+      .concat(s.markers.map((m) => ({ t: m.t - origin, label: `Polar: ${m.label}` }))).sort((a, b) => a.t - b.t);
+    rec.polarInfo = { name: s.name, source: s.source, aligned, start_diff_s: +(s.tFirst - origin).toFixed(3) };
+    SESS.delete(rec.id);
+    return true;
+  }
+
+  // ---------------------------------------------------------------- registry & requests
+  const SESS = new Map(), RECS = [];
+  let counter = 0;
+  const yieldUI = () => new Promise((r) => setTimeout(r, 30));
+  function sessionList() {
+    return RECS.map((r) => ({ id: r.id, label: r.label, name: r.participant, note: r.condition, start: r.start, duration: r.duration,
+      has_ppg: r.hasPpg, has_polar: r.hasHeart, kind: r.kind, n_channels: r.nChannels }))
+      .sort((a, b) => String(b.start || '').localeCompare(String(a.start || '')) || b.label.localeCompare(a.label));
+  }
+  function addRecording(rec) { RECS.push(rec); }
+  async function addFiles(fileList, currentId = null) {
+    await yieldUI();
+    const byDir = {}, edfs = [], zips = [], errors = [];
+    const polarFiles = [];
+    for (const f of fileList) {
+      const path = f.webkitRelativePath || f.relPath || f.name, low = path.toLowerCase();
+      if (low.endsWith('.txt') && /phone timestamp/i.test(f.slice ? await f.slice(0, 300).text() : (await f.text()).slice(0, 300))) { polarFiles.push([path, f]); continue; }
+      if (low.endsWith('.edf') || low.endsWith('.bdf')) edfs.push(f);
+      else if (low.endsWith('.zip')) zips.push(f);
+      else { const dir = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '.'; (byDir[dir] = byDir[dir] || {})[path.slice(path.lastIndexOf('/') + 1)] = f; }
+    }
+    for (const z of zips) {
+      if (typeof JSZip === 'undefined') { errors.push(`${z.name}: membuka ZIP perlu koneksi internet (pustaka JSZip)`); continue; }
+      const zip = await JSZip.loadAsync(await z.arrayBuffer());
+      for (const [p, e] of Object.entries(zip.files)) {
+        if (e.dir) continue;
+        const low = p.toLowerCase(), wrap = { name: p.slice(p.lastIndexOf('/') + 1), relPath: p, text: () => e.async('string'), arrayBuffer: () => e.async('arraybuffer') };
+        if (low.endsWith('.txt') && /phone timestamp/i.test((await wrap.text()).slice(0, 200))) polarFiles.push([p, wrap]);
+        else if (low.endsWith('.edf') || low.endsWith('.bdf')) edfs.push(wrap);
+        else { const dir = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '.'; (byDir[dir] = byDir[dir] || {})[wrap.name] = wrap; }
+      }
+    }
+    const groups = {}, newSets = [];
+    for (const [path, f] of polarFiles) {
+      const text = await f.text(), typ = polarType(path.split('/').pop(), text.split(/\r?\n/)[0]);
+      if (['RR', 'ECG', 'MARKER'].includes(typ)) (groups[polarKey(path)] = groups[polarKey(path)] || {})[typ] = text;
+    }
+    for (const [key, files] of Object.entries(groups)) {
+      const st = loadPolarSet(key.split('/').pop(), files);
+      if (st) { POLAR_SETS.push(st); newSets.push(st); } else errors.push(`${key.split('/').pop()}: tidak ada interval RR/EKG yang terbaca`);
+    }
+    const added = [];
+    for (const f of edfs) {
+      try { const r = recordingFromEDF(await f.arrayBuffer(), f.name, `r${++counter}`); addRecording(r); added.push(r.id); }
+      catch (e) { errors.push(`${f.name}: ${e.message}`); }
+    }
+    for (const [dir, files] of Object.entries(byDir)) {
+      try {
+        if (files['muse_eeg.csv']) {
+          const r = await recordingFromMusepolar(files, dir.split('/').pop() || dir, `r${++counter}`); addRecording(r); added.push(r.id);
+        } else if (files['EEG_raw.csv']) {
+          const r = await recordingFromLSL(files, dir, `r${++counter}`); addRecording(r); added.push(r.id);
+        } else {
+          for (const [nm, f] of Object.entries(files)) { // stand-alone EEG CSV files (Mind Monitor, muselsl, OpenBCI, ...)
+            if (!/\.(csv|txt)$/i.test(nm)) continue;
+            try { const r = recordingFromCSV(await f.text(), nm, `r${++counter}`); addRecording(r); added.push(r.id); }
+            catch (e) { if (!/tidak ada kolom EEG/.test(e.message)) errors.push(e.message); }
+          }
+        }
+      } catch (e) { errors.push(`${dir}: ${e.message}`); }
+    }
+    // join Polar recordings to the EEG recordings they overlap in clock time
+    const polarJoined = [];
+    for (const id of added) {
+      const rec = RECS.find((r) => r.id === id);
+      // by clock among every Polar recording opened so far; without an EEG clock only a single pair chosen together
+      const sets = rec.absStart !== null && rec.absStart !== undefined ? POLAR_SETS : (added.length === 1 ? newSets : []);
+      if (rec.kind !== 'musepolar' && attachPolar(rec, sets)) polarJoined.push(id);
+    }
+    let attachedTo = null;
+    if (!added.length && newSets.length && currentId) { // only Polar files chosen: join them to the open recording
+      const rec = RECS.find((r) => r.id === currentId);
+      if (rec && rec.kind !== 'musepolar' && attachPolar(rec, newSets)) attachedTo = rec.id;
+      else if (rec && rec.kind === 'musepolar') errors.push('Sesi musepolar sudah punya data Polar sendiri.');
+    }
+    if (!added.length && !attachedTo) throw new Error(errors[0] || 'Tidak ada rekaman EEG (folder musepolar, file EDF/BDF, atau CSV dengan kolom EEG) di pilihan ini.');
+    return { root: 'browser', exists: true, sessions: sessionList(), added, errors, attachedTo, polarJoined };
+  }
+  async function session(id) {
+    if (SESS.has(id)) return SESS.get(id);
+    const rec = RECS.find((r) => r.id === id);
+    if (!rec) throw new Error('Sesi tidak ditemukan.');
+    await yieldUI();
+    const s = new Session(rec); SESS.set(id, s); return s;
+  }
+  async function handle(path) {
+    const u = new URL(path, 'http://x'), q = Object.fromEntries(u.searchParams), parts = u.pathname.split('/').filter(Boolean);
+    const kind = parts[1], id = parts[2];
+    if (kind === 'sessions') return { root: 'browser', exists: true, sessions: sessionList() };
+    const s = (await session(id)).view(q.chans || 'all', q.heart || 'all', +q.pshift || 0);
+    if (kind === 'session') return s.overview();
+    if (kind === 'signal') return s.signal(+q.t0 || 0, fin(+q.t1) ? +q.t1 : 1e9, +q.n || 1600);
+    if (kind === 'analysis') { await yieldUI(); return s.analyze(q.titik || '', q.band || 'alpha', q.metric || 'abs', +q.ref || 0, +q.art || 100); }
+    throw new Error('permintaan tidak dikenal: ' + path);
+  }
+
+  // ---------------------------------------------------------------- export (ZIP of CSV tables)
+  const csvLine = (a) => a.map((v) => (v === null || v === undefined ? '' : typeof v === 'string' && /[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)).join(',');
+  async function exportZip(id, q) {
+    const s = (await session(id)).view(q.chans, q.heart, +q.pshift || 0);
+    const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), spec = s.spec(+q.art), ch = s.ch, nch = s.nch;
+    const segHead = ['ruas', 'nama', 't0_s', 't1_s', 'jendela', `jendela_bersih_${res.pair_label}`,
+      ...ch.flatMap((c) => [`${c}_${res.band}_${res.metric}`, `${c}_z_vs_acuan`, `${c}_jendela_bersih`]), `asimetri_${res.pair_label}`, 'acuan',
+      'ppg_hr_bpm', 'ppg_rmssd_ms', 'ppg_sdnn_ms', 'polar_hr_bpm', 'polar_rmssd_ms', 'polar_sdnn_ms'];
+    const segRows = res.segments.map((g) => [`${g.t0.toFixed(0)}–${g.t1.toFixed(0)} s`, g.name, g.t0, g.t1, g.n_win, g.n_pair,
+      ...ch.flatMap((_, c) => [g.values[c], g.z[c], g.n_clean[c]]), g.asym, g.is_ref,
+      g.ppg.hr, g.ppg.rmssd, g.ppg.sdnn, g.polar ? g.polar.hr : null, g.polar ? g.polar.rmssd : null, g.polar ? g.polar.sdnn : null]);
+    const tHead = ['measure', 'pair', 'n_a', 'n_b', 'med_a', 'med_b', 'p', 'p_holm', 'delta', 'effect', 'sig'];
+    const winHead = ['t_start_s', 't_mid_s', ...ch.flatMap((c) => [...BAND_NAMES.map((b) => `${c}_${b}_uV2`), `${c}_total_uV2`, `${c}_artefak`])];
+    const winRows = Array.from({ length: spec.nwin }, (_, w) => [spec.tStart[w], spec.tMid[w],
+      ...ch.flatMap((_, c) => [...BAND_NAMES.map((b) => spec.power[b][w * nch + c]), spec.total[w * nch + c], spec.bad[w * nch + c]])]);
+    const files = {
+      'ruas.csv': [segHead, ...segRows], 'uji_berpasangan.csv': [tHead, ...res.tests.pairs.map((r) => tHead.map((k) => r[k]))],
+      'uji_kruskal.csv': [['measure', 'p', 'k'], ...res.tests.omnibus.map((o) => [o.measure, o.p, o.k])],
+      'jendela_dayapita.csv': [winHead, ...winRows],
+    };
+    for (const [nm, ser] of [['denyut_ppg.csv', s.ppg], ['denyut_polar.csv', s.polar]])
+      if (ser.t.length) files[nm] = [['t_s', 'ibi_ms', 'valid'], ...ser.t.map((t, i) => [t, ser.ibi[i] * 1000, ser.valid[i]])];
+    const base = `${s.rec.label.replace(/\.[^.]+$/, '')}_${res.band}`;
+    if (typeof JSZip === 'undefined') return { name: `${base}_ruas.csv`, blob: new Blob([files['ruas.csv'].map(csvLine).join('\n')], { type: 'text/csv' }) };
+    const zip = new JSZip();
+    for (const [nm, rows] of Object.entries(files)) zip.file(nm, rows.map(csvLine).join('\n'));
+    zip.file('pengaturan.json', JSON.stringify({ sesi: s.rec.label, ...q }, null, 2));
+    return { name: `${base}_analisis.zip`, blob: await zip.generateAsync({ type: 'blob' }) };
+  }
+
+  // Tab-separated tables for the clipboard (paste into Excel/Sheets) - used where downloads are blocked.
+  async function exportText(id, q) {
+    const s = (await session(id)).view(q.chans, q.heart, +q.pshift || 0);
+    const res = s.analyze(q.titik, q.band, q.metric, +q.ref, +q.art), ch = s.ch;
+    const f = (v) => (v === null || v === undefined ? '' : typeof v === 'number' ? String(+v.toPrecision(5)).replace('.', ',') : String(v));
+    const rows = [[`Sesi: ${s.rec.participant}`, `Pita: ${res.band} (${res.unit})`, `Ruas acuan: ${res.ref + 1}`], [],
+      ['Ruas', 'Nama', 'Jendela bersih', ...ch, `Asimetri ${res.pair_label}`, 'Denyut PPG', 'PRV-RMSSD', `Denyut ${s.rec.heartName}`, 'HRV-RMSSD', 'Acuan'],
+      ...res.segments.map((g) => [`${Math.round(g.t0)}–${Math.round(g.t1)} s`, g.name, `${g.n_pair}/${g.n_win}`, ...g.values, g.asym,
+        g.ppg.hr, g.ppg.rmssd, g.polar ? g.polar.hr : null, g.polar ? g.polar.rmssd : null, g.is_ref ? 'ya' : '']), [],
+      ['Ukuran', 'Perbandingan', 'n', 'Median 1', 'Median 2', 'p', 'p Holm', 'δ Cliff', 'Efek', 'Berbeda'],
+      ...res.tests.pairs.map((r) => [res.measure_labels[r.measure] || r.measure, r.pair, `${r.n_a}/${r.n_b}`, r.med_a, r.med_b, r.p, r.p_holm, r.delta, r.effect, r.sig ? 'ya' : 'tidak'])];
+    return rows.map((r) => r.map(f).join('\t')).join('\n');
+  }
+
+  // ---------------------------------------------------------------- demo data (synthetic)
+  function demo() {
+    let seed = 7; const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const gauss = () => Math.sqrt(-2 * Math.log(rnd() + 1e-12)) * Math.cos(2 * Math.PI * rnd());
+    const heart = (dur, hrOf) => { const b = [0.3]; while (b[b.length - 1] < dur + 1) { const t = b[b.length - 1]; b.push(t + 60 / hrOf(t) * (1 + 0.04 * Math.sin(2 * Math.PI * t / 5)) + 0.01 * gauss()); } return b; };
+    const make = (id, kind, label, name, chans, fs, dur, gen, beats, extra) => {
+      const n = Math.round(dur * fs), t = Float64Array.from({ length: n }, (_, i) => i / fs);
+      const x = chans.map((c, k) => { let lp = 0; return filterEEG(Float64Array.from(t, (tt) => { lp = 0.97 * lp + gauss(); return 1.5 * lp + gen(c, k, tt) + 2 * gauss(); }), fs); });
+      return { id, kind, label, participant: name, condition: extra.note, start: extra.start, channels: chans, fs, t, x,
+        ppg: extra.ppg || null, rr: { t: Float64Array.from(beats.slice(1)), ms: Float64Array.from(beats.slice(1).map((v, i) => (v - beats[i]) * 1000)) },
+        heartName: extra.heartName, markers: extra.markers, syncOffset: extra.sync ?? null,
+        quality: { eeg: { status: 'VALID', rate_hz: fs }, ppg: { status: extra.ppg ? 'VALID' : '-', rate_hz: extra.ppg ? 64 : null } },
+        nChannels: chans.length, duration: dur, hasPpg: !!extra.ppg, hasHeart: true };
+    };
+    const blinks = Array.from({ length: 60 }, () => rnd() * 240);
+    const blink = (tt) => { let s = 0; for (const b of blinks) if (!(b > 80 && b < 160)) s += 180 * Math.exp(-((tt - b) ** 2) / (2 * 0.08 ** 2)); return s; };
+    const b1 = heart(240, (t) => (t < 80 ? 68 : t < 160 ? 63 : 80));
+    const tp = Float64Array.from({ length: 240 * 64 }, (_, i) => i / 64);
+    const ph = (tt) => { let j = lb(b1, tt); j = Math.max(1, Math.min(b1.length - 1, j)); return j - 1 + (tt - b1[j - 1]) / (b1[j] - b1[j - 1]); };
+    const ppgV = Float64Array.from(tp, (tt) => { const w = 2 * Math.PI * ph(tt); return 210000 - 2500 * (Math.sin(w) + 0.4 * Math.sin(2 * w + 1)) + 30 * gauss(); });
+    const muse = make('demo-muse', 'musepolar', 'demo_muse_4kanal', 'Demo Muse (4 kanal)', MUSE_CH, 256, 240, (c, k, tt) => {
+      const al = tt >= 80 && tt < 160 ? 12 : 4, be = tt >= 160 ? 5 : 2;
+      return al * Math.sin(2 * Math.PI * (10 + 0.3 * k) * tt + k) + be * Math.sin(2 * Math.PI * 20 * tt) + (c.startsWith('AF') ? blink(tt) : 0);
+    }, b1, { note: 'istirahat → mata tertutup → aritmetika', start: '2026-09-26T09:30:00', heartName: 'Polar RR', sync: 0.062,
+      ppg: { t: tp, v: ppgV, fs: 64 }, markers: [{ t: 80.2, label: 'Mata tertutup' }, { t: 160.1, label: 'Hitung mundur (aritmetika)' }] });
+    const cap = ['Fp1', 'Fp2', 'F3', 'F4', 'C3', 'C4', 'P3', 'P4', 'O1', 'O2', 'F7', 'F8', 'T7', 'T8', 'P7', 'P8'];
+    const b2 = heart(180, (t) => (t < 60 ? 70 : t < 120 ? 62 : 82));
+    const edf = make('demo-edf', 'edf', 'demo_16kanal.edf', 'Demo EDF (16 kanal)', cap, 250, 180, (c, k, tt) => {
+      const post = 'OP'.includes(c[0]), al = tt >= 60 && tt < 120 ? (post ? 20 : 6) : post ? 5 : 3, be = tt >= 120 ? (c[0] === 'F' ? 5 : 2.5) : 2;
+      return al * Math.sin(2 * Math.PI * (10 + 0.1 * k) * tt + k) + be * Math.sin(2 * Math.PI * 21 * tt + k) + (c.startsWith('Fp') ? blink(tt) * 0.8 : 0);
+    }, b2, { note: '', start: '2026-09-26T10:00:00', heartName: 'EKG (EDF)', markers: [{ t: 60, label: 'Mata tertutup' }, { t: 120, label: 'Aritmetika' }] });
+    return [muse, edf];
+  }
+  async function loadDemo() {
+    await yieldUI();
+    if (!RECS.some((r) => r.id.startsWith('demo'))) demo().forEach(addRecording);
+    return { root: 'browser', exists: true, sessions: sessionList() };
+  }
+
+  return { handle, addFiles, exportZip, exportText, loadDemo, _internals: { butterBandSOS, notchSOS, filtfilt, filterEEG, subsegmentSpectra, windowSpectra,
+    readEDF, recordingFromEDF, recordingFromCSV, estimateRate, loadPolarSet, attachPolar, Session, mwTest, kruskal, holm, findPeaks, ppgBeatsB1, ecgBeats, intervalSeries, hrvStats, filtfiltBA, canonical, position, museSources } };
+})();
+if (typeof window !== 'undefined') window.ENGINE = ENGINE;
+if (typeof module !== 'undefined') module.exports = ENGINE;
+
+</script>
+<script type="module">
+// Small dependency-free canvas charts for Research View: time series with shared zoom,
+// crosshair + tooltip, overlays (segments, markers, map window) and a head topomap.
+
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const isDark = () => {
+  const t = document.documentElement.dataset.theme;
+  return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+};
+
+const tooltip = () => document.getElementById('tooltip');
+
+function fmtTime(t, span = 0) {
+  if (!Number.isFinite(t)) return '–';
+  if (span < 120 && Math.abs(t) < 600) return `${+t.toFixed(span < 5 ? 2 : span < 30 ? 1 : 0)} s`;
+  const s = Math.round(t), m = Math.floor(s / 60);
+  return `${m}:${String(s - m * 60).padStart(2, '0')}`;
+}
+
+function fmtTick(v) {
+  if (!Number.isFinite(v)) return '';
+  const a = Math.abs(v);
+  if (a >= 1e4) return v.toExponential(0).replace('+', '');
+  return String(+v.toPrecision(3));
+}
+
+function fmtNum(v, digits = 3) {
+  if (v === null || v === undefined || !Number.isFinite(v)) return '–';
+  const a = Math.abs(v);
+  if (a >= 1000) return v.toFixed(0);
+  if (a >= 100) return v.toFixed(digits > 2 ? 1 : 0);
+  if (a >= 10) return v.toFixed(Math.min(digits - 1, 2));
+  if (a >= 1) return v.toFixed(Math.min(digits, 2));
+  if (a === 0) return '0';
+  return v.toPrecision(2);
+}
+
+function niceStep(span, target) {
+  const raw = span / Math.max(1, target);
+  const p = Math.pow(10, Math.floor(Math.log10(raw)));
+  const m = raw / p;
+  return (m < 1.5 ? 1 : m < 3.5 ? 2 : m < 7.5 ? 5 : 10) * p;
+}
+const TIME_STEPS = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600];
+
+function lowerBound(arr, x) {
+  let lo = 0, hi = arr.length;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (arr[mid] < x) lo = mid + 1; else hi = mid; }
+  return lo;
+}
+
+// Keeps several charts on one x range and one hover position.
+class ChartGroup {
+  constructor() { this.charts = []; this.x0 = 0; this.x1 = 1; this.hoverX = null; }
+  add(c) { this.charts.push(c); c.group = this; return c; }
+  setView(x0, x1) { this.x0 = x0; this.x1 = x1; this.charts.forEach((c) => c.draw()); }
+  hover(x, src, ev) {
+    this.hoverX = x;
+    this.charts.forEach((c) => c.drawOverlay());
+    if (x === null) { tooltip().hidden = true; return; }
+    src.showTooltip(x, ev);
+  }
+}
+
+class Chart {
+  constructor(el, opt = {}) {
+    this.el = el;
+    this.opt = Object.assign({
+      padL: 58, padR: 12, padT: 10, padB: 20, yLog: false, xFmt: fmtTime, interactive: true,
+      yFmt: (v) => fmtNum(v), tickFmt: fmtTick, title: '', lanes: 0, laneScale: 100, legend: true, markerLabels: false,
+    }, opt);
+    this.base = document.createElement('canvas');
+    this.over = document.createElement('canvas');
+    el.append(this.base, this.over);
+    this.series = [];
+    this.ov = { segments: [], markers: [], window: null };
+    this.group = null;
+    this.drag = null;
+    this.ownX = null; // [x0, x1] when the chart is not in a group
+    new ResizeObserver(() => this.draw()).observe(el);
+    this._events();
+  }
+
+  get x0() { return this.ownX ? this.ownX[0] : this.group.x0; }
+  get x1() { return this.ownX ? this.ownX[1] : this.group.x1; }
+
+  setSeries(series) { this.series = series; this.draw(); }
+  setOverlays(ov) { Object.assign(this.ov, ov); this.draw(); }
+
+  _size(cv) {
+    const r = this.el.getBoundingClientRect(), d = window.devicePixelRatio || 1;
+    const w = Math.max(10, Math.round(r.width * d)), h = Math.max(10, Math.round(r.height * d));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+    const ctx = cv.getContext('2d');
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    return { ctx, W: r.width, H: r.height };
+  }
+
+  plotBox() {
+    const r = this.el.getBoundingClientRect(), o = this.opt;
+    return { L: o.padL, R: r.width - o.padR, T: o.padT + (this._extraT || 0), B: r.height - o.padB };
+  }
+  xTo(t) { const b = this.plotBox(); return b.L + (t - this.x0) / (this.x1 - this.x0 || 1) * (b.R - b.L); }
+  xFrom(px) { const b = this.plotBox(); return this.x0 + (px - b.L) / (b.R - b.L || 1) * (this.x1 - this.x0); }
+
+  // y scale ---------------------------------------------------------------
+  _yDomain() {
+    if (this.opt.lanes) return [0, 1];
+    if (this.opt.yDomain) return this.opt.yDomain;
+    let lo = Infinity, hi = -Infinity;
+    for (const s of this.series) {
+      const i0 = Math.max(0, lowerBound(s.t, this.x0) - 1), i1 = Math.min(s.t.length, lowerBound(s.t, this.x1) + 1);
+      for (let i = i0; i < i1; i++) {
+        const v = s.y[i];
+        if (v === null || !Number.isFinite(v) || (this.opt.yLog && v <= 0)) continue;
+        if (v < lo) lo = v; if (v > hi) hi = v;
+      }
+    }
+    if (!Number.isFinite(lo)) return this.opt.yLog ? [1, 10] : [0, 1];
+    if (this.opt.yLog) {
+      const a = Math.log10(lo), b = Math.log10(hi), pad = Math.max(0.05, (b - a) * 0.08);
+      return [Math.pow(10, a - pad), Math.pow(10, b + pad)];
+    }
+    if (hi === lo) { hi += 1; lo -= 1; }
+    const pad = (hi - lo) * 0.08;
+    return [lo - pad, hi + pad];
+  }
+  _yMap(dom) {
+    const b = this.plotBox();
+    if (this.opt.yLog) {
+      const a = Math.log10(dom[0]), c = Math.log10(dom[1]);
+      return (v) => b.B - (Math.log10(v) - a) / (c - a) * (b.B - b.T);
+    }
+    return (v) => b.B - (v - dom[0]) / (dom[1] - dom[0]) * (b.B - b.T);
+  }
+
+  draw() {
+    const { ctx, W, H } = this._size(this.base);
+    ctx.clearRect(0, 0, W, H);
+    if (!this.group && !this.ownX) return;
+    const o = this.opt;
+    // legend goes on its own line when it would collide with the title
+    this._extraT = 0;
+    if (o.title && o.legend && !o.lanes) {
+      ctx.font = '600 11px system-ui, sans-serif';
+      const tw = ctx.measureText(o.title).width;
+      ctx.font = '11px system-ui, sans-serif';
+      const lw = this.series.filter((s) => !s.noLegend).reduce((a, s) => a + ctx.measureText(s.name).width + 23, 0);
+      if (tw + lw + 16 > W - o.padR) this._extraT = 14;
+    }
+    const b = this.plotBox();
+    ctx.font = '11px system-ui, sans-serif';
+    ctx.textBaseline = 'middle';
+
+    // overlays behind data: segments, reference, map window
+    for (const s of this.ov.segments || []) {
+      const xa = Math.max(b.L, this.xTo(s.a)), xb = Math.min(b.R, this.xTo(s.b));
+      if (xb <= xa) continue;
+      ctx.fillStyle = s.ref ? css('--ref-fill') : (s.i % 2 ? css('--seg-fill') : 'transparent');
+      ctx.fillRect(xa, b.T, xb - xa, b.B - b.T);
+    }
+    if (this.ov.window) {
+      const xa = Math.max(b.L, this.xTo(this.ov.window.a)), xb = Math.min(b.R, this.xTo(this.ov.window.b));
+      if (xb > xa) { ctx.fillStyle = css('--win-fill'); ctx.fillRect(xa, b.T, xb - xa, b.B - b.T); }
+    }
+
+    // grid + axes
+    const dom = this._yDomain();
+    const ymap = this._yMap(dom);
+    ctx.strokeStyle = css('--grid'); ctx.lineWidth = 1; ctx.fillStyle = css('--text-muted');
+    ctx.textAlign = 'right';
+    if (o.lanes) {
+      const lh = (b.B - b.T) / o.lanes;
+      for (let j = 0; j < o.lanes; j++) {
+        const yc = b.T + lh * (j + 0.5);
+        ctx.beginPath(); ctx.moveTo(b.L, Math.round(yc) + 0.5); ctx.lineTo(b.R, Math.round(yc) + 0.5); ctx.stroke();
+        const s = this.series.find((x) => x.lane === j);
+        if (s) {
+          ctx.fillStyle = s.color; ctx.fillRect(6, yc - 1.5, 10, 3);
+          ctx.fillStyle = css('--text-secondary'); ctx.textAlign = 'left'; ctx.fillText(s.name, 20, yc);
+        }
+      }
+    } else {
+      const ticks = this._yTicks(dom);
+      for (const v of ticks) {
+        const y = Math.round(ymap(v)) + 0.5;
+        if (y < b.T - 1 || y > b.B + 1) continue;
+        ctx.beginPath(); ctx.moveTo(b.L, y); ctx.lineTo(b.R, y); ctx.stroke();
+        if (y > b.T + 5 || !o.title) ctx.fillText(o.tickFmt(v), b.L - 6, y); // keep clear of the title
+      }
+    }
+    // x ticks
+    const span = this.x1 - this.x0;
+    const step = o.xStep ? o.xStep(span) : (TIME_STEPS.find((s) => span / s <= Math.max(3, (b.R - b.L) / 90)) || 3600);
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillStyle = css('--text-muted');
+    for (let t = Math.ceil(this.x0 / step) * step; t <= this.x1 + 1e-9; t += step) {
+      const x = Math.round(this.xTo(t)) + 0.5;
+      ctx.strokeStyle = css('--grid');
+      ctx.beginPath(); ctx.moveTo(x, b.T); ctx.lineTo(x, b.B); ctx.stroke();
+      const lab = o.xFmt(t, span), lw = ctx.measureText(lab).width;
+      ctx.fillText(lab, Math.min(x, W - lw / 2 - 1), b.B + 4);
+    }
+    ctx.strokeStyle = css('--axis');
+    ctx.beginPath(); ctx.moveTo(b.L, b.B + 0.5); ctx.lineTo(b.R, b.B + 0.5); ctx.stroke();
+
+    // data
+    ctx.save();
+    ctx.beginPath(); ctx.rect(b.L, b.T - 2, b.R - b.L, b.B - b.T + 4); ctx.clip();
+    for (const s of this.series) this._drawSeries(ctx, s, ymap, b);
+    ctx.restore();
+
+    // boundaries + markers on top of data
+    ctx.setLineDash([4, 3]); ctx.strokeStyle = css('--text-secondary'); ctx.lineWidth = 1;
+    for (const s of this.ov.segments || []) {
+      if (s.i === 0) continue;
+      const x = Math.round(this.xTo(s.a)) + 0.5;
+      if (x < b.L || x > b.R) continue;
+      ctx.beginPath(); ctx.moveTo(x, b.T); ctx.lineTo(x, b.B); ctx.stroke();
+    }
+    ctx.setLineDash([]);
+    ctx.strokeStyle = css('--marker'); ctx.fillStyle = css('--marker');
+    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+    let lastLabelEnd = -Infinity;
+    for (const m of this.ov.markers || []) {
+      const x = Math.round(this.xTo(m.t)) + 0.5;
+      if (x < b.L || x > b.R) continue;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x, b.T); ctx.lineTo(x, b.B); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x - 4, b.T); ctx.lineTo(x + 4, b.T); ctx.lineTo(x, b.T + 5); ctx.fill();
+      if (o.markerLabels && x > lastLabelEnd + 6) {
+        const txt = m.label.length > 26 ? m.label.slice(0, 25) + '…' : m.label;
+        const w = ctx.measureText(txt).width;
+        if (x + 4 + w < b.R) {
+          ctx.fillStyle = css('--surface-1'); ctx.globalAlpha = 0.85; ctx.fillRect(x + 3, b.T + 5, w + 4, 14); ctx.globalAlpha = 1;
+          ctx.fillStyle = css('--marker'); ctx.fillText(txt, x + 5, b.T + 6);
+          lastLabelEnd = x + 4 + w;
+        }
+      }
+    }
+    // title + legend
+    ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+    ctx.fillStyle = css('--text-secondary'); ctx.font = '600 11px system-ui, sans-serif';
+    if (o.title) ctx.fillText(o.title, 2, 0);
+    if (o.legend && !o.lanes) {
+      ctx.font = '11px system-ui, sans-serif'; ctx.textAlign = 'right';
+      let x = b.R - 4;
+      for (const s of [...this.series].reverse()) {
+        if (s.noLegend) continue;
+        const w = ctx.measureText(s.name).width;
+        const ly = this._extraT ? 13 : 0;
+        ctx.fillStyle = css('--text-secondary'); ctx.fillText(s.name, x, ly);
+        x -= w + 5; ctx.fillStyle = s.color; ctx.fillRect(x - 10, ly + 5, 10, 3); x -= 18;
+      }
+    }
+    if (!this.series.length || (this.series.every((s) => !s.t.length))) {
+      ctx.fillStyle = css('--text-muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(this.opt.emptyText || 'tidak ada data', (b.L + b.R) / 2, (b.T + b.B) / 2);
+    }
+    this.drawOverlay();
+  }
+
+  _yTicks(dom) {
+    if (this.opt.yLog) {
+      const a = Math.floor(Math.log10(dom[0])), c = Math.ceil(Math.log10(dom[1]));
+      const out = [];
+      const mult = c - a <= 3 ? [1, 2, 5] : [1];
+      for (let e = a; e <= c; e++) for (const m of mult) out.push(m * Math.pow(10, e));
+      return out.filter((v) => v >= dom[0] && v <= dom[1]);
+    }
+    const step = niceStep(dom[1] - dom[0], 4);
+    const out = [];
+    for (let v = Math.ceil(dom[0] / step) * step; v <= dom[1]; v += step) out.push(+v.toPrecision(10));
+    return out;
+  }
+
+  _drawSeries(ctx, s, ymap, b) {
+    const o = this.opt;
+    const i0 = Math.max(0, lowerBound(s.t, this.x0) - 1), i1 = Math.min(s.t.length, lowerBound(s.t, this.x1) + 1);
+    ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width || 1.5; ctx.lineJoin = 'round';
+    if (o.lanes) {
+      const lh = (b.B - b.T) / o.lanes, yc = b.T + lh * (s.lane + 0.5), k = (lh / 2) / o.laneScale;
+      if (s.lo) { // min/max envelope
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        for (let i = i0; i < i1; i++) {
+          if (s.lo[i] === null) continue;
+          const x = Math.round(this.xTo(s.t[i])) + 0.5;
+          ctx.moveTo(x, yc - s.hi[i] * k); ctx.lineTo(x, yc - s.lo[i] * k + 0.8);
+        }
+        ctx.stroke();
+      } else {
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        let pen = false;
+        for (let i = i0; i < i1; i++) {
+          if (s.y[i] === null) { pen = false; continue; }
+          const x = this.xTo(s.t[i]), y = yc - s.y[i] * k;
+          pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y); pen = true;
+        }
+        ctx.stroke();
+      }
+      return;
+    }
+    const gapDt = s.gap || Infinity;
+    ctx.beginPath();
+    let pen = false, prevT = null, n = 0;
+    for (let i = i0; i < i1; i++) {
+      const v = s.y[i];
+      if (v === null || !Number.isFinite(v) || (o.yLog && v <= 0)) { pen = false; continue; }
+      if (prevT !== null && s.t[i] - prevT > gapDt) pen = false;
+      const x = this.xTo(s.t[i]), y = ymap(v);
+      pen ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      pen = true; prevT = s.t[i]; n++;
+    }
+    ctx.stroke();
+    // isolated points (surrounded by gaps) would be invisible as a line: draw dots
+    if (s.dots || n < 60) {
+      for (let i = i0; i < i1; i++) {
+        const v = s.y[i];
+        if (v === null || !Number.isFinite(v) || (o.yLog && v <= 0)) continue;
+        ctx.beginPath(); ctx.arc(this.xTo(s.t[i]), ymap(v), 2, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+  }
+
+  drawOverlay() {
+    const { ctx, W, H } = this._size(this.over);
+    ctx.clearRect(0, 0, W, H);
+    const b = this.plotBox();
+    const hx = this.group ? this.group.hoverX : this.hoverX;
+    if (this.drag && Math.abs(this.drag.x1 - this.drag.x0) > 2) {
+      const xa = Math.min(this.drag.x0, this.drag.x1), xb = Math.max(this.drag.x0, this.drag.x1);
+      ctx.fillStyle = css('--win-fill'); ctx.fillRect(xa, b.T, xb - xa, b.B - b.T);
+      ctx.strokeStyle = css('--accent'); ctx.strokeRect(xa + 0.5, b.T + 0.5, xb - xa, b.B - b.T);
+    }
+    if (hx === null || hx === undefined || hx < this.x0 || hx > this.x1) return;
+    const x = Math.round(this.xTo(hx)) + 0.5;
+    ctx.strokeStyle = css('--axis'); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(x, b.T); ctx.lineTo(x, b.B); ctx.stroke();
+    if (this.opt.lanes) return;
+    const ymap = this._yMap(this._yDomain());
+    for (const s of this.series) {
+      const i = this._nearest(s, hx);
+      if (i < 0) continue;
+      const v = s.y[i];
+      if (v === null || !Number.isFinite(v) || (this.opt.yLog && v <= 0)) continue;
+      ctx.fillStyle = s.color; ctx.strokeStyle = css('--surface-1'); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(this.xTo(s.t[i]), ymap(v), 4, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    }
+  }
+
+  _nearest(s, x) {
+    if (!s.t.length) return -1;
+    let i = lowerBound(s.t, x);
+    if (i >= s.t.length) i = s.t.length - 1;
+    if (i > 0 && Math.abs(s.t[i - 1] - x) < Math.abs(s.t[i] - x)) i--;
+    const tol = (this.x1 - this.x0) * 0.03 + (s.tol || 0);
+    return Math.abs(s.t[i] - x) <= tol ? i : -1;
+  }
+
+  showTooltip(x, ev) {
+    const tt = tooltip();
+    tt.replaceChildren();
+    const h = document.createElement('div');
+    h.className = 'tt-h'; h.textContent = this.opt.xFmt(x, this.x1 - this.x0) + (this.opt.xUnit || '');
+    tt.append(h);
+    const extra = this.opt.hoverInfo ? this.opt.hoverInfo(x) : null;
+    if (extra) { const e = document.createElement('div'); e.className = 'tt-h'; e.textContent = extra; tt.append(e); }
+    for (const s of this.series) {
+      if (s.noTooltip) continue;
+      const i = this._nearest(s, x);
+      let txt = '–';
+      if (i >= 0) {
+        if (s.lo) txt = `${fmtNum(s.lo[i])} … ${fmtNum(s.hi[i])} µV`;
+        else if (s.y[i] !== null && Number.isFinite(s.y[i])) txt = this.opt.yFmt(s.y[i]) + (s.unit ? ' ' + s.unit : '');
+      }
+      const r = document.createElement('div'); r.className = 'tt-r';
+      const a = document.createElement('span'); const sw = document.createElement('i');
+      sw.className = 'sw'; sw.style.background = s.color; a.append(sw, document.createTextNode(s.name));
+      const v = document.createElement('b'); v.textContent = txt;
+      r.append(a, v); tt.append(r);
+    }
+    tt.hidden = false;
+    const w = tt.offsetWidth, hgt = tt.offsetHeight;
+    let left = ev.clientX + 14, top = ev.clientY + 14;
+    if (left + w > innerWidth - 8) left = ev.clientX - w - 14;
+    if (top + hgt > innerHeight - 8) top = ev.clientY - hgt - 14;
+    tt.style.left = left + 'px'; tt.style.top = top + 'px';
+  }
+
+  _events() {
+    const el = this.over;
+    const localX = (ev) => ev.clientX - this.el.getBoundingClientRect().left;
+    const inPlot = (px) => { const b = this.plotBox(); return px >= b.L && px <= b.R; };
+    const hover = (x, ev) => {
+      if (this.group) this.group.hover(x, this, ev);
+      else { this.hoverX = x; this.drawOverlay(); if (x === null) tooltip().hidden = true; else this.showTooltip(x, ev); }
+    };
+    el.addEventListener('pointermove', (ev) => {
+      const px = localX(ev);
+      if (this.drag) { this.drag.x1 = Math.max(this.plotBox().L, Math.min(this.plotBox().R, px)); this.drawOverlay(); }
+      if (!inPlot(px)) { hover(null, ev); return; }
+      hover(this.xFrom(px), ev);
+    });
+    el.addEventListener('pointerleave', (ev) => { if (!this.drag) hover(null, ev); });
+    if (!this.opt.interactive) return;
+    el.style.cursor = 'crosshair';
+    el.addEventListener('pointerdown', (ev) => {
+      const px = localX(ev);
+      if (!inPlot(px) || ev.button !== 0) return;
+      el.setPointerCapture(ev.pointerId);
+      this.drag = { x0: px, x1: px };
+    });
+    el.addEventListener('pointerup', (ev) => {
+      if (!this.drag) return;
+      const { x0, x1 } = this.drag;
+      this.drag = null;
+      this.drawOverlay();
+      if (Math.abs(x1 - x0) > 6) {
+        const a = this.xFrom(Math.min(x0, x1)), c = this.xFrom(Math.max(x0, x1));
+        this.opt.onZoom && this.opt.onZoom(a, c);
+      } else if (this.opt.onPick) this.opt.onPick(this.xFrom(x0));
+    });
+    el.addEventListener('dblclick', () => this.opt.onReset && this.opt.onReset());
+  }
+}
+
+// --- colour scale: layered RdYlBu_r (as in the original matplotlib maps) ------------
+
+// matplotlib "RdYlBu_r": blue = low, yellow = middle, red = high
+const RDYLBU_R = ['#313695', '#4575b4', '#74add1', '#abd9e9', '#e0f3f8', '#ffffbf', '#fee090', '#fdae61', '#f46d43', '#d73027', '#a50026'];
+const LEVELS = 12; // thin bands: fine gradation that still reads as layers
+const hexRgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function colorAt(u, stops) {
+  u = Math.max(0, Math.min(1, u));
+  const p = u * (stops.length - 1), i = Math.min(stops.length - 2, Math.floor(p)), f = p - i;
+  const a = hexRgb(stops[i]), b = hexRgb(stops[i + 1]);
+  return [0, 1, 2].map((k) => Math.round(a[k] + (b[k] - a[k]) * f));
+}
+const levelColors = (n = LEVELS) => Array.from({ length: n }, (_, k) => colorAt((k + 0.5) / n, RDYLBU_R));
+// colour bar with one hard-edged block per level
+function layeredCss(n = LEVELS) {
+  const c = levelColors(n).map((rgb) => `rgb(${rgb.join(',')})`);
+  return `linear-gradient(90deg, ${c.map((col, k) => `${col} ${(k / n) * 100}% ${((k + 1) / n) * 100}%`).join(', ')})`;
+}
+
+// --- topomap ---------------------------------------------------------------------
+
+const POS = { AF7: [-0.5, 0.48], AF8: [0.5, 0.48], TP9: [-0.82, -0.2], TP10: [0.82, -0.2] };
+
+// Layered head map: inverse-distance interpolation of the electrodes (power 3, as the
+// original), cut into `levels` equal RdYlBu_r colour bands between vmin and vmax, with
+// thin contour lines between bands.
+function drawTopo(canvas, values, { vmin, vmax, labels = true, showValues = false, fmt = fmtNum, levels = LEVELS, pos = POS } = {}) {
+  const d = window.devicePixelRatio || 1;
+  const size = canvas.getBoundingClientRect().width || canvas.width;
+  const px = Math.max(40, Math.round(size * d));
+  if (canvas.width !== px) { canvas.width = px; canvas.height = px; }
+  const ctx = canvas.getContext('2d');
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, px, px);
+  const pad = px * (labels ? 0.1 : 0.07), R = px / 2 - pad, cx = px / 2, cy = px / 2 + (labels ? px * 0.02 : 0);
+  const toPx = ([x, y]) => [cx + x * R, cy - y * R];
+  const pts = Object.entries(pos).filter(([c]) => values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]));
+  const many = Object.keys(pos).length > 6; // dense caps: smaller dots, names only
+  const lw = Math.max(1, px / 160);
+  if (pts.length >= 2 && Number.isFinite(vmin) && Number.isFinite(vmax)) {
+    const span = vmax - vmin || 1;
+    const cols = levelColors(levels);
+    const lev = new Int8Array(px * px).fill(-1);
+    const x0 = Math.max(0, Math.floor(cx - R)), x1 = Math.min(px, Math.ceil(cx + R));
+    const y0 = Math.max(0, Math.floor(cy - R)), y1 = Math.min(px, Math.ceil(cy + R));
+    for (let j = y0; j < y1; j++) {
+      const y = (cy - (j + 0.5)) / R;
+      for (let i = x0; i < x1; i++) {
+        const x = (i + 0.5 - cx) / R;
+        if (x * x + y * y > 1) continue;
+        let ws = 0, vs = 0;
+        for (const [c, [ex, ey]] of pts) {
+          const dd = Math.hypot(x - ex, y - ey) + 1e-6, w = 1 / (dd * dd * dd);
+          ws += w; vs += w * values[c];
+        }
+        lev[j * px + i] = Math.max(0, Math.min(levels - 1, Math.floor(((vs / ws - vmin) / span) * levels)));
+      }
+    }
+    const img = ctx.createImageData(px, px);
+    const edge = isDark() ? 1.3 : 0.8; // subtle contour lines: slightly darker (light) / lighter (dark)
+    for (let j = y0; j < y1; j++) {
+      for (let i = x0; i < x1; i++) {
+        const q = j * px + i, k = lev[q];
+        if (k < 0) continue;
+        const r = lev[q + 1], dn = j + 1 < px ? lev[q + px] : -1;
+        const line = (r >= 0 && r !== k) || (dn >= 0 && dn !== k);
+        const c = cols[k], o = q * 4;
+        for (let m = 0; m < 3; m++) img.data[o + m] = line ? Math.min(255, c[m] * edge) : c[m];
+        img.data[o + 3] = 255;
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  } else {
+    ctx.fillStyle = css('--surface-2');
+    ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = css('--text-muted'); ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `${Math.max(9, px / 16)}px system-ui, sans-serif`;
+    ctx.fillText('data kurang', cx, cy);
+  }
+  // head outline, nose, ears
+  ctx.strokeStyle = css('--text-secondary'); ctx.lineWidth = lw;
+  ctx.beginPath(); ctx.arc(cx, cy, R, 0, Math.PI * 2); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx - R * 0.1, cy - R * 0.995); ctx.lineTo(cx, cy - R * 1.1); ctx.lineTo(cx + R * 0.1, cy - R * 0.995); ctx.stroke();
+  for (const s of [-1, 1]) {
+    ctx.beginPath(); ctx.ellipse(cx + s * R * 1.03, cy, R * 0.05, R * 0.16, 0, 0, Math.PI * 2); ctx.stroke();
+  }
+  // electrodes
+  const fs = many ? Math.max(8, Math.min(10 * d, px / 30)) : Math.max(9, Math.min(13 * d, px / 22));
+  ctx.font = `600 ${fs}px system-ui, sans-serif`; ctx.textAlign = 'center';
+  for (const [c, p] of Object.entries(pos)) {
+    const [x, y] = toPx(p);
+    const has = values[c] !== null && values[c] !== undefined && Number.isFinite(values[c]);
+    ctx.fillStyle = has ? css('--text-primary') : css('--surface-1');
+    ctx.strokeStyle = css('--surface-1'); ctx.lineWidth = Math.max(1.5, px / 120);
+    ctx.beginPath(); ctx.arc(x, y, Math.max(2, px / (many ? 90 : 55)), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    if (!has) { ctx.strokeStyle = css('--text-muted'); ctx.lineWidth = 1; ctx.stroke(); }
+    if (labels) {
+      const txt = showValues && has && !many ? `${c} ${fmt(values[c])}` : c;
+      ctx.textBaseline = 'top';
+      const w = ctx.measureText(txt).width;
+      const lx = Math.max(w / 2 + 4, Math.min(px - w / 2 - 4, x));
+      ctx.fillStyle = css('--surface-1'); ctx.globalAlpha = 0.85;
+      ctx.fillRect(lx - w / 2 - 3, y + px / 40, w + 6, fs + 4); ctx.globalAlpha = 1;
+      ctx.fillStyle = css('--text-primary'); ctx.fillText(txt, lx, y + px / 40 + 2);
+    }
+  }
+}
+
+
+const $ = (id) => document.getElementById(id);
+let CH = ['TP9', 'AF7', 'AF8', 'TP10']; // replaced by the session's channels (Muse 4, EDF 16, ...)
+const SYM = { delta: 'δ', theta: 'θ', alpha: 'α', beta: 'β' };
+// heart data label: Polar (musepolar session or joined Polar Sensor Logger files) or ECG from the file itself
+const heartShort = () => (S.ov && (S.ov.kind === 'musepolar' || S.ov.polar_info) ? 'Polar' : 'EKG');
+function polarNote(ov) {
+  const p = ov.polar_info; if (!p) return '';
+  const src = p.source === 'ECG' ? 'EKG .txt' : 'RR .txt';
+  if (p.aligned !== 'clock') return ` · ${src}, disejajarkan di awal (EEG tanpa jam)`;
+  const d = p.start_diff_s + (ov.pshift || 0);
+  return ` · ${src}, mulai ${Math.abs(d).toFixed(1)} s ${d < 0 ? 'sebelum' : 'sesudah'} EEG`;
+}
+const KIND_LABEL = { edf: 'EDF', csv: 'CSV', lsl: 'CSV (format lama)' };
+const mLabel = (m) => (S.res && S.res.measure_labels && S.res.measure_labels[m]) || m;
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* private mode */ } },
+};
+
+const S = {
+  root: '', sessions: [], sid: null, ov: null, res: null,
+  set: { titik: '', band: 'alpha', metric: 'abs', ref: 0, art: 100, chans: 'all', heart: 'all', pshift: 0 },
+  mapT: 0, mapWin: 20, mapMode: 'value', measure: 'AF', psdCh: 'AF',
+  anaReq: 0, sigReq: 0,
+};
+
+// --- tiny DOM helper (text is always set as text, never parsed as HTML) -----------
+function h(tag, attrs = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k === 'style') el.style.cssText = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) if (c !== null && c !== undefined && c !== false) el.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return el;
+}
+// Muse: one colour per channel. Many channels: colour by scalp region (at most 5 hues).
+const regionOf = (c) => { const r = S.ov && S.ov.regions; if (!r) return null; return Object.keys(r).find((k) => r[k].includes(c)) || null; };
+const chColor = (i) => {
+  if (CH.length <= 4) return css(`--series-${i + 1}`);
+  const keys = S.ov ? Object.keys(S.ov.regions) : [];
+  const k = keys.indexOf(regionOf(CH[i]));
+  return k >= 0 && k < 5 ? css(`--series-${k + 1}`) : css('--text-secondary');
+};
+const pairIdx = () => (S.res && S.res.pair ? S.res.pair.map((c) => CH.indexOf(c)) : CH.map((_, i) => i));
+const fin = (v) => v !== null && v !== undefined && Number.isFinite(v);
+const median = (a) => {
+  const x = a.filter(fin).sort((p, q) => p - q);
+  if (!x.length) return null;
+  const m = x.length >> 1;
+  return x.length % 2 ? x[m] : (x[m - 1] + x[m]) / 2;
+};
+const fmtRange = (a, b) => (b < 600 ? `${Math.round(a)}–${Math.round(b)} s` : `${fmtTime(a, 999)}–${fmtTime(b, 999)}`);
+const signed = (v, d = 2) => {
+  if (!fin(v)) return '–';
+  const t = Math.abs(v).toFixed(d);
+  return (+t === 0 ? '' : v > 0 ? '+' : '−') + t;
+};
+
+// --- feedback -----------------------------------------------------------------------
+let busyN = 0;
+function busy(on) { busyN = Math.max(0, busyN + (on ? 1 : -1)); $('busy').hidden = busyN === 0; }
+let toastTimer = null;
+function toast(msg, kind = 'error') {
+  const t = $('toast');
+  t.textContent = msg; t.className = 'toast' + (kind === 'info' ? ' info' : ''); t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, kind === 'info' ? 3500 : 7000);
+}
+// Browser-only build (research/web): the engine computes everything locally, no server.
+const WEB = typeof window !== 'undefined' && !!window.ENGINE;
+const ARTIFACT = WEB && !!window.RV_ARTIFACT; // hosted page: no print dialog, no file downloads
+async function api(path, opts) {
+  busy(true);
+  try {
+    if (WEB) return await window.ENGINE.handle(path);
+    const r = await fetch(path, opts);
+    if (!r.ok) {
+      let msg = r.statusText;
+      try { msg = (await r.json()).detail || msg; } catch { /* not json */ }
+      throw new Error(msg);
+    }
+    return await r.json();
+  } finally { busy(false); }
+}
+const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
+
+// --- charts -------------------------------------------------------------------------
+const group = new ChartGroup();
+const common = {
+  onZoom: (a, b) => setView(a, b),
+  onReset: () => setView(0, dur()),
+  onPick: (t) => { S.mapT = clampMapT(t - S.mapWin / 2); $('mapT').value = S.mapT; updateMap(); },
+};
+const eegChart = group.add(new Chart($('chEeg'), { ...common, lanes: 4, laneScale: 100, markerLabels: true, emptyText: 'memuat EEG…' }));
+const bandChart = group.add(new Chart($('chBand'), { ...common, yLog: true, title: 'Daya pita' }));
+const heartChart = group.add(new Chart($('chHeart'), {
+  ...common, title: 'Interval antar-denyut (ms)', yFmt: (v) => v.toFixed(0), emptyText: 'tidak ada data denyut',
+  hoverInfo: (t) => { const s = segAt(t); return s ? `Ruas ${s.i + 1}${s.name ? ' · ' + s.name : ''}` : null; },
+}));
+const psdChart = new Chart($('chPsd'), {
+  interactive: false, yLog: true, title: 'Daya spektral (µV²/Hz)', xFmt: (f) => `${+f.toFixed(1)} Hz`,
+  xStep: (span) => ($('chPsd').clientWidth < 520 ? 10 : span > 20 ? 5 : 2), padL: 52, padR: 18,
+});
+psdChart.ownX = [1, 40];
+
+const dur = () => (S.ov ? S.ov.duration : 1);
+function setView(a, b) {
+  const d = dur();
+  let x0 = Math.max(0, Math.min(a, b)), x1 = Math.min(d, Math.max(a, b));
+  if (x1 - x0 < 2) { const c = (x0 + x1) / 2; x0 = Math.max(0, c - 1); x1 = Math.min(d, c + 1); }
+  group.setView(x0, x1);
+  $('viewInfo').textContent = x0 <= 0.01 && x1 >= d - 0.01 ? `· seluruh sesi (${fmtTime(d, d)})` : `· ${fmtTime(x0, x1 - x0)} – ${fmtTime(x1, x1 - x0)}`;
+  loadSignal();
+}
+const loadSignal = debounce(async () => {
+  if (!S.sid) return;
+  const req = ++S.sigReq;
+  const n = Math.round(($('chEeg').clientWidth || 800) * 1.5);
+  try {
+    const sig = await api(`/api/signal/${S.sid}?t0=${group.x0}&t1=${group.x1}&n=${n}&chans=${S.set.chans}`);
+    if (req !== S.sigReq) return;
+    eegChart.setSeries(CH.map((c, i) => (sig.kind === 'env'
+      ? { name: c, color: chColor(i), lane: i, t: sig.t, lo: sig.lo[i], hi: sig.hi[i] }
+      : { name: c, color: chColor(i), lane: i, t: sig.t, y: sig.y[i] })));
+  } catch (e) { toast(`EEG: ${e.message}`); }
+}, 120);
+
+// --- sessions -----------------------------------------------------------------------
+async function loadSessions(root) {
+  let data;
+  try { data = await api(`/api/sessions?root=${encodeURIComponent(root || '')}`); } catch (e) { toast(e.message); return; }
+  if (WEB && !data.sessions.length) { loadDemo(); return; } // open in a working state with the example recordings
+  applySessionList(data);
+}
+function applySessionList(data, preferFirst = false) {
+  S.root = data.root;
+  S.sessions = data.sessions || [];
+  const sel = $('sessionSel');
+  sel.replaceChildren(...S.sessions.map((s) => h('option', { value: s.id }, sessionText(s))));
+  if (!S.sessions.length) {
+    S.sid = null; S.ov = null; S.res = null;
+    $('sessionSub').textContent = data.exists === false ? `Folder tidak ditemukan: ${data.root}` : `Belum ada sesi di ${data.root}`;
+    showEmpty(data);
+    return;
+  }
+  const saved = store.get('sid');
+  const pick = !preferFirst && S.sessions.some((s) => s.id === saved) ? saved : S.sessions[0].id;
+  sel.value = pick;
+  selectSession(pick);
+}
+function sessionText(s) {
+  const d = fin(s.duration) ? ` · ${fmtTime(s.duration, s.duration)}` : '';
+  const date = (s.start || '').replace('T', ' ').slice(0, 16);
+  const kind = s.kind !== 'musepolar' ? ` · ${KIND_LABEL[s.kind] || s.kind.toUpperCase()} ${s.n_channels} kanal` : '';
+  return `${s.name}${date ? ' · ' + date : ''}${d}${kind}${s.has_polar ? (s.kind !== 'musepolar' ? ' · EKG' : ' · Polar') : ''}`;
+}
+function showEmpty(data) {
+  $('segCards').replaceChildren(WEB
+    ? h('div', { class: 'card empty', style: 'grid-column:1/-1' },
+      h('p', {}, h('b', {}, 'Buka rekaman untuk mulai.')),
+      h('p', {}, 'Pilih file EDF/BDF, CSV (Mind Monitor, muselsl, OpenBCI, atau CSV dengan kanal 10-20) atau ZIP lewat “Buka file”, atau folder rekaman lewat “Folder…”. '
+        + 'Semua perhitungan berjalan di browser ini; data tidak dikirim ke mana pun.'),
+      h('p', {}, h('button', { class: 'btn primary', onclick: loadDemo }, 'Coba data contoh')))
+    : h('div', { class: 'card empty', style: 'grid-column:1/-1' },
+      h('p', {}, h('b', {}, 'Belum ada rekaman untuk ditampilkan.')),
+      h('p', {}, `Folder: ${data.root}`),
+      h('p', {}, 'Rekam sesi dengan dashboard musepolar (python -m musepolar), pilih folder lain lewat “Folder…” (folder sesi musepolar atau file EDF), atau unggah ZIP / EDF.')));
+  $('kpis').replaceChildren();
+  eegChart.opt.emptyText = 'belum ada rekaman';
+  for (const c of [eegChart, bandChart, heartChart]) c.setSeries([]);
+  psdChart.setSeries([]);
+  for (const id of ['segTable', 'testTable', 'mapTable']) $(id).replaceChildren();
+  $('omnibus').textContent = ''; $('testNote').textContent = ''; $('mapTitle').textContent = '–';
+  drawTopo($('mapBig'), {}, {});
+}
+
+// keep=true: same recording, only the channel mode / heart sources changed (keeps titik, zoom, map time)
+async function selectSession(sid, keep = false) {
+  S.sid = sid;
+  store.set('sid', sid);
+  let ov;
+  if (!keep) { S.set.pshift = 0; $('pshift').value = 0; }
+  const q = `chans=${S.set.chans}&heart=${S.set.heart}&pshift=${S.set.pshift}`;
+  try { ov = await api(`/api/session/${sid}?${q}`); } catch (e) { toast(e.message); return; }
+  if (S.sid !== sid) return;
+  S.ov = ov;
+  renderSourceControls();
+  CH = ov.channels;
+  S.measure = null; // first measure (frontal pair) once the analysis arrives
+  S.psdCh = 'PAIR';
+  eegChart.opt.lanes = CH.length;
+  eegChart.opt.emptyText = 'memuat EEG…';
+  $('chEeg').style.setProperty('--h', `${CH.length <= 4 ? 260 : Math.max(260, 22 * CH.length + 30)}px`);
+  if (!keep) {
+    const saved = store.get(`titik:${ov.folder}`);
+    S.set.titik = saved !== null ? saved : (ov.marker_titik || '');
+    S.set.ref = 0;
+    $('titik').value = S.set.titik;
+    S.mapT = 0;
+  }
+  $('sessionSub').textContent = [ov.name, (ov.start || '').replace('T', ' '), ov.note].filter(Boolean).join(' · ');
+  document.title = `${ov.name} · Muse 2 Research View`;
+  eegChart.setSeries([]);
+  if (keep) { setView(group.x0, group.x1); } else setView(0, ov.duration);
+  renderStatic();
+  await runAnalysis();
+}
+
+function renderStatic() {
+  const ov = S.ov;
+  const markers = ov.markers.filter((m) => fin(m.t)).map((m) => ({ t: m.t, label: m.label }));
+  for (const c of [eegChart, bandChart, heartChart]) c.setOverlays({ markers });
+  const series = [];
+  const mk = (src, name, color) => (src ? {
+    name, color, t: src.t, y: src.ibi.map((v, i) => (src.valid[i] ? v : null)), unit: 'ms', gap: 4,
+  } : null);
+  const ppg = mk(ov.ppg && ov.ppg.t.length ? ov.ppg : null, ov.kind !== 'musepolar' ? 'PPG' : 'PPG dahi', css('--series-1'));
+  const pol = mk(ov.polar, ov.heart_name, css('--series-2'));
+  if (ppg) series.push(ppg);
+  if (pol) series.push(pol);
+  heartChart.setSeries(series);
+  syncMapSlider();
+}
+
+// --- channel mode & heart sources -------------------------------------------------------
+function renderSourceControls() {
+  const o = S.ov.options;
+  const b16 = $('chansSeg').querySelector('[data-v=all]'), b4 = $('chansSeg').querySelector('[data-v=muse4]');
+  b16.textContent = `Semua (${o.n_all} kanal)`;
+  b16.disabled = o.n_all <= 4;
+  b4.disabled = !o.muse4;
+  b16.title = o.n_all <= 4 ? 'Rekaman ini hanya punya 4 kanal' : `Analisis semua ${o.n_all} kanal`;
+  const desc = (m, c) => (m === c ? m : c.includes('+') ? `${m} = rata-rata ${c.replace('+', ' & ')}` : `${m} = ${c}`);
+  const refTxt = o.muse_ref ? `dirujuk ulang ke ${o.muse_ref} seperti Muse` : 'referensi asli file (tidak ada kanal Fpz)';
+  b4.title = o.muse4 ? `Meniru Muse 2: ${Object.entries(o.muse4).map(([m, c]) => desc(m, c)).join('; ')}; ${refTxt}`
+    : 'Tidak ada kanal di sekitar posisi sensor Muse (AF7, AF8, TP9, TP10)';
+  const eff = o.n_all <= 4 ? 'muse4' : S.set.chans;
+  $('chansSeg').querySelectorAll('button').forEach((x) => x.classList.toggle('on', x.dataset.v === eff));
+  const hs = $('heartSel');
+  hs.querySelector('[value=ppg]').disabled = !o.ppg;
+  hs.querySelector('[value=ecg]').disabled = !o.ecg;
+  const hn = heartShort();
+  hs.querySelector('[value=all]').textContent = `PPG + ${hn}`;
+  hs.querySelector('[value=ecg]').textContent = `Hanya ${hn}`;
+  hs.value = S.set.heart;
+  $('pshiftField').hidden = !S.ov.polar_info;
+  $('chansInfo').textContent = o.muse4 && eff === 'muse4' && o.n_all > 4
+    ? `${Object.entries(o.muse4).map(([m, c]) => `${m}=${c}`).join(' · ')} · ref ${o.muse_ref || 'asli'}` : '';
+}
+$('chansSeg').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-v]');
+  if (!b || b.disabled || !S.sid || b.dataset.v === S.set.chans) return;
+  S.set.chans = b.dataset.v; store.set('chans', S.set.chans);
+  selectSession(S.sid, true);
+});
+$('pshift').addEventListener('change', (e) => {
+  const v = Math.max(-600, Math.min(600, +e.target.value || 0));
+  e.target.value = v; S.set.pshift = v;
+  if (S.sid) selectSession(S.sid, true);
+});
+$('heartSel').addEventListener('change', (e) => {
+  S.set.heart = e.target.value; store.set('heart', S.set.heart);
+  if (S.sid) selectSession(S.sid, true);
+});
+S.set.chans = store.get('chans') === 'muse4' ? 'muse4' : 'all';
+S.set.heart = ['ppg', 'ecg', 'none'].includes(store.get('heart')) ? store.get('heart') : 'all';
+
+// --- analysis -----------------------------------------------------------------------
+const runAnalysis = debounce(async () => {
+  if (!S.sid) return;
+  const req = ++S.anaReq;
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart, pshift: S.set.pshift });
+  try {
+    const res = await api(`/api/analysis/${S.sid}?${q}`);
+    if (req !== S.anaReq) return;
+    S.res = res;
+    S.set.ref = res.ref;
+    renderAnalysis();
+  } catch (e) { toast(e.message); }
+}, 200);
+
+const isBad = (w, c) => S.res.bad[w].charCodeAt(c) === 49; // '1'
+function windowValue(w, c) {
+  const W = S.res.windows, p = W.power[S.res.band][c][w];
+  if (!fin(p)) return null;
+  if (S.res.metric === 'rel') { const t = W.total[c][w]; return fin(t) && t > 0 ? (100 * p) / t : null; }
+  return p;
+}
+const unitTxt = () => (S.res.metric === 'rel' ? '%' : 'µV²');
+const valFmt = (v) => (S.res && S.res.metric === 'rel' ? fmtNum(v, 3) : fmtNum(v, 3));
+const segAt = (t) => (S.res ? S.res.segments.find((s) => t >= s.t0 && t < s.t1) || null : null);
+
+function renderAnalysis() {
+  const res = S.res;
+  const segs = res.segments.map((s) => ({ a: s.t0, b: s.t1, i: s.i, ref: s.i === res.ref }));
+  for (const c of [eegChart, bandChart, heartChart]) c.setOverlays({ segments: segs });
+
+  $('refSel').replaceChildren(...res.segments.map((s) => h('option', { value: s.i },
+    `Ruas ${s.i + 1} · ${fmtRange(s.t0, s.t1)}${s.name ? ' · ' + s.name : ''}`)));
+  $('refSel').value = res.ref;
+  $('refSel').disabled = res.segments.length < 2;
+
+  bandChart.opt.yLog = res.metric === 'abs';
+  bandChart.opt.title = `Daya ${SYM[res.band]} ${res.band} (${unitTxt()}${res.metric === 'abs' ? ', log' : ''})`;
+  bandChart.opt.yFmt = (v) => fmtNum(v, 3);
+  const nW = S.ov.windows.t_mid.length;
+  // Muse: one line per channel; many channels: mean of the clean channels in each scalp region
+  const groups = CH.length <= 4 ? CH.map((c, i) => [c, [i]])
+    : Object.entries(S.ov.regions).slice(0, 5).map(([r, cs]) => [r, cs.map((c) => CH.indexOf(c))]);
+  bandChart.setSeries(groups.map(([name, idx], k) => ({
+    name, color: css(`--series-${k + 1}`), t: S.ov.windows.t_mid, unit: unitTxt(),
+    y: Array.from({ length: nW }, (_, w) => {
+      const v = idx.filter((i) => !isBad(w, i)).map((i) => windowValue(w, i)).filter(fin);
+      return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    }),
+  })));
+  if (CH.length > 4) bandChart.opt.title += ' · rata-rata per area';
+
+  renderKpis();
+  syncMapSlider();
+  updateMap();
+  renderSegTable();
+  renderTests();
+  renderPsd();
+}
+
+// --- KPI tiles ----------------------------------------------------------------------
+function statusEl(st) {
+  const cls = st === 'VALID' ? 'ok' : st === 'WARNING' ? 'warn' : st === 'INVALID' ? 'bad' : 'none';
+  const txt = { VALID: 'Baik', WARNING: 'Perlu dicek', INVALID: 'Buruk' }[st] || 'Tidak ada';
+  return h('span', { class: `status ${cls}` }, h('i'), txt);
+}
+function kpi(k, v, d) { return h('div', { class: 'card kpi' }, h('div', { class: 'k' }, k), h('div', { class: 'v' }, v), h('div', { class: 'd' }, d)); }
+function renderKpis() {
+  const ov = S.ov, res = S.res, q = ov.quality;
+  const hp = ov.hrv.ppg, hpo = ov.hrv.polar;
+  let clean = res.clean_frac.map((f, i) => `${CH[i]} ${fin(f) ? Math.round(f * 100) : '–'}%`).join(' · ');
+  if (CH.length > 4) {
+    const fr = res.clean_frac.map((f) => (fin(f) ? f : 0));
+    const worst = fr.indexOf(Math.min(...fr));
+    clean = `rata-rata ${Math.round((fr.reduce((a, b) => a + b, 0) / fr.length) * 100)}% · terendah ${CH[worst]} ${Math.round(fr[worst] * 100)}%`;
+  }
+  const mk = ov.markers.filter((m) => !String(m.label).startsWith('SYNC'));
+  $('kpis').replaceChildren(
+    kpi('Durasi', fmtTime(ov.duration, ov.duration), ov.start ? `mulai ${ov.start.replace('T', ' ')}` : ov.label),
+    kpi('Mutu EEG', statusEl(q.eeg && q.eeg.status), `jendela bersih: ${clean}`),
+    kpi('Denyut dahi (PPG)', hp.ok ? [Math.round(hp.hr), h('small', {}, 'bpm')] : '–',
+      hp.ok ? `PRV-RMSSD ${fmtNum(hp.rmssd, 2)} ms · valid ${Math.round((hp.valid_frac || 0) * 100)}%`
+        : (['ecg', 'none'].includes(ov.heart) && ov.options.ppg ? 'tidak dipakai (pilihan Data jantung)'
+          : q.ppg && q.ppg.status !== '-' ? 'denyut tidak terdeteksi' : 'PPG tidak direkam')),
+    kpi(heartShort() === 'Polar' ? 'Polar H10' : 'Denyut EKG', hpo && hpo.ok ? [Math.round(hpo.hr), h('small', {}, 'bpm')] : '–',
+      hpo && hpo.ok ? `HRV-RMSSD ${fmtNum(hpo.rmssd, 2)} ms · SDNN ${fmtNum(hpo.sdnn, 2)} ms${polarNote(ov)}`
+        : (['ppg', 'none'].includes(ov.heart) && ov.options.ecg ? 'tidak dipakai (pilihan Data jantung)' : 'tidak direkam')),
+    ov.kind !== 'musepolar'
+      ? kpi('Kanal EEG', [String(CH.length), h('small', {}, `dari ${ov.options.n_all} @ ${fmtNum(ov.fs, 3)} Hz`)],
+        ov.chans === 'muse4' && ov.options.n_all > 4
+          ? `disesuaikan Muse · ${ov.options.muse_ref ? 'ref Fpz' : 'ref asli file'}` : `${KIND_LABEL[ov.kind] || ov.kind} · pasangan frontal ${ov.pair_label}`)
+      : kpi('Sinkronisasi Muse−Polar', fin(ov.sync_offset_ms) ? [signed(ov.sync_offset_ms, 0), h('small', {}, 'ms')] : '–',
+        fin(ov.sync_offset_ms) ? 'diterapkan ke data Polar' : (ov.polar ? 'belum ada; Polar memakai jam Mac' : 'tidak diperlukan')),
+    kpi('Penanda', String(mk.length), mk.length ? mk.slice(0, 3).map((m) => `${fmtTime(m.t, 100)} ${m.label}`).join(' · ') : 'tidak ada'),
+  );
+}
+
+// --- head maps ----------------------------------------------------------------------
+function syncMapSlider() {
+  const max = Math.max(0, Math.floor(dur() - S.mapWin));
+  const sl = $('mapT');
+  sl.max = max;
+  S.mapT = clampMapT(S.mapT);
+  sl.value = S.mapT;
+}
+const clampMapT = (t) => Math.max(0, Math.min(Math.floor(dur() - S.mapWin), Math.round(t)));
+
+function currentWindowValues() {
+  const T0 = S.mapT, T1 = S.mapT + S.mapWin, W = S.ov.windows;
+  const out = {}, n = [];
+  CH.forEach((c, i) => {
+    const vals = [];
+    W.t_mid.forEach((t, w) => { if (t >= T0 && t < T1 && !isBad(w, i)) vals.push(windowValue(w, i)); });
+    out[c] = median(vals); n.push(vals.length);
+  });
+  return { values: out, n };
+}
+const toLog = (v) => (fin(v) && v > 0 ? Math.log10(v) : null);
+function zOf(v, c) {
+  const i = CH.indexOf(c), m = S.res.ref_mean[i], sd = S.res.ref_sd[i];
+  const tv = S.res.metric === 'abs' ? toLog(v) : v;
+  return fin(tv) && fin(m) && fin(sd) ? (tv - m) / sd : null;
+}
+
+// Each head map uses its own colour range (as the original app), so every map shows
+// its full set of layers; the numbers at the electrodes carry the actual values.
+function mapScale(drawn) {
+  const all = Object.values(drawn).filter(fin);
+  if (!all.length) return { vmin: 0, vmax: 1 };
+  let lo = Math.min(...all), hi = Math.max(...all);
+  if (hi - lo < 1e-6) { const pad = S.mapMode === 'change' ? 0.25 : 0.5; lo -= pad; hi += pad; }
+  return { vmin: lo, vmax: hi };
+}
+function mapInput(valuesByCh) {
+  // values as drawn: z (change), log10 power (absolute) or percent (relative)
+  const out = {};
+  for (const c of CH) {
+    const v = valuesByCh[c];
+    out[c] = S.mapMode === 'change' ? zOf(v, c) : (S.res.metric === 'abs' ? toLog(v) : (fin(v) ? v : null));
+  }
+  return out;
+}
+const labelFmt = () => (S.mapMode === 'change' ? (v) => signed(v, 1) : S.res.metric === 'abs' ? (v) => fmtNum(10 ** v, 3) : (v) => fmtNum(v, 3));
+
+function updateMap() {
+  if (!S.res) return;
+  const res = S.res;
+  const { values, n } = currentWindowValues();
+  const drawn = mapInput(values);
+  const segDrawn = res.segments.map((s) => (S.mapMode === 'change'
+    ? Object.fromEntries(CH.map((c, i) => [c, s.z[i]]))
+    : mapInput(Object.fromEntries(CH.map((c, i) => [c, s.values[i]])))));
+  const sc = mapScale(drawn);
+  const fmt = labelFmt();
+  drawTopo($('mapBig'), drawn, { ...sc, showValues: true, fmt, pos: S.ov.positions });
+  const T1 = Math.min(dur(), S.mapT + S.mapWin);
+  $('mapTLabel').textContent = `Mulai jendela: ${fmtTime(S.mapT, 100)}`;
+  const seg = segAt(S.mapT + S.mapWin / 2);
+  $('mapTitle').textContent = `${fmtRange(S.mapT, T1)} · ${SYM[res.band]} ${res.band}`
+    + (seg ? ` · Ruas ${seg.i + 1}` : '') + ` · ${Math.min(...pairIdx().map((i) => n[i]))} jendela bersih ${res.pair_label}`;
+  for (const c of [eegChart, bandChart, heartChart]) c.setOverlays({ window: { a: S.mapT, b: T1 } });
+
+  const cb = $('colorbar');
+  cb.querySelector('.bar').style.background = layeredCss();
+  const ticks = cb.querySelectorAll('.ticks span');
+  [sc.vmin, (sc.vmin + sc.vmax) / 2, sc.vmax].forEach((v, i) => { ticks[i].textContent = fmt(v); });
+  cb.querySelector('.cap').textContent = S.mapMode === 'change'
+    ? 'z terhadap ruas acuan · skala per peta: biru = terendah, merah = tertinggi di peta ini'
+    : `${res.band} (${unitTxt()})${res.metric === 'abs' ? ' · lapisan pada skala log' : ''} · skala per peta: biru = terendah, merah = tertinggi`;
+
+  const rows = [h('tr', {}, h('th', {}, 'Kanal'), h('th', { style: 'text-align:right' }, unitTxt()), h('th', { style: 'text-align:right' }, 'z vs acuan'), h('th', { style: 'text-align:right' }, 'jendela'))];
+  CH.forEach((c, i) => rows.push(h('tr', {},
+    h('th', {}, CH.length <= 4 ? h('i', { class: 'sw', style: `background:${chColor(i)}` }) : null, c),
+    h('td', {}, valFmt(values[c])), h('td', {}, signed(zOf(values[c], c), 2)), h('td', {}, String(n[i])))));
+  $('mapTable').replaceChildren(...rows);
+
+  renderSegCards(segDrawn, sc, fmt);
+}
+
+// --- segment cards ------------------------------------------------------------------
+function heartOf(s) {
+  if (s.polar && s.polar.ok) return { src: heartShort(), ...s.polar };
+  if (s.ppg && s.ppg.ok) return { src: 'PPG', ...s.ppg };
+  return null;
+}
+function renderSegCards(segDrawn, sc, fmt) {
+  const res = S.res;
+  const cards = res.segments.map((s, k) => {
+    const v = pairIdx().map((i) => s.values[i]).filter(fin);
+    const af = v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
+    const zz = pairIdx().map((i) => s.z[i]).filter(fin);
+    const zaf = zz.length ? zz.reduce((a, b) => a + b, 0) / zz.length : null;
+    const hr = heartOf(s);
+    const cv = h('canvas', { width: 84, height: 84, 'aria-label': `Peta ruas ${s.i + 1}` });
+    const isRef = s.i === res.ref;
+    const card = h('div', { class: `card seg-card${isRef ? ' ref' : ''}`, title: 'Klik untuk memperbesar ruas ini di grafik' },
+      h('div', { class: 't' }, `Ruas ${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
+      s.name ? h('div', { class: 'nm', title: s.name }, s.name) : null,
+      isRef ? h('div', {}, h('span', { class: 'label-chip REFERENCE' }, h('i'), 'Acuan')) : null,
+      h('div', { class: 'facts' },
+        `${SYM[res.band]} ${res.pair_label} `, h('b', {}, `${valFmt(af)} ${unitTxt()}`), isRef ? '' : ` (z ${signed(zaf, 1)})`, h('br'),
+        hr ? ['Denyut ', h('b', {}, Math.round(hr.hr)), ` (${hr.src})`, fin(hr.rmssd) ? [' · RMSSD ', h('b', {}, Math.round(hr.rmssd)), ' ms'] : ''] : 'Denyut –',
+        h('br'), `${s.n_pair}/${s.n_win} jendela bersih ${res.pair_label}`,
+        isRef ? '' : [' · ', h('button', { class: 'btn sm', style: 'min-height:22px;padding:0 7px;font-size:11px', onclick: (e) => { e.stopPropagation(); setRef(s.i); } }, 'jadikan acuan')]),
+      cv);
+    card.addEventListener('click', () => {
+      setView(s.t0, s.t1);
+      S.mapT = clampMapT(s.t0); $('mapT').value = S.mapT; updateMap();
+    });
+    requestAnimationFrame(() => drawTopo(cv, segDrawn[k], { ...mapScale(segDrawn[k]), labels: false, fmt, pos: S.ov.positions }));
+    return card;
+  });
+  $('segCards').replaceChildren(...cards);
+}
+function setRef(i) { S.set.ref = i; $('refSel').value = i; runAnalysis(); }
+
+// --- tables -------------------------------------------------------------------------
+function td(v, cls) { return h('td', { class: cls || (v === '–' ? 'na' : null) }, v); }
+function renderSegTable() {
+  const res = S.res;
+  $('segUnit').textContent = `nilai kanal = median daya ${SYM[res.band]} ${res.band} (${unitTxt()}) pada jendela bersih`;
+  const hn = heartShort();
+  const cols = ['Ruas', 'Nama', `Jendela bersih ${res.pair_label}`, ...CH, ...(res.pair ? [`Asimetri ${res.pair_label}`] : []),
+    'Denyut PPG', 'PRV-RMSSD', `Denyut ${hn}`, 'HRV-RMSSD', 'Acuan'];
+  const head = h('tr', {}, ...cols.map((t, i) => h('th', { class: i === 1 || i === cols.length - 1 ? 'l' : null }, t)));
+  const rows = res.segments.map((s) => h('tr', { class: s.i === res.ref ? 'ref' : null },
+    td(`${s.i + 1} · ${fmtRange(s.t0, s.t1)}`),
+    td(s.name || '–', 'l'),
+    td(`${s.n_pair}/${s.n_win}`),
+    ...s.values.map((v) => td(fin(v) ? valFmt(v) : '–')),
+    res.pair ? td(fin(s.asym) ? signed(s.asym, 3) : '–') : null,
+    td(s.ppg && s.ppg.ok ? Math.round(s.ppg.hr) : '–'),
+    td(s.ppg && fin(s.ppg.rmssd) ? Math.round(s.ppg.rmssd) : '–'),
+    td(s.polar && s.polar.ok ? Math.round(s.polar.hr) : '–'),
+    td(s.polar && fin(s.polar.rmssd) ? Math.round(s.polar.rmssd) : '–'),
+    h('td', { class: 'l' }, s.is_ref ? h('span', { class: 'label-chip REFERENCE' }, h('i'), 'Acuan') : '')));
+  $('segTable').replaceChildren(h('thead', {}, head), h('tbody', {}, ...rows));
+}
+
+function renderMeasureSeg() {
+  const seg = $('measureSeg');
+  const list = ['Semua', ...S.res.measures];
+  if (!list.includes(S.measure)) S.measure = S.res.measures[0];
+  if (list.length > 8) { // many channels: a drop-down instead of a long row of buttons
+    const sel = h('select', { 'aria-label': 'Ukuran uji', onchange: (e) => { S.measure = e.target.value; renderTests(); } },
+      ...list.map((m) => h('option', { value: m }, m === 'Semua' ? 'Semua ukuran' : mLabel(m))));
+    sel.value = S.measure;
+    seg.className = 'measure-pick';
+    seg.replaceChildren(sel);
+    return;
+  }
+  seg.className = 'seg sm';
+  seg.replaceChildren(...list.map((m) => h('button', { 'data-v': m, class: m === S.measure ? 'on' : null }, mLabel(m))));
+}
+function renderTests() {
+  const res = S.res, t = res.tests;
+  renderMeasureSeg();
+  if (res.segments.length < 2) {
+    $('testNote').textContent = 'Isi titik observasi (atau klik “Pakai penanda”) untuk membagi sesi menjadi beberapa ruas dan membandingkannya.';
+    $('testTable').replaceChildren(); $('omnibus').textContent = '';
+    return;
+  }
+  $('testNote').textContent = `Mann–Whitney dua sisi pada jendela ${S.ov.windows.win_s} s yang tidak tumpang tindih (min. 5 per ruas); `
+    + `p dikoreksi Holm per ukuran; δ Cliff > 0 berarti ruas kedua lebih tinggi. Pita ${SYM[res.band]} ${res.band}, ${res.metric === 'rel' ? 'daya relatif' : 'daya absolut'}.`;
+  const rows = t.pairs.filter((r) => S.measure === 'Semua' || r.measure === S.measure);
+  const all = S.measure === 'Semua';
+  const head = h('tr', {}, ...[all ? 'Ukuran' : null, 'Perbandingan', 'n', 'Median', 'Perubahan', 'p', 'p Holm', 'δ Cliff', 'Hasil'].filter(Boolean)
+    .map((x, i) => h('th', { class: i === 0 || (all && i === 1) ? 'l' : null }, x)));
+  const body = rows.map((r) => {
+    const asym = r.measure.startsWith('Asimetri');
+    const change = fin(r.med_a) && fin(r.med_b)
+      ? (asym ? signed(r.med_b - r.med_a, 3) : (r.med_a !== 0 ? `${signed(((r.med_b - r.med_a) / Math.abs(r.med_a)) * 100, 0)}%` : '–')) : '–';
+    const result = r.p === null ? h('span', { class: 'badge' }, 'data kurang')
+      : r.sig ? h('span', { class: 'badge sig' }, 'berbeda') : h('span', { class: 'badge' }, 'tidak berbeda');
+    return h('tr', {},
+      all ? td(mLabel(r.measure), 'l') : null,
+      td(r.pair, all ? 'l' : null),
+      td(`${r.n_a} / ${r.n_b}`),
+      td(`${asym ? signed(r.med_a, 3) : valFmt(r.med_a)} → ${asym ? signed(r.med_b, 3) : valFmt(r.med_b)}`),
+      td(change),
+      td(fin(r.p) ? fmtP(r.p) : '–'),
+      td(fin(r.p_holm) ? fmtP(r.p_holm) : '–'),
+      td(fin(r.delta) ? `${signed(r.delta, 2)} (${r.effect})` : '–'),
+      h('td', {}, result));
+  });
+  $('testTable').replaceChildren(h('thead', {}, head), h('tbody', {}, ...body));
+  const om = t.omnibus.filter((o) => all || o.measure === S.measure);
+  $('omnibus').textContent = om.length
+    ? 'Kruskal–Wallis (semua ruas): ' + om.map((o) => `${mLabel(o.measure)} ${pStr(o.p)}`).join(' · ')
+    : '';
+}
+const fmtP = (p) => (p < 0.001 ? '< 0,001' : p.toFixed(3).replace('.', ','));
+const pStr = (p) => (p < 0.001 ? 'p < 0,001' : `p = ${fmtP(p)}`);
+
+// --- spectrum -----------------------------------------------------------------------
+function fillPsdSelect() {
+  const sel = $('psdCh');
+  const key = S.ov.label + '|' + CH.length;
+  if (sel.dataset.key !== key) {
+    const muse = CH.length <= 4;
+    const opts = [h('option', { value: 'PAIR' }, muse ? 'AF7 + AF8 (dahi)' : `${S.res.pair_label} (frontal)`)];
+    if (muse) opts.push(h('option', { value: 'R:Temporal' }, 'TP9 + TP10 (telinga)'));
+    else for (const r of Object.keys(S.ov.regions)) opts.push(h('option', { value: `R:${r}` }, `Area ${r.toLowerCase()}`));
+    for (const c of CH) opts.push(h('option', { value: c }, c));
+    sel.replaceChildren(...opts);
+    sel.dataset.key = key;
+  }
+  if (![...sel.options].some((o) => o.value === S.psdCh)) S.psdCh = 'PAIR';
+  sel.value = S.psdCh;
+}
+function renderPsd() {
+  const res = S.res;
+  fillPsdSelect();
+  const idx = S.psdCh === 'PAIR' ? pairIdx()
+    : S.psdCh.startsWith('R:') ? (S.ov.regions[S.psdCh.slice(2)] || []).map((c) => CH.indexOf(c))
+      : [CH.indexOf(S.psdCh)];
+  const f = res.freqs;
+  const series = res.segments.slice(0, 8).map((s, k) => ({
+    name: `Ruas ${s.i + 1}`, color: css(`--series-${k + 1}`), t: f, unit: 'µV²/Hz',
+    y: f.map((_, j) => { const v = idx.map((c) => s.psd[c][j]).filter(fin); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; }),
+  }));
+  psdChart.opt.yFmt = (v) => fmtNum(v, 2);
+  const bands = S.ov.bands;
+  psdChart.setOverlays({
+    segments: Object.values(bands).map(([a, b], i) => ({ a, b, i })),
+    window: { a: bands[res.band][0], b: bands[res.band][1] },
+  });
+  psdChart.opt.title = `Daya spektral (µV²/Hz) · pita ${SYM[res.band]} diarsir`;
+  psdChart.setSeries(series);
+}
+
+// --- events -------------------------------------------------------------------------
+function segControl(id, onPick) {
+  $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-v]');
+    if (!b) return;
+    $(id).querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === b));
+    onPick(b.dataset.v);
+  });
+}
+segControl('bandSeg', (v) => { S.set.band = v; runAnalysis(); });
+segControl('metricSeg', (v) => { S.set.metric = v; runAnalysis(); });
+segControl('mapModeSeg', (v) => { S.mapMode = v; updateMap(); });
+segControl('measureSeg', (v) => { S.measure = v; renderTests(); });
+
+function applyTitik() {
+  const v = $('titik').value.trim();
+  if (v === S.set.titik) return;
+  S.set.titik = v;
+  if (S.ov) store.set(`titik:${S.ov.folder}`, v);
+  runAnalysis();
+}
+$('titik').addEventListener('change', applyTitik);
+$('titik').addEventListener('keydown', (e) => { if (e.key === 'Enter') applyTitik(); });
+$('useMarkers').addEventListener('click', () => {
+  if (!S.ov) return;
+  if (!S.ov.marker_titik) { toast('Sesi ini tidak punya penanda (selain SYNC).', 'info'); return; }
+  $('titik').value = S.ov.marker_titik; applyTitik();
+});
+$('refSel').addEventListener('change', (e) => setRef(+e.target.value));
+$('art').addEventListener('change', (e) => {
+  const v = Math.max(20, Math.min(1000, +e.target.value || 100));
+  e.target.value = v; S.set.art = v; runAnalysis();
+});
+$('eegScale').addEventListener('change', (e) => { eegChart.opt.laneScale = +e.target.value; eegChart.draw(); });
+$('mapT').addEventListener('input', (e) => { S.mapT = +e.target.value; updateMap(); });
+$('mapWin').addEventListener('change', (e) => { S.mapWin = +e.target.value; syncMapSlider(); updateMap(); });
+$('psdCh').addEventListener('change', (e) => { S.psdCh = e.target.value; renderPsd(); });
+$('zoomAll').addEventListener('click', () => setView(0, dur()));
+$('zoomIn').addEventListener('click', () => { const c = (group.x0 + group.x1) / 2, s = (group.x1 - group.x0) / 4; setView(c - s, c + s); });
+$('zoomOut').addEventListener('click', () => { const c = (group.x0 + group.x1) / 2, s = group.x1 - group.x0; setView(c - s, c + s); });
+$('sessionSel').addEventListener('change', (e) => selectSession(e.target.value));
+
+$('folderBtn').addEventListener('click', () => {
+  if (WEB) { $('dirInput').click(); return; } // browser: pick a local folder
+  $('rootInput').value = S.root; $('folderDlg').showModal();
+});
+async function openLocal(files, what) {
+  if (!files || !files.length) return;
+  busy(true);
+  try {
+    const data = await window.ENGINE.addFiles(files, S.sid);
+    if (data.attachedTo) { // only Polar files: joined to the open recording
+      toast('Data Polar digabung ke rekaman yang sedang dibuka.' + (data.errors.length ? ` ${data.errors.join('; ')}` : ''), 'info');
+      await selectSession(data.attachedTo, true);
+      return;
+    }
+    toast(`${data.added.length} rekaman dimuat dari ${what}.` + (data.polarJoined.length ? ` Data Polar digabung ke ${data.polarJoined.length} rekaman.` : '')
+      + (data.errors.length ? ` Dilewati: ${data.errors.join('; ')}` : ''), 'info');
+    applySessionList(data, true);
+    const first = data.sessions.find((x) => x.id === data.added[0]);
+    if (first) { $('sessionSel').value = first.id; selectSession(first.id); }
+  } catch (err) { toast(err.message); } finally { busy(false); }
+}
+async function loadDemo() {
+  busy(true);
+  try { const data = await window.ENGINE.loadDemo(); applySessionList(data, true); } catch (err) { toast(err.message); } finally { busy(false); }
+}
+if (WEB) {
+  document.querySelectorAll('.server-only').forEach((el) => { el.hidden = true; });
+  document.querySelectorAll('.web-only').forEach((el) => { el.hidden = false; });
+  $('zipInput').multiple = true;
+  $('dirInput').addEventListener('change', (e) => { const f = [...e.target.files]; e.target.value = ''; openLocal(f, 'folder'); });
+  $('demoBtn').addEventListener('click', loadDemo);
+  if (ARTIFACT) {
+    $('printBtn').hidden = true;
+    const b = document.querySelector('[data-export=export]');
+    b.textContent = 'Salin tabel';
+    b.title = 'Salin tabel per ruas dan hasil uji (tempel ke Excel / Google Sheets)';
+  }
+}
+function showCopyFallback(text) {
+  const box = h('div', { class: 'copy-fallback card' },
+    h('p', {}, h('b', {}, 'Salin manual: '), 'teks sudah dipilih, tekan Ctrl/⌘ + C lalu tempel ke spreadsheet.'),
+    h('textarea', { id: 'copyText', readonly: true, rows: 10 }),
+    h('div', { class: 'row end' }, h('button', { class: 'btn', onclick: () => box.remove() }, 'Tutup')));
+  box.querySelector('textarea').value = text;
+  document.body.append(box);
+  box.querySelector('textarea').select();
+}
+$('folderDlg').addEventListener('close', () => {
+  const rv = $('folderDlg').returnValue;
+  if (rv === 'ok') loadSessions($('rootInput').value.trim());
+  else if (rv === 'default') loadSessions('');
+});
+$('zipInput').addEventListener('change', async (e) => {
+  if (WEB) { const fl = [...e.target.files]; e.target.value = ''; openLocal(fl, fl.length === 1 ? fl[0].name : `${fl.length} file`); return; }
+  const f = e.target.files[0];
+  e.target.value = '';
+  if (!f) return;
+  const fd = new FormData();
+  fd.append('file', f);
+  try {
+    const data = await api('/api/upload', { method: 'POST', body: fd });
+    toast(`${data.sessions.length} rekaman dari ${f.name} dimuat.`, 'info');
+    applySessionList(data, true);
+  } catch (err) { toast(err.message); }
+});
+document.querySelectorAll('[data-export]').forEach((b) => b.addEventListener('click', () => {
+  if (!S.sid) return;
+  const q = new URLSearchParams({ titik: S.set.titik, band: S.set.band, metric: S.set.metric, ref: S.set.ref, art: S.set.art, chans: S.set.chans, heart: S.set.heart, pshift: S.set.pshift });
+  if (ARTIFACT) {
+    busy(true);
+    window.ENGINE.exportText(S.sid, Object.fromEntries(q)).then(async (text) => {
+      try { await navigator.clipboard.writeText(text); toast('Tabel disalin. Tempel ke Excel atau Google Sheets.', 'info'); }
+      catch { showCopyFallback(text); }
+    }).catch((err) => toast(err.message)).finally(() => busy(false));
+    return;
+  }
+  if (WEB) {
+    busy(true);
+    window.ENGINE.exportZip(S.sid, Object.fromEntries(q)).then(({ name, blob }) => {
+      const a = h('a', { href: URL.createObjectURL(blob), download: name }); document.body.append(a); a.click(); a.remove();
+    }).catch((err) => toast(err.message)).finally(() => busy(false));
+    return;
+  }
+  window.location.href = `/api/${b.dataset.export}/${S.sid}?${q}`;
+}));
+$('printBtn').addEventListener('click', () => window.print());
+
+function redrawAll() {
+  [eegChart, bandChart, heartChart, psdChart].forEach((c) => c.draw());
+  if (S.res) { renderAnalysis(); loadSignal(); }
+}
+const theme = store.get('theme');
+if (theme) document.documentElement.dataset.theme = theme;
+$('themeBtn').addEventListener('click', () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.dataset.theme = dark ? 'light' : 'dark';
+  store.set('theme', document.documentElement.dataset.theme);
+  redrawAll();
+});
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', redrawAll);
+window.addEventListener('resize', debounce(() => { if (S.res) updateMap(); loadSignal(); }, 200));
+
+loadSessions('');
+
+</script>
+</body>
+</html>

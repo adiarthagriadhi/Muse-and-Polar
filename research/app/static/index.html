@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Muse 2 Research View</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='14' fill='%232a78d6'/%3E%3Ccircle cx='11' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='21' cy='12' r='2.2' fill='white'/%3E%3Ccircle cx='7.5' cy='19' r='2.2' fill='white'/%3E%3Ccircle cx='24.5' cy='19' r='2.2' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <h1>Muse 2 Research View</h1>
+    <p class="sub" id="sessionSub">Memuat daftar sesi…</p>
+  </div>
+  <div class="source">
+    <label class="field grow">
+      <span>Sesi</span>
+      <select id="sessionSel" aria-label="Pilih sesi"></select>
+    </label>
+    <button class="btn" id="folderBtn" title="Pilih folder rekaman (sesi musepolar dan/atau file EDF)">Folder…</button>
+    <input type="file" id="dirInput" webkitdirectory multiple hidden>
+    <label class="btn" title="Buka file EDF/EDF+/BDF, CSV (Mind Monitor, muselsl, OpenBCI, CSV dengan kanal 10-20), file .txt Polar Sensor Logger, atau ZIP berisi rekaman. Pilih EEG dan Polar sekaligus untuk menggabungkannya.">Buka file<input type="file" id="zipInput" accept=".zip,.edf,.bdf,.csv,.txt" hidden></label>
+    <button class="btn web-only" id="demoBtn" title="Muat dua rekaman contoh (Muse 4 kanal dan EDF 16 kanal)" hidden>Data contoh</button>
+  </div>
+  <div class="exports" role="group" aria-label="Ekspor">
+    <button class="btn server-only" data-export="report" title="Laporan Word (.docx)">Laporan Word</button>
+    <button class="btn" data-export="export" title="Tabel ruas, uji, jendela & denyut (.zip berisi CSV)">Data CSV</button>
+    <button class="btn server-only" data-export="figure" title="Gambar ringkasan (.png)">Gambar</button>
+    <button class="btn" id="printBtn" title="Cetak halaman atau simpan sebagai PDF">Cetak</button>
+    <button class="btn icon" id="themeBtn" title="Ganti tema terang/gelap" aria-label="Ganti tema">◐</button>
+  </div>
+</header>
+
+<section class="controls card" aria-label="Pengaturan analisis">
+  <label class="field titik">
+    <span>Titik observasi (detik) <em class="hint">memisahkan ruas, mis. 60, 120</em></span>
+    <div class="row">
+      <input id="titik" type="text" inputmode="decimal" placeholder="kosong = seluruh sesi satu ruas">
+      <button class="btn" id="useMarkers" title="Isi dengan waktu penanda sesi">Pakai penanda</button>
+    </div>
+  </label>
+  <div class="field">
+    <span>Pita EEG</span>
+    <div class="seg" id="bandSeg" role="radiogroup">
+      <button data-v="delta">δ delta</button><button data-v="theta">θ theta</button>
+      <button data-v="alpha" class="on">α alpha</button><button data-v="beta">β beta</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Satuan daya</span>
+    <div class="seg" id="metricSeg" role="radiogroup">
+      <button data-v="abs" class="on" title="Daya absolut (µV²), skala log">Absolut</button>
+      <button data-v="rel" title="Persen dari daya 1–40 Hz">Relatif %</button>
+    </div>
+  </div>
+  <div class="field">
+    <span>Kanal EEG <em class="hint" id="chansInfo"></em></span>
+    <div class="seg" id="chansSeg" role="radiogroup" aria-label="Jumlah kanal">
+      <button data-v="all" class="on">Semua kanal</button>
+      <button data-v="muse4">4 kanal (Muse)</button>
+    </div>
+  </div>
+  <label class="field">
+    <span>Data jantung</span>
+    <select id="heartSel" aria-label="Sumber data jantung">
+      <option value="all">PPG + EKG/Polar</option>
+      <option value="ppg">Hanya PPG</option>
+      <option value="ecg">Hanya EKG/Polar</option>
+      <option value="none">Tanpa data jantung</option>
+    </select>
+  </label>
+  <label class="field small" id="pshiftField" hidden title="Koreksi bila jam ponsel Polar berbeda dari jam alat EEG (positif = data Polar digeser ke kanan)">
+    <span>Geser Polar</span>
+    <div class="row unit"><input id="pshift" type="number" step="0.1" value="0"><em>s</em></div>
+  </label>
+  <label class="field">
+    <span>Ruas acuan</span>
+    <select id="refSel"></select>
+  </label>
+  <label class="field small">
+    <span>Ambang artefak</span>
+    <div class="row unit"><input id="art" type="number" min="20" max="1000" step="10" value="100"><em>µV</em></div>
+  </label>
+</section>
+
+<section class="kpis" id="kpis" aria-label="Ringkasan sesi"></section>
+
+<section class="segments" id="segCards" aria-label="Ruas"></section>
+
+<section class="main">
+  <div class="col">
+  <div class="card charts">
+    <div class="card-head">
+      <h2>Sinyal <span class="muted" id="viewInfo"></span></h2>
+      <div class="tools">
+        <label class="inline">Skala EEG
+          <select id="eegScale"><option value="50">±50 µV</option><option value="100" selected>±100 µV</option><option value="200">±200 µV</option><option value="400">±400 µV</option></select>
+        </label>
+        <button class="btn sm" id="zoomOut" title="Perkecil">−</button>
+        <button class="btn sm" id="zoomIn" title="Perbesar">+</button>
+        <button class="btn sm" id="zoomAll" title="Tampilkan seluruh sesi">Semua</button>
+      </div>
+    </div>
+    <p class="hint">Seret di grafik untuk memperbesar · klik untuk memilih waktu peta · klik ganda untuk kembali ke seluruh sesi. Jendela berartefak tampil kosong.</p>
+    <div class="chart" id="chEeg" style="--h:260px"></div>
+    <div class="chart" id="chBand" style="--h:220px"></div>
+    <div class="chart" id="chHeart" style="--h:190px"></div>
+  </div>
+  <div class="card">
+    <div class="card-head">
+      <h2>Spektrum per ruas</h2>
+      <select id="psdCh" aria-label="Kanal spektrum">
+        <option value="AF">AF7 + AF8 (dahi)</option><option value="TP">TP9 + TP10 (telinga)</option>
+        <option value="TP9">TP9</option><option value="AF7">AF7</option><option value="AF8">AF8</option><option value="TP10">TP10</option>
+      </select>
+    </div>
+    <div class="chart" id="chPsd" style="--h:240px"></div>
+  </div>
+  </div>
+
+  <div class="side">
+  <div class="card mapcard">
+    <div class="card-head">
+      <h2>Peta kepala</h2>
+      <div class="seg sm" id="mapModeSeg" role="radiogroup">
+        <button data-v="value" class="on" title="Nilai daya pita">Nilai</button>
+        <button data-v="change" title="Perubahan terhadap ruas acuan (z)">Perubahan vs acuan</button>
+      </div>
+    </div>
+    <p class="map-title" id="mapTitle">–</p>
+    <div class="topo-wrap"><canvas id="mapBig" width="320" height="320" aria-label="Peta kepala"></canvas></div>
+    <div class="colorbar" id="colorbar"><div class="bar"></div><div class="ticks"><span></span><span></span><span></span></div><div class="cap"></div></div>
+    <div class="map-ctrl">
+      <label class="field grow"><span id="mapTLabel">Mulai jendela: 0 s</span><input id="mapT" type="range" min="0" max="100" step="1" value="0"></label>
+      <label class="field small"><span>Lebar</span>
+        <select id="mapWin"><option value="10">10 s</option><option value="20" selected>20 s</option><option value="30">30 s</option><option value="60">60 s</option></select>
+      </label>
+    </div>
+    <table class="mini-table" id="mapTable" aria-label="Nilai per kanal"></table>
+  </div>
+  </div>
+</section>
+
+<section class="bottom">
+  <div class="card wide">
+    <div class="card-head"><h2>Per ruas</h2><span class="muted" id="segUnit"></span></div>
+    <div class="table-wrap"><table class="data" id="segTable"></table></div>
+  </div>
+  <div class="card wide">
+    <div class="card-head">
+      <h2>Uji antar ruas</h2>
+      <div class="seg sm" id="measureSeg" role="radiogroup"></div>
+    </div>
+    <p class="hint" id="testNote"></p>
+    <div class="table-wrap"><table class="data" id="testTable"></table></div>
+    <p class="omnibus" id="omnibus"></p>
+  </div>
+  <details class="card notes">
+    <summary><h2>Metode &amp; cara membaca</h2></summary>
+    <div class="notes-body">
+      <p><b>Data.</b> EEG 4 kanal Muse (256 Hz) difilter notch 50 Hz dan bandpass 1–40 Hz. Daya pita dihitung per jendela 4 detik
+        (geser 2 detik) dengan metode Welch. Jendela sebuah kanal dibuang bila amplitudonya melewati <i>ambang artefak</i>
+        (kedip, gerak) atau terlalu datar (&lt; 0,5 µV, sensor tidak menempel).</p>
+      <p><b>Ruas.</b> <i>Titik observasi</i> memotong sesi menjadi ruas. Nilai ruas = median jendela bersih.
+        <i>Relatif %</i> = daya pita dibagi daya 1–40 Hz, lebih tahan terhadap perbedaan kontak elektroda antar sesi.
+        Asimetri AF = (AF8 − AF7) / (AF8 + AF7); positif berarti kanan lebih besar.</p>
+      <p><b>Perubahan vs acuan.</b> Nilai z per kanal = (median ruas − median ruas acuan) / sebaran jendela acuan.
+        Aplikasi tidak memberi label kondisi atau keadaan; nilai ditampilkan apa adanya.</p>
+      <p><b>Uji.</b> Mann–Whitney dua sisi antar ruas memakai jendela yang tidak tumpang tindih (tiap jendela 4 detik dihitung sekali),
+        p dikoreksi Holm per ukuran, dan δ Cliff sebagai besar efek (|δ| &lt; 0,15 sangat kecil, &lt; 0,33 kecil, &lt; 0,47 sedang, selebihnya besar).
+        Kruskal–Wallis ditampilkan bila ada ≥ 3 ruas.</p>
+      <p><b>Jantung.</b> Pipeline B1: PPG inframerah (kolom <code>ir</code>/PPG_2), filter Butterworth orde 3 0,6–3,5 Hz fase nol,
+        puncak berjarak ≥ 60/160 s dengan prominensi 1,4826 × MAD. Interval PPG, RR Polar dan EKG dianggap tidak valid bila
+        di luar 300–2000 ms atau berubah &gt; 20 % dari interval sebelumnya; RMSSD hanya dari pasangan interval valid berurutan.
+        Polar digeser dengan hasil sinkronisasi gerak bila ada. PPG dahi = PRV, bukan HRV; pada studi B1 denyut Muse 2 sesuai
+        dengan Polar H10, tetapi RMSSD ultra-singkat dari PPG dahi ditaksir berlebih.</p>
+      <p><b>EDF / banyak kanal.</b> File EDF, EDF+ atau BDF dibaca langsung. Kanal dikenali dari namanya menurut sistem 10-20/10-10
+        (mis. <code>EEG Fp1-REF</code>, T3 = T7); kanal EKG dipakai untuk denyut dan anotasi EDF+ menjadi penanda.
+        Pasangan frontal untuk asimetri dipilih otomatis: F3/F4, lalu AF7/AF8, AF3/AF4, Fp1/Fp2, F7/F8.
+        Dengan banyak kanal, grafik daya menampilkan rata-rata per area kepala.</p>
+      <p><b>CSV.</b> Dikenali otomatis: rekaman musepolar, Mind Monitor (<code>RAW_TP9</code>…, penanda dari kolom <code>Elements</code>),
+        muselsl (<code>timestamps, TP9…</code>), format aplikasi lama (<code>EEG_raw.csv</code> + <code>PPG_raw.csv</code>), OpenBCI GUI
+        (<code>EXG Channel</code>, sample rate dari header), atau CSV apa pun dengan kolom waktu dan kanal bernama 10-20, plus kolom
+        ECG/PPG/marker bila ada. Nilai dianggap µV. Frekuensi sampel diambil dari header atau dihitung dari kolom waktu (minimal 100 Hz).</p>
+      <p><b>Polar Sensor Logger (.txt).</b> Pilih file EEG bersama file <code>…_RR.txt</code> (atau <code>…_ECG.txt</code>) dari aplikasi
+        Polar Sensor Logger, atau letakkan dalam satu folder. Data Polar digabung dengan rekaman EEG yang waktunya tumpang tindih,
+        dicocokkan lewat jam (kolom <i>Phone timestamp</i> dan waktu mulai EEG), lalu menjadi sumber denyut dan HRV. Interval RR dipakai
+        langsung; EKG dipakai bila tidak ada file RR. <code>…_MARKER.txt</code> menjadi penanda. Bila jam ponsel dan alat EEG berbeda,
+        koreksi dengan <i>Geser Polar</i>. Bila rekaman EEG tidak punya jam (mis. CSV tanpa waktu), satu file Polar yang dipilih bersamanya
+        disejajarkan di awal. Membuka file Polar saja akan menggabungkannya ke rekaman yang sedang dibuka.</p>
+      <p><b>4 kanal (Muse).</b> Rekaman banyak kanal dibuat meniru Muse 2: sensor TP9, AF7, AF8, TP10 dibangun ulang dari elektroda
+        di sekitarnya (AF7 = rata-rata Fp1 &amp; F7, AF8 = Fp2 &amp; F8, TP9 = T7 &amp; P7, TP10 = T8 &amp; P8, atau elektrodanya sendiri bila ada),
+        lalu dirujuk ulang ke Fpz seperti Muse bila kanal Fpz tersedia. Tampilan, tata letak peta, dan ukuran uji sama dengan sesi Muse.
+        Karena merata-rata dua elektroda, daya absolutnya cenderung sedikit lebih kecil; untuk membandingkan dengan Muse sungguhan,
+        <i>Relatif %</i> lebih adil.</p>
+      <p><b>Peta kepala.</b> Interpolasi dari hanya 4 elektroda, jadi gambaran kasar, bukan topografi rinci.
+        Peta dibuat berlapis (12 pita warna tipis). Setiap peta memakai skala warnanya sendiri, seperti tampilan lama:
+        biru = nilai terendah, merah = tertinggi di peta itu. Bandingkan antar peta lewat angka di elektroda.</p>
+    </div>
+  </details>
+</section>
+
+<dialog id="folderDlg">
+  <form method="dialog" class="dlg">
+    <h2>Folder rekaman</h2>
+    <p class="hint">Folder berisi sesi musepolar (<code>recordings/</code>) dan/atau file EDF/BDF, satu folder sesi, atau satu file EDF.</p>
+    <input id="rootInput" type="text" spellcheck="false">
+    <div class="row end">
+      <button class="btn" value="default" id="rootDefault">Default</button>
+      <button class="btn" value="cancel">Batal</button>
+      <button class="btn primary" value="ok" id="rootOk">Muat</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="busy" id="busy" hidden>Menghitung…</div>
+<div class="toast" id="toast" role="status" hidden></div>
+<div class="tooltip" id="tooltip" hidden></div>
+
+<script type="module" src="/static/app.js"></script>
+</body>
+</html>
