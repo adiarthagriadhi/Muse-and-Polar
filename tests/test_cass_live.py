@@ -46,6 +46,9 @@ def test_export_and_analysis_from_recording(tmp_path):
             assert payload["autonomic_scalar"] == "polar_rr_rmssd" and payload["n_windows"] > 5
             assert payload["n_valid"] > 0
 
+            index = await client.get("/cass", allow_redirects=False)
+            assert index.status == 302 and index.headers["Location"] == f"/cass/session/{sid}"
+
             bad = await client.post("/api/cass/export/..")
             assert bad.status in (400, 404)
         finally:

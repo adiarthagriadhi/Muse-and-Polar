@@ -97,17 +97,40 @@ def add_routes(app, data_dir):
             return web.json_response({"error": "Kesalahan pemrosesan CASS; periksa log Terminal."}, status=500)
 
     async def session_view(request):
+        """Wellness Explorer with a participant selector: the chosen session first, then all others."""
         folder = resolve_session(root, request.match_info["session"])
+        from .explorer import build_html, cached_payload
+
+        def build():
+            first = cached_payload(folder)  # errors for the chosen session are shown
+            payloads, labels = [first], {first["session_id"]}
+            for s in sessions(root):
+                other = root.resolve() / s["id"]
+                if other == folder.resolve():
+                    continue
+                try:
+                    p = cached_payload(other)
+                except ValueError:
+                    continue  # unusable recording: leave it out of the selector
+                if p["session_id"] in labels:
+                    p = {**p, "session_id": f'{p["session_id"]} ({s["id"]})'}
+                labels.add(p["session_id"])
+                payloads.append(p)
+            return build_html(payloads if len(payloads) > 1 else first)
+
         try:
-            from .explorer import build_html, explorer_payload
-            html = await asyncio.to_thread(lambda: build_html(explorer_payload(folder)))
+            html = await asyncio.to_thread(build)
         except ValueError as exc:
             return web.Response(text=ERROR_PAGE.replace("{msg}", html_escape(str(exc))), content_type="text/html",
                                 charset="utf-8", status=422)
         return web.Response(text=html, content_type="text/html", charset="utf-8",
                             headers={"Cache-Control": "no-store"})
 
-    async def explorer(_request):
+    async def explorer(request):
+        # like the toolkit: open the Wellness Explorer (newest session first, others in the selector)
+        rows=sessions(root)
+        if rows and "daftar" not in request.query:
+            raise web.HTTPFound(f"/cass/session/{rows[0]['id']}")
         return web.Response(text=EXPLORER,content_type="text/html",charset="utf-8")
     app.router.add_get("/api/cass/sessions",listing)
     app.router.add_get("/api/cass/export/{session}",export)

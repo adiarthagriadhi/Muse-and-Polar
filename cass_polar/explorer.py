@@ -1577,15 +1577,43 @@ def payload_from_csv(path, sid=None, marker_s=60.0, ruas_s=30.0, refs=None):
     return build_payload(state, refs, sid, marker_s, ruas_s=ruas_s)
 
 
-def explorer_payload(folder, marker_s=None, ruas_s=30.0):
+DEFAULT_MARKER_S = 60.0  # same default as the CASS Wellness portal / payload_from_csv
+
+
+def session_label(folder):
+    """Participant-style name like the toolkit's session_id: <session name>__<YYYYMMDDTHHMMSS>."""
+    import re
+    from datetime import datetime
+    folder = Path(folder)
+    meta = {}
+    try:
+        meta = json.loads((folder / "session.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pass
+    name = re.sub(r"[^A-Za-z0-9_]+", "_", meta.get("name") or "").strip("_")
+    start = meta.get("start_unix")
+    if not name or not start:
+        return folder.name
+    return f"{name}__{datetime.fromtimestamp(start).strftime('%Y%m%dT%H%M%S')}"
+
+
+def explorer_payload(folder, marker_s="default", ruas_s=30.0):
     """Payload for one musepolar session: X from Muse EEG, Y from Polar RR RMSSD.
 
+    marker_s "default" = 60 s when the recording is long enough (as the toolkit), None = no marker.
     Normalisation here mirrors NB10 (robust z against R0); the page recomputes it
     in the browser whenever markers change.
     """
     from .engine import MIN_RR, RR_SPAN_S, STEP_S, WINDOW_S, _robust_location_scale, window_state
 
-    state, _duration, _warnings = window_state(Path(folder), marker_s)
+    if marker_s == "default":
+        try:
+            state, duration, _w = window_state(Path(folder), DEFAULT_MARKER_S)
+            marker_s = DEFAULT_MARKER_S
+        except ValueError:  # shorter than marker + 5 s: whole recording is R0
+            marker_s = None
+    if marker_s is None or marker_s != DEFAULT_MARKER_S:
+        state, duration, _w = window_state(Path(folder), marker_s)
     state["window_id"] = range(len(state))
     ref = state["phase"].eq("PRE")
     for c in CHANNELS:
@@ -1605,4 +1633,20 @@ def explorer_payload(folder, marker_s=None, ruas_s=30.0):
     state["autonomic_valid"] = np.isfinite(state["autonomic_state"])
     refs = {"window_s": WINDOW_S, "step_s": STEP_S, "cortical_metric": "log_beta_alpha",
             "autonomic_scalar": "polar_rr_rmssd", "min_ibi": MIN_RR, "rr_span_s": RR_SPAN_S}
-    return build_payload(state, refs, Path(folder).name, marker_s, ruas_s=ruas_s)
+    return build_payload(state, refs, session_label(folder), marker_s, ruas_s=ruas_s)
+
+
+_CACHE = {}
+
+
+def cached_payload(folder):
+    """explorer_payload() memoised on the session's input files, so the multi-session page stays fast."""
+    folder = Path(folder)
+    key = tuple((f.name, f.stat().st_mtime_ns, f.stat().st_size)
+                for f in (folder / "muse_eeg.csv", folder / "polar_rr.csv", folder / "session.json") if f.exists())
+    hit = _CACHE.get(folder)
+    if hit and hit[0] == key:
+        return hit[1]
+    payload = explorer_payload(folder)
+    _CACHE[folder] = (key, payload)
+    return payload
