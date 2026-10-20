@@ -28,8 +28,9 @@ The output contains `polar_rr_rmssd`, `polar_n_ibi`, `polar_hr`, recomputed `aut
 
 The dashboard (`python -m musepolar`) serves this engine directly: after a recording, the CASS panel
 has **Ekspor sesi** (saves `<session>_CASS_Polar.zip`, including `muse_ppg.csv` for reference) and
-**Tampilkan CASS** (opens `/cass/session/<session>`, computed by `engine.py` from `muse_eeg.csv` and
-`polar_rr.csv`). No separate CASS toolkit process is needed for this view.
+**Tampilkan CASS** (opens `/cass/session/<session>`: the CASS Wellness Explorer page, built by
+`explorer.py` from the toolkit's `build_explorer.py` template, with per-window values from
+`engine.window_state()` — X from `muse_eeg.csv`, Y from `polar_rr.csv`). No separate CASS toolkit process is needed for this view.
 
 ## Next integration step
 

@@ -38,7 +38,8 @@ def test_export_and_analysis_from_recording(tmp_path):
             dl = await client.get(f"/api/cass/export/{sid}")
             assert set(zipfile.ZipFile(io.BytesIO(await dl.read())).namelist()) == names
 
-            assert (await client.get(f"/cass/session/{sid}")).status == 200
+            page = await client.get(f"/cass/session/{sid}")
+            assert page.status == 200 and "CASS Wellness Explorer" in await page.text()
             res = await client.get(f"/api/cass/analysis/{sid}?r0=12")
             payload = await res.json()
             assert res.status == 200, payload

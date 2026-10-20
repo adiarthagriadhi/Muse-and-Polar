@@ -5,6 +5,7 @@ import io
 import json
 import re
 import zipfile
+from html import escape as html_escape
 from pathlib import Path
 from aiohttp import web
 
@@ -95,9 +96,16 @@ def add_routes(app, data_dir):
             logging.getLogger(__name__).exception("CASS analysis failed")
             return web.json_response({"error": "Kesalahan pemrosesan CASS; periksa log Terminal."}, status=500)
 
-    async def session_view(_request):
-        html = Path(__file__).resolve().parent.parent / "musepolar" / "static" / "cass_session.html"
-        return web.FileResponse(html, headers={"Cache-Control": "no-cache"})
+    async def session_view(request):
+        folder = resolve_session(root, request.match_info["session"])
+        try:
+            from .explorer import build_html, explorer_payload
+            html = await asyncio.to_thread(lambda: build_html(explorer_payload(folder)))
+        except ValueError as exc:
+            return web.Response(text=ERROR_PAGE.replace("{msg}", html_escape(str(exc))), content_type="text/html",
+                                charset="utf-8", status=422)
+        return web.Response(text=html, content_type="text/html", charset="utf-8",
+                            headers={"Cache-Control": "no-store"})
 
     async def explorer(_request):
         return web.Response(text=EXPLORER,content_type="text/html",charset="utf-8")
@@ -116,3 +124,7 @@ let rows=data.sessions.map(s=>{let id=encodeURIComponent(s.id);let td=document.c
 let box=document.getElementById('result');box.textContent='';if(!rows.length){box.textContent='Belum ada rekaman Muse EEG + Polar RR.';return}let table=document.createElement('table');table.innerHTML='<thead><tr><th>Sesi</th><th>Status analisis</th><th>CASS</th><th>Ekspor</th></tr></thead>';let body=document.createElement('tbody');rows.forEach(r=>body.append(r));table.append(body);box.append(table);
 }).catch(e=>document.getElementById('result').textContent='Gagal memuat: '+e.message);
 </script></body></html>"""
+
+ERROR_PAGE = """<!doctype html><html lang="id"><head><meta charset="utf-8"><title>CASS Wellness Explorer</title>
+<style>body{font:15px system-ui;margin:40px;color:#0b0b0b;background:#f9f9f7}p{max-width:640px}</style></head>
+<body><h1>CASS belum bisa ditampilkan</h1><p>{msg}</p><p><a href="/">← Muse–Polar Live</a></p></body></html>"""

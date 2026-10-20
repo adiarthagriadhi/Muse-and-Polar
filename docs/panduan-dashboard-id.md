@@ -146,14 +146,15 @@ perhitungan CASS berjalan di server dashboard ini.
 1. Rekam sesi dengan Muse **dan** Polar terhubung, lalu tekan *Stop rekam*.
 2. **Ekspor sesi** — menyimpan `<folder sesi>_CASS_Polar.zip` di folder rekaman, berisi
    `muse_eeg.csv`, `muse_ppg.csv`, `polar_rr.csv`, `polar_ecg.csv`, `marker.csv`, `session.json`.
-3. **Tampilkan CASS ↗** — membuka tampilan CASS sesi itu di tab baru dan langsung menghitung:
-   peta keadaan X × Y, trajektori waktu, heatmap kortikal, okupansi kuadran, unduh CSV.
+3. **Tampilkan CASS ↗** — membuka **CASS Wellness Explorer** sesi itu di tab baru (tampilan sama
+   dengan explorer toolkit CASS Wellness: heatmap kuadran kepala, state map, okupansi kuadran,
+   lintasan X dan Y, ringkasan antar-ruas, tombol *Marker & ruas*, *PDF*, *Tema*).
 
 Sumbu X = robust-z log(β/α) EEG Muse (jendela 5 s, langkah 2,5 s); sumbu Y = RMSSD dari
 **RR Polar H10** (rentang 20 s, minimal 8 RR). PPG Muse ikut disimpan tetapi tidak dipakai untuk
-sumbu Y. Batas baseline R0 bawaan 60 s hanya untuk pratinjau; ubah sesuai protokol lalu tekan
-*Hitung CASS*. Tautan **semua sesi** membuka daftar semua rekaman yang punya EEG dan RR.
-Rekaman perlu lebih panjang dari R0 + 5 s. Detail metode: [`cass_polar/README.md`](../cass_polar/README.md).
+sumbu Y. Tanpa marker seluruh rekaman adalah R0 (sama seperti unggahan CASS Wellness dengan
+marker kosong); tambahkan marker lewat *Marker & ruas* di explorer. Tautan **semua sesi** membuka daftar semua rekaman yang punya EEG dan RR.
+Detail metode: [`cass_polar/README.md`](../cass_polar/README.md).
 
 ## Format data rekaman
 

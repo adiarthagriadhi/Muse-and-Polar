@@ -23,6 +23,7 @@ BANDS = {"alpha": (8.0, 13.0), "beta": (13.0, 30.0)}
 WINDOW_S = 5.0
 STEP_S = 2.5
 RR_SPAN_S = 20.0
+MIN_RR = 8
 
 
 class CASSInputError(ValueError):
@@ -107,17 +108,19 @@ def _num(x):
     return None if not np.isfinite(x) else round(x, 6)
 
 
-def analyze(folder: str | Path, r0_end: float, rr_span_s: float = RR_SPAN_S) -> dict:
+def window_state(folder: Path, r0_end: float | None, rr_span_s: float = RR_SPAN_S):
+    """Per-window EEG log(beta/alpha) per channel and Polar RR RMSSD, before normalisation.
+
+    r0_end None = no marker, every window belongs to R0. Returns (state, duration_s, warnings).
+    """
     folder = Path(folder)
-    if not np.isfinite(r0_end) or r0_end < 10:
-        raise CASSInputError("Akhir baseline R0 harus minimal 10 detik.")
-    if rr_span_s <= 0 or rr_span_s > 300:
-        raise CASSInputError("Rentang RR harus antara 0 dan 300 detik.")
     eeg_path, rr_path = folder / "muse_eeg.csv", folder / "polar_rr.csv"
     if not eeg_path.is_file() or not rr_path.is_file():
         raise CASSInputError("Dibutuhkan muse_eeg.csv dan polar_rr.csv pada sesi yang sama.")
     bp, eeg_start, duration, warnings = _bandpower(pd.read_csv(eeg_path))
-    if r0_end + 5 > duration:
+    if r0_end is None:
+        r0_end = duration  # no marker: the whole recording is R0
+    elif r0_end + 5 > duration:
         raise CASSInputError(f"Rekaman {duration:.1f} s; R0 harus menyisakan >=5 s fase POST.")
     rr = read_rr(rr_path, eeg_start)
     if rr.empty:
@@ -150,13 +153,22 @@ def analyze(folder: str | Path, r0_end: float, rr_span_s: float = RR_SPAN_S) -> 
             lo, hi = rr_min, min(rr_max, rr_min + rr_span_s)
         if hi > rr_max:
             lo, hi = max(rr_min, rr_max - rr_span_s), rr_max
-        rmssd, n_ibi, hr = hrv_window(rr, lo, hi, min_ibi=8)
+        rmssd, n_ibi, hr = hrv_window(rr, lo, hi, min_ibi=MIN_RR)
         row.update({"polar_t0": lo, "polar_t1": hi,
                     "polar_rr_rmssd": rmssd, "polar_n_ibi": n_ibi, "polar_hr": hr})
         rows.append(row)
     if not rows:
         raise CASSInputError("Tidak ada window CASS yang memiliki bandpower EEG.")
-    state = pd.DataFrame(rows)
+    return pd.DataFrame(rows), duration, warnings
+
+
+def analyze(folder: str | Path, r0_end: float, rr_span_s: float = RR_SPAN_S) -> dict:
+    folder = Path(folder)
+    if not np.isfinite(r0_end) or r0_end < 10:
+        raise CASSInputError("Akhir baseline R0 harus minimal 10 detik.")
+    if rr_span_s <= 0 or rr_span_s > 300:
+        raise CASSInputError("Rentang RR harus antara 0 dan 300 detik.")
+    state, duration, warnings = window_state(folder, r0_end, rr_span_s)
     baseline = state.phase.eq("PRE")
     if not baseline.any():
         raise CASSInputError("Fase R0 tidak memiliki window EEG valid.")
