@@ -535,6 +535,11 @@ function connect() {
       case 'hello':
         syncClock(m.server_time); status = m.status; renderStatus();
         if (m.recording) { recording = m.recording; renderRecording(); }
+        if (m.mode && m.mode !== 'live') {
+          $('liveDot').textContent = m.mode === 'demo' ? 'DEMO' : 'SIM';
+          $('liveDot').title = 'Data sintetis, bukan dari perangkat';
+          $('liveDot').classList.add('demo');
+        }
         if (m.sync) renderSync(m.sync);
         break;
       case 'status': status = m.status; renderStatus(); break;

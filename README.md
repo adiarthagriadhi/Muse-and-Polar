@@ -75,6 +75,11 @@ cd research
 PYTHONPATH=src python app/server.py          # opens http://127.0.0.1:8600, reads ../recordings
 ```
 
+**Demo version.** `python -m musepolar --demo` (or double-click `run_demo.command` on macOS) starts
+the simulator and adds three ready-made synthetic 4-minute sessions in `demo_recordings/` (60 s rest,
+then a mental task, slow breathing, or recovery), so the CASS panel (**Tampilkan CASS**) can be tried
+immediately. Demo data are synthetic and have no physiological meaning.
+
 Or open `research/web/research-view.html` directly in a browser and press **Data contoh** (example
 data, synthetic).
 

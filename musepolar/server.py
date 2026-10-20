@@ -112,7 +112,18 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
 
 
 async def serve(args) -> None:
+    demo = []
+    if args.demo:
+        from .demo import ensure_demo_sessions
+
+        demo = ensure_demo_sessions(Path(args.data_dir))
     hub = Hub(Path(args.data_dir))
+    hub.mode = "demo" if args.demo else "sim" if args.sim else "live"
+    if demo:
+        # CASS buttons work right away on the first demo session
+        meta = json.loads((demo[0] / "session.json").read_text(encoding="utf-8"))
+        hub.last_recording = {"active": False, "name": meta["name"], "dir": str(demo[0]),
+                              "elapsed": meta["duration_sec"], "counts": meta["samples"]}
     slots = make_slots(hub, args)
     app = build_app(hub, slots)
     runner = web.AppRunner(app)
@@ -121,7 +132,7 @@ async def serve(args) -> None:
     await site.start()
     broadcaster = asyncio.create_task(hub.broadcast_loop())
     url = f"http://{'localhost' if args.host in ('127.0.0.1', '0.0.0.0') else args.host}:{args.port}"
-    log.info("Dashboard: %s  (data folder: %s)%s", url, Path(args.data_dir).resolve(), "  [SIMULATOR]" if args.sim else "")
+    log.info("Dashboard: %s  (data folder: %s)%s", url, Path(args.data_dir).resolve(), "  [DEMO]" if args.demo else "  [SIMULATOR]" if args.sim else "")
     if args.autoconnect:
         for slot in slots.values():
             slot.start()
@@ -141,7 +152,10 @@ def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="musepolar", description="Live dashboard & recorder for Muse 2 + Polar H10")
     p.add_argument("--host", default="127.0.0.1")
     p.add_argument("--port", type=int, default=8765)
-    p.add_argument("--data-dir", default="recordings", help="folder for recorded sessions")
+    p.add_argument("--data-dir", help="folder for recorded sessions (default recordings/, demo_recordings/ with --demo)")
+    p.add_argument("--demo", action="store_true",
+                   help="try everything without devices: simulator, auto-connect, and three ready-made "
+                        "synthetic sessions for the CASS explorer, all in demo_recordings/")
     p.add_argument("--sim", action="store_true", help="use simulated devices (no Bluetooth)")
     p.add_argument("--autoconnect", action="store_true", help="connect both devices at startup")
     p.add_argument("--no-browser", action="store_true", help="don't open the browser automatically")
@@ -154,6 +168,10 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--no-polar-acc", action="store_true", help="disable Polar accelerometer (needed for sync)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
+    if args.demo:
+        args.sim = args.autoconnect = True
+    if args.data_dir is None:
+        args.data_dir = "demo_recordings" if args.demo else "recordings"
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",

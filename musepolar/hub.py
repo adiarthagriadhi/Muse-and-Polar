@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 class Hub:
     def __init__(self, data_dir: Path, send_interval: float = 0.05, metrics_interval: float = 0.5):
         self.data_dir = Path(data_dir)
+        self.mode = "live"  # "sim" / "demo" are shown in the dashboard title
         self.send_interval = send_interval
         self.metrics_interval = metrics_interval
         self.clients: set = set()
@@ -144,6 +145,7 @@ class Hub:
     def hello(self) -> dict:
         return {
             "type": "hello",
+            "mode": self.mode,
             "streams": STREAMS,
             "status": self.status,
             "recording": self.recorder.info() if self.recorder else self.last_recording,
