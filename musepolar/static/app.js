@@ -369,7 +369,49 @@ function renderRecording() {
     $('recPath').textContent = active ? `→ ${p}` : `Tersimpan: ${p}`;
     $('recPath').title = p;
   }
+  renderCass();
 }
+
+// ---------------------------------------------------------------- CASS (EEG Muse × RR Polar)
+let cassExported = null;  // { id, zip } of the last export
+function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
+function cassSession() {
+  if (!recording || !recording.dir) return { why: 'Rekam dulu satu sesi' };
+  if (recording.active) return { why: 'Hentikan rekaman dulu' };
+  const id = recording.dir.split(/[\\/]/).pop();
+  const c = recording.counts || {};
+  if (!c.muse_eeg) return { id, why: 'Rekaman terakhir tidak berisi EEG Muse' };
+  if (!c.polar_rr) return { id, why: 'Rekaman terakhir tidak berisi RR Polar' };
+  return { id };
+}
+function renderCass() {
+  const s = cassSession();
+  for (const b of ['cassExport', 'cassShow']) {
+    $(b).disabled = !!s.why;
+    $(b).title = s.why || `Sesi ${s.id}`;
+  }
+  const out = $('cassResult');
+  out.classList.add('cass-result');
+  if (cassExported && cassExported.id === s.id) {
+    out.innerHTML = cassExported.error
+      ? `<span class="st critical">✕ Ekspor gagal</span><span>${esc(cassExported.error)}</span>`
+      : `<span class="st good">✓ Diekspor</span><span class="muted ellipsis" title="${esc(cassExported.zip)}">${esc(cassExported.zip)}</span>`;
+  } else out.innerHTML = s.why && recording ? `<span class="muted">${esc(s.why)}</span>` : '';
+}
+$('cassExport').addEventListener('click', async () => {
+  const { id } = cassSession();
+  $('cassExport').disabled = true;
+  try {
+    const r = await fetch(`/api/cass/export/${encodeURIComponent(id)}`, { method: 'POST' });
+    const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
+    cassExported = r.ok ? { id, zip: j.zip } : { id, error: j.error || `HTTP ${r.status}` };
+  } catch (e) { cassExported = { id, error: e.message }; }
+  renderCass();
+});
+$('cassShow').addEventListener('click', () => {
+  const { id } = cassSession();
+  if (id) window.open(`/cass/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
+});
 
 function renderMetrics(m) {
   if (m.hrv) {
@@ -538,4 +580,5 @@ window.addEventListener('beforeunload', (e) => {
   if (recording && recording.active) { e.preventDefault(); e.returnValue = ''; }
 });
 renderStatus();
+renderCass();
 renderMetrics({});

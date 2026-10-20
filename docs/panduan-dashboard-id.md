@@ -138,6 +138,26 @@ python -m musepolar.scan
 
 Di macOS, "alamat" berupa UUID CoreBluetooth (bukan MAC) yang tetap sama untuk Mac yang sama.
 
+## CASS (EEG Muse × RR Polar)
+
+Panel **CASS** di kolom kanan dashboard. Tidak perlu menjalankan skrip lain di Terminal:
+perhitungan CASS berjalan di server dashboard ini.
+
+1. Rekam sesi dengan Muse **dan** Polar terhubung, lalu tekan *Stop rekam*.
+2. **Ekspor sesi** — menyimpan `<folder sesi>_CASS_Polar.zip` di folder rekaman, berisi
+   `muse_eeg.csv`, `muse_ppg.csv`, `polar_rr.csv`, `polar_ecg.csv`, `marker.csv`, `session.json`.
+3. **Tampilkan CASS ↗** — membuka **CASS Wellness Explorer** sesi itu di tab baru (tampilan sama
+   dengan explorer toolkit CASS Wellness, termasuk pemilih *Peserta* berisi semua rekaman yang punya
+   EEG dan RR, sesi ini di urutan pertama: heatmap kuadran kepala, state map, okupansi kuadran,
+   lintasan X dan Y, ringkasan antar-ruas, tombol *Marker & ruas*, *PDF*, *Tema*).
+
+Sumbu X = robust-z log(β/α) EEG Muse (jendela 5 s, langkah 2,5 s); sumbu Y = RMSSD dari
+**RR Polar H10** (rentang 20 s, minimal 8 RR). PPG Muse ikut disimpan tetapi tidak dipakai untuk
+sumbu Y. Marker bawaan di 60 s (sama dengan bawaan CASS Wellness): 0–60 s = R0 (acuan), sisanya
+R1. Rekaman ≤ 65 s tidak diberi marker (seluruhnya R0). Ubah atau tambah marker lewat
+*Marker & ruas* di explorer. Nama peserta = nama sesi di dashboard + waktu mulai. Tautan **semua sesi** membuka explorer dengan sesi terbaru.
+Detail metode: [`cass_polar/README.md`](../cass_polar/README.md).
+
 ## Format data rekaman
 
 Setiap sesi disimpan di `recordings/<YYYYMMDD_HHMMSS>_<nama>/`:
@@ -208,6 +228,7 @@ musepolar/
   ble.py        loop scan/connect/reconnect bersama (bleak)
   analysis.py   daya pita EEG, kualitas sinyal, HRV, estimasi selisih waktu (sinkronisasi)
   recorder.py   penulisan CSV + session.json
+cass_polar/     analisis CASS (X EEG Muse, Y RR Polar) + rute /cass di dashboard
   simulator.py  perangkat sintetis untuk --sim
   static/       dashboard (HTML/CSS/JS tanpa dependensi eksternal, bisa offline)
 tests/          uji decoder, analisis, perekam, dan end-to-end dengan simulator
