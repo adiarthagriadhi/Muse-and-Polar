@@ -376,7 +376,8 @@ function renderRecording() {
 let cassExported = null;  // { id, zip } of the last export
 function esc(t) { return String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]); }
 function cassSession() {
-  if (!recording || !recording.dir) return { why: 'Rekam dulu satu sesi' };
+  // no recording known to this page: fall back to the newest session in the data folder
+  if (!recording || !recording.dir) return { id: null };
   if (recording.active) return { why: 'Hentikan rekaman dulu' };
   const id = recording.dir.split(/[\\/]/).pop();
   const c = recording.counts || {};
@@ -388,20 +389,28 @@ function renderCass() {
   const s = cassSession();
   for (const b of ['cassExport', 'cassShow']) {
     $(b).disabled = !!s.why;
-    $(b).title = s.why || `Sesi ${s.id}`;
+    $(b).title = s.why || (s.id ? `Sesi ${s.id}` : 'Sesi terbaru di folder rekaman');
   }
   const out = $('cassResult');
   out.classList.add('cass-result');
-  if (cassExported && cassExported.id === s.id) {
+  if (cassExported && (!s.id || cassExported.id === s.id)) {
     out.innerHTML = cassExported.error
       ? `<span class="st critical">✕ Ekspor gagal</span><span>${esc(cassExported.error)}</span>`
       : `<span class="st good">✓ Diekspor</span><span class="muted ellipsis" title="${esc(cassExported.zip)}">${esc(cassExported.zip)}</span>`;
   } else out.innerHTML = s.why && recording ? `<span class="muted">${esc(s.why)}</span>` : '';
 }
+async function newestSession() {
+  const r = await fetch('/api/cass/sessions');
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const list = (await r.json()).sessions || [];
+  if (!list.length) throw new Error('Belum ada sesi dengan EEG Muse dan RR Polar di folder rekaman.');
+  return list[0].id;
+}
 $('cassExport').addEventListener('click', async () => {
-  const { id } = cassSession();
+  let { id } = cassSession();
   $('cassExport').disabled = true;
   try {
+    if (!id) id = await newestSession();
     const r = await fetch(`/api/cass/export/${encodeURIComponent(id)}`, { method: 'POST' });
     const j = await r.json().catch(() => ({ error: `HTTP ${r.status}` }));
     cassExported = r.ok ? { id, zip: j.zip } : { id, error: j.error || `HTTP ${r.status}` };
@@ -410,7 +419,8 @@ $('cassExport').addEventListener('click', async () => {
 });
 $('cassShow').addEventListener('click', () => {
   const { id } = cassSession();
-  if (id) window.open(`/cass/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
+  // /cass opens the explorer on the newest session when none is known here
+  window.open(id ? `/cass/session/${encodeURIComponent(id)}` : '/cass', '_blank', 'noopener');
 });
 
 function renderMetrics(m) {
