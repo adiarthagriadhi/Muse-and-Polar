@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+- CASS buttons (Ekspor sesi, Tampilkan CASS) stay usable after a dashboard restart: the newest session in the data folder is loaded as the last recording at startup.
+
 ## [1.0.0] – 2026-10-08
 
 First open release.

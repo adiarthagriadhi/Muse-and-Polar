@@ -11,7 +11,7 @@ from pathlib import Path
 
 from aiohttp import WSMsgType, web
 
-from .hub import Hub
+from .hub import Hub, latest_recording
 from cass_polar.live_routes import add_routes
 
 log = logging.getLogger("musepolar")
@@ -113,6 +113,7 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
 
 async def serve(args) -> None:
     hub = Hub(Path(args.data_dir))
+    hub.last_recording = latest_recording(hub.data_dir)  # keeps the CASS buttons usable after a restart
     slots = make_slots(hub, args)
     app = build_app(hub, slots)
     runner = web.AppRunner(app)

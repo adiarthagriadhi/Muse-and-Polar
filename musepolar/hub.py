@@ -17,6 +17,42 @@ from .streams import STREAMS
 log = logging.getLogger(__name__)
 
 
+def _count_rows(path: Path) -> int:
+    """Data rows in a CSV (lines minus the header), counted without parsing."""
+    n = 0
+    with open(path, "rb") as f:
+        while chunk := f.read(1 << 20):
+            n += chunk.count(b"\n")
+    return max(0, n - 1)
+
+
+def latest_recording(data_dir: Path) -> dict | None:
+    """Info dict (same shape as Recorder.info) for the newest finished session in data_dir.
+
+    Lets the dashboard offer the CASS buttons again after a restart. Returns None when the folder
+    has no session. Row counts come from the CSV files themselves, so a session that was cut off
+    before session.json was finalised still counts.
+    """
+    root = Path(data_dir)
+    if not root.is_dir():
+        return None
+    for d in sorted((p for p in root.iterdir() if p.is_dir() and not p.is_symlink()), reverse=True):
+        counts = {s: _count_rows(d / f"{s}.csv") for s in STREAMS if (d / f"{s}.csv").is_file()}
+        if not counts:
+            continue
+        meta: dict = {}
+        try:
+            meta = json.loads((d / "session.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            pass
+        elapsed = meta.get("duration_sec")
+        if elapsed is None and meta.get("start_unix") and meta.get("end_unix"):
+            elapsed = meta["end_unix"] - meta["start_unix"]
+        return {"active": False, "name": meta.get("name", ""), "dir": str(d.resolve()),
+                "elapsed": float(elapsed or 0), "counts": counts}
+    return None
+
+
 class Hub:
     def __init__(self, data_dir: Path, send_interval: float = 0.05, metrics_interval: float = 0.5):
         self.data_dir = Path(data_dir)
