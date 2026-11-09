@@ -89,6 +89,10 @@ sessions at once (agreement with the protocol expectation, conclusions vs rating
 write reference-group norms, which the dashboard reads with `--corva-norms norms.json`. Run it on data in a
 private repository; participant data never go into this one.
 
+**CorVa Space download.** `python tools/build_corva_package.py` builds `dist/CorVa-Space-<version>.zip`: a
+standalone package (dashboard + CASS + CorVa, run scripts for macOS/Linux and Windows, guide `BACA-DULU.md`) that
+uses port 8775 and `corva_recordings/`, so it runs next to an existing dashboard install.
+
 Or open `research/web/research-view.html` directly in a browser and press **Data contoh** (example
 data, synthetic).
 
