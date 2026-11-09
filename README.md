@@ -4,12 +4,13 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23252791.svg)](https://doi.org/10.5281/zenodo.23252791)
 
 Open research software for **recording and analysing a Muse 2 EEG headband together with a Polar H10
-chest strap**. It has three parts:
+chest strap**. It has three parts, plus a variant in development:
 
 | Part | Folder | What it does |
 |---|---|---|
 | **Live dashboard** (`musepolar`) | [`musepolar/`](musepolar/) | Connects directly to Muse 2 and Polar H10 over Bluetooth Low Energy, shows the signals live in the browser, records raw CSV with per-sample timestamps, event markers, and a movement-based Muse–Polar clock synchronisation. Includes a simulator. |
 | **Research View** (`muse2_pipeline`) | [`research/`](research/README.md) | Offline analysis of musepolar recordings and of EDF/EDF+/BDF and other EEG CSV files: EEG band power per segment, head maps, artefact rejection, between-segment tests, pulse (PRV) and Polar (HRV) intervals, CSV/PNG/Word export. Also available as a single HTML file that runs in the browser without Python. |
+| **CorVa Space · CASS-NV** (in development) | [`corva/`](corva/README.md) | Development hub for a CASS variant that maps cortical (Muse EEG log β/α) × vagal (Polar lnRMSSD) states on a 3 × 3 grid with qualitative labels and rest/activity/recovery context. #NeuroVagal |
 | **Tools** | [`tools/`](tools/) | `penanda-waktu-tari.html`: a browser tool to mark time points (and a 1–5 movement-quality rating) on a video, exported as CSV for alignment with EEG recordings. |
 
 > **Not a medical device.** This software is for research and teaching. It does not diagnose, monitor
