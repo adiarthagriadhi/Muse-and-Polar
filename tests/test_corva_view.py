@@ -52,6 +52,17 @@ def test_page_embeds_result_and_citations(result):
     assert all(k in data["cites"] for i in data["result"]["conclusions"]["items"] for k in i["refs"])
 
 
+def test_page_is_split_into_screens(result):
+    """One screen per page with tabs and a pager, not one long scroll (print shows every page)."""
+    html = build_html(result, [{"id": SID, "name": "corva uji"}], SID)
+    pages = re.findall(r'<section class="page" id="([a-z]+)" data-title="([^"]+)"', html)
+    assert [p for p, _ in pages] == ["kesimpulan", "perbandingan", "peta", "fase", "lintasan", "tabel", "metode", "rujukan"]
+    assert 'id="tabs"' in html and 'id="prevPage"' in html and 'id="nextPage"' in html
+    assert "overflow: hidden" in html and ".page.active { display: block" in html
+    assert ".page { display: block !important; break-before: page; }" in html  # print: all pages
+    assert "if (!D.comparison) $('perbandingan').remove();" in html
+
+
 def test_page_data_cannot_break_out_of_script(result):
     evil = "</script><script>alert(1)</script>"
     html = build_html(result, [{"id": SID, "name": evil}], SID)

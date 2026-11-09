@@ -76,17 +76,65 @@ TEMPLATE = r"""<!doctype html>
   --good: #2fbf2f; --warning: #e0a000; --critical: #e66767; --link: #8fb8f0;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--bg); color: var(--text-primary); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--text-primary); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 a { color: var(--link); }
-header { padding: 18px 16px 10px; max-width: 1180px; margin: 0 auto; }
-header h1 { margin: 4px 0 2px; font-size: 22px; letter-spacing: -0.01em; }
+header { padding: 10px 16px 0; width: 100%; max-width: 1180px; margin: 0 auto; flex: none; }
+.head-row { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 8px 16px; }
+header h1 { margin: 2px 0 0; font-size: 20px; letter-spacing: -0.01em; }
 .sub { color: var(--text-secondary); margin: 0; }
-.tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.tools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.tools label { display: flex; align-items: center; gap: 6px; }
+.menu { position: relative; }
+.menu summary { list-style: none; }
+.menu summary::-webkit-details-marker { display: none; }
+.menu-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 20; display: grid; min-width: 220px; padding: 6px;
+  background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 6px 20px #0002; }
+.menu-list a, .menu-list button { font: inherit; text-align: left; color: var(--text-primary); background: none; border: 0;
+  padding: 8px 10px; border-radius: 6px; text-decoration: none; cursor: pointer; }
+.menu-list a:hover, .menu-list button:hover { background: var(--surface-2); }
+.tabs { display: flex; gap: 2px; margin-top: 8px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tab { font: inherit; font-size: 13px; color: var(--text-secondary); background: none; border: 0; border-bottom: 2px solid transparent;
+  padding: 8px 12px; cursor: pointer; white-space: nowrap; }
+.tab[aria-selected="true"] { color: var(--text-primary); border-bottom-color: var(--text-primary); font-weight: 600; }
+.pager { flex: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; max-width: 1180px;
+  margin: 0 auto; padding: 8px 16px 12px; }
+.pager .btn:disabled { opacity: 0.4; cursor: default; }
+.page { display: none; }
+.page.active { display: block; animation: fade 0.15s ease-out; }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.strip { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 12px 0 0; }
+.tile { font: inherit; text-align: left; background: var(--surface-1); border: 1px solid var(--border); border-radius: 10px;
+  padding: 8px 10px; cursor: pointer; color: var(--text-primary); min-width: 0; }
+.tile[aria-selected="true"] { border-color: var(--text-primary); box-shadow: inset 0 0 0 1px var(--text-primary); }
+.tile .t-name { display: block; font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .t-lab { display: block; font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .t-cmp { font-size: 12px; }
+.tile .t-cmp.good { color: var(--good); } .tile .t-cmp.warning { color: var(--warning); } .tile .t-cmp.ref, .tile .t-cmp.none { color: var(--text-muted); }
+@media (max-width: 640px) { .strip { grid-template-columns: repeat(5, minmax(56px, 1fr)); } .tile .t-name { display: none; } }
+#fase .cards { display: block; margin-top: 12px; }
+#fase .card { display: none; max-width: 760px; }
+#fase .card.active { display: block; }
+.card-nav { display: flex; justify-content: space-between; margin-top: 12px; }
+#map svg { max-height: calc(100dvh - 360px); min-height: 260px; }
+@media (max-width: 640px) {
+  header .lbl, header a.small, .notice { display: none; }
+  header h1 { font-size: 17px; }
+  .sub { font-size: 12px; }
+  .stat b { font-size: 17px; }
+  .tools select { max-width: 150px; }
+  #peta .chips, #peta p.muted, #peta h2 { display: none; }
+  #peta .panel { margin: 6px 0; padding: 10px 12px; }
+  .legend { grid-template-columns: 1fr 1fr; gap: 4px 10px; font-size: 12px; }
+  .legend .muted.small { grid-column: 1 / -1; }
+  #map svg { max-height: calc(100dvh - 380px); }
+}
 .btn, select { font: inherit; color: var(--text-primary); background: var(--surface-1); border: 1px solid var(--border);
   border-radius: 8px; padding: 6px 10px; cursor: pointer; text-decoration: none; }
 .btn:hover, select:hover { border-color: var(--axis); }
-main { max-width: 1180px; margin: 0 auto; padding: 0 16px 40px; }
-.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; margin: 12px 0; }
+main { flex: 1; min-height: 0; overflow-y: auto; width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 16px 8px; }
+.panel { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin: 10px 0; }
 .panel h2 { font-size: 15px; margin: 0 0 4px; }
 .muted { color: var(--text-muted); }
 .small { font-size: 12px; }
@@ -148,8 +196,14 @@ th { color: var(--text-muted); font-weight: 600; }
 td.num { font-variant-numeric: tabular-nums; }
 .table-wrap { overflow-x: auto; }
 @media print {
-  body { background: #fff; color: #000; }
-  .tools, .chips, .tip, .no-print { display: none !important; }
+  html, body { height: auto; }
+  body { background: #fff; color: #000; display: block; overflow: visible; }
+  main { overflow: visible; }
+  .page { display: block !important; break-before: page; }
+  .page:first-child { break-before: auto; }
+  #fase .card { display: block !important; margin-bottom: 12px; }
+  #map svg { max-height: none; }
+  .tools, .tabs, .chips, .tip, .no-print, .card-nav { display: none !important; }
   .panel, .card { border-color: #ccc; }
   main, header { max-width: none; }
 }
@@ -157,84 +211,119 @@ td.num { font-variant-numeric: tabular-nums; }
 </head>
 <body>
 <header>
-  <a href="/" class="small no-print">← Muse–Polar Live</a>
-  <h1>CorVa Space <span class="muted" style="font-weight:400">· CASS-NV</span></h1>
-  <p class="sub" id="sub"></p>
-  <div class="tools">
-    <select id="sessionSel" aria-label="Pilih sesi"></select>
-    <a class="btn" id="csvPhases">Unduh CSV fase</a>
-    <a class="btn" id="csvWindows">Unduh CSV jendela</a>
-    <a class="btn" id="csvConcl">Unduh CSV kesimpulan</a>
-    <label class="small muted">Bandingkan dengan sesi sebelum:
-      <select id="preSel" aria-label="Sesi sebelum (acuan perbandingan)"></select></label>
-    <button class="btn" id="printBtn">Cetak / PDF</button>
+  <div class="head-row">
+    <div>
+      <a href="/" class="small no-print">← Muse–Polar Live</a>
+      <h1>CorVa Space <span class="muted" style="font-weight:400">· CASS-NV</span></h1>
+      <p class="sub" id="sub"></p>
+    </div>
+    <div class="tools">
+      <label class="small muted"><span class="lbl">Sesi</span> <select id="sessionSel" aria-label="Pilih sesi"></select></label>
+      <label class="small muted"><span class="lbl">Bandingkan dengan sesi sebelum</span>
+        <select id="preSel" aria-label="Sesi sebelum (acuan perbandingan)"></select></label>
+      <details class="menu">
+        <summary class="btn">Unduh / cetak</summary>
+        <div class="menu-list">
+          <a id="csvConcl">CSV kesimpulan</a>
+          <a id="csvPhases">CSV fase</a>
+          <a id="csvWindows">CSV jendela</a>
+          <button type="button" id="printBtn">Cetak / PDF (semua halaman)</button>
+        </div>
+      </details>
+    </div>
   </div>
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Halaman"></nav>
 </header>
-<main>
-  <section class="panel">
-    <p class="notice">Label menggambarkan posisi <b>relatif terhadap acuan R0 orang ini sendiri</b> (baseline setelah menit
-      stabilisasi), bukan norma populasi dan bukan diagnosis. Zona netral |z| &lt; <span id="thr"></span>.</p>
-    <div class="summary" id="summary"></div>
-    <ul class="warn" id="warnings"></ul>
+<main id="main">
+  <section class="page" id="kesimpulan" data-title="Kesimpulan">
+    <div class="panel">
+      <p class="notice">Label menggambarkan posisi <b>relatif terhadap acuan R0 orang ini sendiri</b> (baseline setelah menit
+        stabilisasi), bukan norma populasi dan bukan diagnosis. Zona netral |z| &lt; <span id="thr"></span>.</p>
+      <div class="summary" id="summary"></div>
+      <ul class="warn" id="warnings"></ul>
+    </div>
+    <div class="panel" id="conclPanel">
+      <h2>Kesimpulan</h2>
+      <p class="concl-summary" id="conclSummary"></p>
+      <ul class="concl" id="conclList"></ul>
+      <p class="muted small" id="conclNote"></p>
+    </div>
   </section>
 
-  <section class="panel" id="conclPanel">
-    <h2>Kesimpulan</h2>
-    <p class="concl-summary" id="conclSummary"></p>
-    <ul class="concl" id="conclList"></ul>
-    <p class="muted small" id="conclNote"></p>
+  <section class="page" id="perbandingan" data-title="Perbandingan" data-optional>
+    <div class="panel" id="cmpPanel">
+      <h2 id="cmpTitle">Perbandingan dengan sesi sebelum</h2>
+      <p class="concl-summary" id="cmpSummary"></p>
+      <ul class="concl" id="cmpList"></ul>
+      <p class="muted small" id="cmpNote"></p>
+    </div>
   </section>
 
-  <section class="panel" id="cmpPanel" hidden>
-    <h2 id="cmpTitle">Perbandingan dengan sesi sebelum</h2>
-    <p class="concl-summary" id="cmpSummary"></p>
-    <ul class="concl" id="cmpList"></ul>
-    <div class="table-wrap" id="cmpTable"></div>
-    <p class="muted small" id="cmpNote"></p>
-  </section>
-
-  <section class="panel">
-    <h2>Peta CorVa Space</h2>
-    <p class="muted small">Sumbu X = kondisi kortikal (z log β/α EEG Muse), sumbu Y = kondisi vagal (z lnRMSSD RR Polar).
-      Titik kecil = jendela 5 s yang dianalisis; titik besar bernomor = median fase.</p>
-    <div class="chips" id="chips" role="group" aria-label="Sorot fase"></div>
-    <div class="map-wrap">
-      <div id="map"></div>
-      <div>
-        <div class="legend" id="legend"></div>
-        <label class="small no-print" style="display:block;margin-top:14px"><input type="checkbox" id="showSettle">
-          tampilkan menit stabilisasi (titik berongga)</label>
+  <section class="page" id="peta" data-title="Peta">
+    <div class="panel">
+      <h2>Peta CorVa Space</h2>
+      <p class="muted small">Sumbu X = kondisi kortikal (z log β/α EEG Muse), sumbu Y = kondisi vagal (z lnRMSSD RR Polar).
+        Titik kecil = jendela 5 s yang dianalisis; titik besar bernomor = median fase.</p>
+      <div class="chips" id="chips" role="group" aria-label="Sorot fase"></div>
+      <div class="map-wrap">
+        <div id="map"></div>
+        <div>
+          <div class="legend" id="legend"></div>
+          <label class="small no-print" style="display:block;margin-top:14px"><input type="checkbox" id="showSettle">
+            tampilkan menit stabilisasi (titik berongga)</label>
+        </div>
       </div>
     </div>
   </section>
 
-  <section>
-    <h2 style="font-size:15px;margin:18px 0 8px">Label per fase</h2>
+  <section class="page" id="fase" data-title="Fase">
+    <div class="strip no-print" id="strip" role="tablist" aria-label="Pilih fase"></div>
     <div class="cards" id="cards"></div>
   </section>
 
-  <section class="panel">
-    <h2>Lintasan waktu</h2>
-    <p class="muted small">Pita abu-abu = zona netral; area arsir = menit stabilisasi (tidak dianalisis). Garis vertikal = awal fase.</p>
-    <div class="tl-title"><span>X kortikal · z log(β/α)</span></div>
-    <div id="tlx"></div>
-    <div class="tl-title"><span>Y vagal · z lnRMSSD</span></div>
-    <div id="tly"></div>
+  <section class="page" id="lintasan" data-title="Lintasan waktu">
+    <div class="panel">
+      <h2>Lintasan waktu</h2>
+      <p class="muted small">Pita abu-abu = zona netral; area arsir = menit stabilisasi (tidak dianalisis). Garis vertikal = awal fase.</p>
+      <div class="tl-title"><span>X kortikal · z log(β/α)</span></div>
+      <div id="tlx"></div>
+      <div class="tl-title"><span>Y vagal · z lnRMSSD</span></div>
+      <div id="tly"></div>
+    </div>
   </section>
 
-  <section class="panel">
-    <h2>Tabel fase</h2>
-    <div class="table-wrap" id="table"></div>
+  <section class="page" id="tabel" data-title="Tabel">
+    <div class="panel">
+      <h2>Tabel fase</h2>
+      <div class="table-wrap" id="table"></div>
+    </div>
+    <div class="panel" id="cmpTableWrap" hidden>
+      <h2>Perubahan dari R0: sesi sebelum → sesudah</h2>
+      <div class="table-wrap" id="cmpTable"></div>
+    </div>
   </section>
 
-  <section class="panel">
-    <h2>Metode dan rujukan</h2>
-    <dl id="method"></dl>
-    <ul class="reflist" id="refs"></ul>
-    <p class="muted small">⚠ = DOI atau daftar penulis belum terverifikasi; cek naskah asli sebelum dikutip. Peta bukti lengkap:
-      <code>corva/EVIDENCE.md</code>.</p>
+  <section class="page" id="metode" data-title="Metode">
+    <div class="panel">
+      <h2>Metode</h2>
+      <dl id="method"></dl>
+    </div>
+  </section>
+
+  <section class="page" id="rujukan" data-title="Rujukan">
+    <div class="panel">
+      <h2>Rujukan yang dipakai di halaman ini</h2>
+      <ul class="reflist" id="refs"></ul>
+      <p class="muted small">⚠ = DOI atau daftar penulis belum terverifikasi; cek naskah asli sebelum dikutip. Peta bukti lengkap:
+        <code>corva/EVIDENCE.md</code>.</p>
+    </div>
   </section>
 </main>
+<footer class="pager no-print">
+  <button class="btn" id="prevPage" type="button">‹ Sebelumnya</button>
+  <span class="muted small" id="pageInfo" aria-live="polite"></span>
+  <button class="btn" id="nextPage" type="button">Berikutnya ›</button>
+</footer>
 <div class="tip" id="tip" role="tooltip"></div>
 <script id="corva-data" type="application/json">/*__DATA__*/</script>
 <script>
@@ -258,18 +347,21 @@ $('sub').textContent = `${name} · ${ft(R.duration_s)} menit rekaman · ${R.wind
 document.title = `CorVa Space · ${name}`;
 $('thr').textContent = String(THR).replace('.', ',');
 $('sessionSel').innerHTML = D.sessions.map((s) => `<option value="${esc(s.id)}"${s.id === D.current ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
-$('sessionSel').addEventListener('change', (e) => { location.href = '/corva/session/' + encodeURIComponent(e.target.value); });
+$('sessionSel').addEventListener('change', (e) => {
+  const keep = location.hash === '#perbandingan' ? '' : location.hash;  // stay on the same page
+  location.href = '/corva/session/' + encodeURIComponent(e.target.value) + keep;
+});
 const preId = D.comparison ? D.comparison.pre : '';
 $('preSel').innerHTML = `<option value="">— tidak dibandingkan —</option>` + D.sessions.filter((s) => s.id !== D.current)
   .map((s) => `<option value="${esc(s.id)}"${s.id === preId ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
 $('preSel').addEventListener('change', (e) => {
   const v = e.target.value;
-  location.href = '/corva/session/' + encodeURIComponent(D.current) + (v ? '?pre=' + encodeURIComponent(v) : '');
+  location.href = '/corva/session/' + encodeURIComponent(D.current) + (v ? '?pre=' + encodeURIComponent(v) + '#perbandingan' : '');
 });
 $('csvConcl').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=conclusions` + (preId ? '&pre=' + encodeURIComponent(preId) : '');
 $('csvPhases').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=phases`;
 $('csvWindows').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=windows`;
-$('printBtn').addEventListener('click', () => window.print());
+$('printBtn').addEventListener('click', () => { document.querySelector('.menu').open = false; window.print(); });
 
 const r0 = R.r0;
 $('summary').innerHTML = [
@@ -291,13 +383,13 @@ $('conclList').innerHTML = C.items.map(conclItem).join('');
 $('conclNote').textContent = C.note + (C.missing.length ? ` Fase tanpa label (tidak ikut disimpulkan): ${C.missing.join(', ')}.` : '');
 if (D.comparison) {
   const X = D.comparison, preName = (D.sessions.find((s) => s.id === X.pre) || {}).name || X.pre;
-  $('cmpPanel').hidden = false;
   $('cmpTitle').textContent = `Perbandingan dengan sesi sebelum: ${preName}`;
   if (X.error) { $('cmpSummary').textContent = X.error; }
   else {
     $('cmpSummary').textContent = X.summary;
     $('cmpList').innerHTML = X.items.map(conclItem).join('');
     const cell = (v) => v == null ? '–' : (v < 0 ? '−' : '+') + Math.abs(v).toFixed(2);
+    $('cmpTableWrap').hidden = false;
     $('cmpTable').innerHTML = `<table><thead><tr><th>Fase</th><th>Δ log(β/α) dari R0<br>sebelum → sesudah</th><th>Δ lnRMSSD dari R0<br>sebelum → sesudah</th><th>Label sebelum → sesudah</th></tr></thead><tbody>`
       + X.table.map((r) => `<tr><td>${SPEC[r.id].num} · ${esc(r.name)}</td>`
         + `<td class="num">${cell(r.log_beta_alpha.pre)} → ${cell(r.log_beta_alpha.post)}</td>`
@@ -451,8 +543,27 @@ $('cards').innerHTML = R.phases.map((p) => {
   if (lab.alternatives.length) body += `<p class="alts">Juga disebut: ${lab.alternatives.map((a) => esc(a.name) + (a.kind === 'analogi' ? ' (analogi)' : '')).join('; ')}</p>`;
   const refs = citeList([...new Set([...lab.refs, ...p.expected_refs])]);
   if (refs) body += `<p class="refs">Rujukan: ${refs}</p>`;
-  return `<article class="card"><div class="card-head">${swatch(p.id, 8)}<div><h3>${s.num} · ${esc(p.name)}</h3><div class="time">${time}</div></div></div>${body}</article>`;
+  const nav = `<div class="card-nav no-print"><button class="btn" type="button" data-step="-1">‹ Fase sebelumnya</button>`
+    + `<button class="btn" type="button" data-step="1">Fase berikutnya ›</button></div>`;
+  return `<article class="card" data-phase="${p.id}"><div class="card-head">${swatch(p.id, 8)}<div><h3>${s.num} · ${esc(p.name)}</h3><div class="time">${time}</div></div></div>${body}${nav}</article>`;
 }).join('');
+
+// one phase per screen: a strip of the five phases, then the chosen card
+let phaseIdx = 0;
+$('strip').innerHTML = R.phases.map((p, i) => {
+  const [cls, icon] = cmpClass[p.comparison] || ['none', '—'];
+  return `<button class="tile" type="button" role="tab" data-i="${i}">${swatch(p.id, 5)} <b>${SPEC[p.id].num}</b>`
+    + `<span class="t-name">${esc(p.name)}</span><span class="t-lab">${esc(p.label.label)}</span>`
+    + `<span class="t-cmp ${cls}">${icon} ${esc(p.comparison || 'tidak dibandingkan')}</span></button>`;
+}).join('');
+function showPhase(i) {
+  phaseIdx = (i + R.phases.length) % R.phases.length;
+  document.querySelectorAll('#strip .tile').forEach((t, k) => t.setAttribute('aria-selected', String(k === phaseIdx)));
+  document.querySelectorAll('#cards .card').forEach((c, k) => c.classList.toggle('active', k === phaseIdx));
+}
+$('strip').addEventListener('click', (e) => { const t = e.target.closest('.tile'); if (t) showPhase(+t.dataset.i); });
+$('cards').addEventListener('click', (e) => { const b = e.target.closest('[data-step]'); if (b) showPhase(phaseIdx + +b.dataset.step); });
+showPhase(0);
 
 // ---------------------------------------------------------------- timelines (one axis each)
 const TW = 1100, TH = 150, tl = 46, tr = 12, tt = 16, tb = 22;
@@ -515,6 +626,44 @@ $('method').innerHTML = [
   ['Normalisasi', M.normalization], ['Syarat label fase', `≥ ${M.min_rr_s} s RR valid dan ≥ ${M.min_eeg_s} s EEG bersih per ruas analisis`],
   ['Jendela', `${M.window_s} s, RMSSD dari rentang RR ${M.rr_span_s} s`], ['Artefak EEG', M.eeg_artifact], ['Versi mesin', R.version],
 ].map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+// ---------------------------------------------------------------- pages (one screen at a time, no long scroll)
+if (!D.comparison) $('perbandingan').remove();
+const pages = [...document.querySelectorAll('.page')];
+let pageIdx = 0;
+$('tabs').innerHTML = pages.map((pg, i) => `<button class="tab" type="button" role="tab" data-i="${i}" aria-controls="${pg.id}">${esc(pg.dataset.title)}</button>`).join('');
+function showPage(i, push = true) {
+  pageIdx = Math.max(0, Math.min(pages.length - 1, i));
+  pages.forEach((pg, k) => pg.classList.toggle('active', k === pageIdx));
+  document.querySelectorAll('#tabs .tab').forEach((t, k) => t.setAttribute('aria-selected', String(k === pageIdx)));
+  const tab = document.querySelector(`#tabs .tab[data-i="${pageIdx}"]`);
+  if (tab) tab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  $('pageInfo').textContent = `${pageIdx + 1} / ${pages.length} · ${pages[pageIdx].dataset.title}`;
+  $('prevPage').disabled = pageIdx === 0;
+  $('nextPage').disabled = pageIdx === pages.length - 1;
+  $('main').scrollTop = 0;
+  hideTip();
+  if (push && location.hash !== '#' + pages[pageIdx].id) history.pushState(null, '', '#' + pages[pageIdx].id);
+}
+const pageFromHash = () => Math.max(0, pages.findIndex((pg) => '#' + pg.id === location.hash));
+$('tabs').addEventListener('click', (e) => { const t = e.target.closest('.tab'); if (t) showPage(+t.dataset.i); });
+$('prevPage').addEventListener('click', () => showPage(pageIdx - 1));
+$('nextPage').addEventListener('click', () => showPage(pageIdx + 1));
+addEventListener('popstate', () => showPage(pageFromHash(), false));
+addEventListener('keydown', (e) => {
+  if (e.altKey || e.ctrlKey || e.metaKey || /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName)) return;
+  if (e.key === 'ArrowRight' || e.key === 'PageDown') { showPage(pageIdx + 1); e.preventDefault(); }
+  if (e.key === 'ArrowLeft' || e.key === 'PageUp') { showPage(pageIdx - 1); e.preventDefault(); }
+});
+let touchX = null, touchY = null;
+$('main').addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; touchY = e.touches[0].clientY; }, { passive: true });
+$('main').addEventListener('touchend', (e) => {
+  if (touchX == null) return;
+  const dx = e.changedTouches[0].clientX - touchX, dy = e.changedTouches[0].clientY - touchY;
+  if (Math.abs(dx) > 70 && Math.abs(dx) > 2 * Math.abs(dy)) showPage(pageIdx + (dx < 0 ? 1 : -1));
+  touchX = null;
+}, { passive: true });
+showPage(pageFromHash(), false);
+
 $('refs').innerHTML = Object.entries(D.cites).map(([k, c]) => `<li>${esc(c.cite)}${c.ok ? '' : ' ⚠'}. ${esc(c.title)}.${c.doi ? ` <a href="https://doi.org/${encodeURIComponent(c.doi).replace(/%2F/g, '/')}" target="_blank" rel="noopener">doi:${esc(c.doi)}</a>` : ''}</li>`).join('');
 })();
 </script>
