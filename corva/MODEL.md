@@ -147,6 +147,10 @@ Mesin v0.2 (`corva/session.py`, `python -m corva.session <folder>`):
   harapan*, atau *acuan (R0)* untuk baseline.
 - **Artefak EEG (D-13):** seperti CASS/NB06 (*asumsi*, diuji banding di v0.5).
 
+Tampilan v0.3 (`/corva/session/<id>`, tombol **Tampilkan CorVa** di dashboard) menyajikan hasil mesin:
+peta 3 × 3 dengan lintasan dan median fase, kartu label per fase, lintasan waktu X dan Y, tabel fase,
+ekspor CSV (per fase dan per jendela), serta cetak/PDF (D-18).
+
 ## 6. Rencana validasi (ringkas, rincian di `ROADMAP.md`)
 
 - Kondisi yang sudah diketahui:

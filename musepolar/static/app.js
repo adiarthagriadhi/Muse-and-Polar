@@ -386,7 +386,7 @@ function cassSession() {
 }
 function renderCass() {
   const s = cassSession();
-  for (const b of ['cassExport', 'cassShow']) {
+  for (const b of ['cassExport', 'cassShow', 'corvaShow']) {
     $(b).disabled = !!s.why;
     $(b).title = s.why || `Sesi ${s.id}`;
   }
@@ -411,6 +411,10 @@ $('cassExport').addEventListener('click', async () => {
 $('cassShow').addEventListener('click', () => {
   const { id } = cassSession();
   if (id) window.open(`/cass/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
+});
+$('corvaShow').addEventListener('click', () => {
+  const { id } = cassSession();
+  if (id) window.open(`/corva/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
 });
 
 function renderMetrics(m) {

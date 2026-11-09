@@ -284,6 +284,49 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
     }
 
 
+PHASE_COLUMNS = ["id", "name", "recorded", "start", "end", "analysis_start", "analysis_end", "complete",
+                 "code", "label", "phase_reading", "qualifier", "expected", "comparison", "adequate", "reasons",
+                 "x_z", "y_z", "theta_beta_z", "engagement_z", "x_magnitude", "y_magnitude",
+                 "n_windows", "n_valid", "valid_fraction", "rr_valid_s", "eeg_clean_s", "analysis_s",
+                 "segment_rmssd_ms", "segment_ln_rmssd", "occupancy", "refs"]
+WINDOW_COLUMNS = ["t0", "t1", "tm", "phase_id", "analysed", "x_z", "y_z", "theta_beta_z", "engagement_z",
+                  "rmssd_ms", "ln_rmssd", "n_ibi", "code", "label"]
+
+
+def _csv(rows, columns) -> str:
+    import csv
+    import io
+
+    f = io.StringIO()
+    w = csv.writer(f)
+    w.writerow(columns)
+    for r in rows:
+        w.writerow(["" if r.get(c) is None else r.get(c) for c in columns])
+    return f.getvalue()
+
+
+def phases_csv(result: dict) -> str:
+    """One row per protocol phase: label, comparison, medians and data coverage."""
+    rows = []
+    for p in result["phases"]:
+        lab, data, med = p["label"], p.get("data", {}), p.get("medians", {})
+        rows.append({**{k: p.get(k) for k in ("id", "name", "recorded", "start", "end", "analysis_start",
+                                              "analysis_end", "complete", "comparison", "adequate")},
+                     "code": lab["code"], "label": lab["label"], "phase_reading": lab["phase_reading"],
+                     "qualifier": lab["qualifier"], "x_magnitude": lab["x_magnitude"], "y_magnitude": lab["y_magnitude"],
+                     "expected": " | ".join(p["expected"]), "reasons": " | ".join(p["reasons"]),
+                     **med, **data,
+                     "segment_rmssd_ms": p.get("segment_rmssd_ms"), "segment_ln_rmssd": p.get("segment_ln_rmssd"),
+                     "occupancy": " ".join(f"{c}={v}" for c, v in p.get("occupancy", {}).items()),
+                     "refs": " ".join(lab["refs"])})
+    return _csv(rows, PHASE_COLUMNS)
+
+
+def windows_csv(result: dict) -> str:
+    """One row per 5 s window (all windows, settling included, see 'analysed')."""
+    return _csv(result["windows"], WINDOW_COLUMNS)
+
+
 def main() -> None:
     import argparse
     import json
