@@ -6,6 +6,8 @@
 Setiap aturan model menunjuk rujukannya, atau dinyatakan sebagai **asumsi** yang masih harus
 divalidasi. Tes `tests/test_corva_evidence.py` gagal bila ada aturan tanpa rujukan yang tidak
 dinyatakan asumsi, rujukan yang tidak dikenal, rujukan yang tidak dipakai, atau berkas ini tidak mutakhir.
+Kesimpulan bertanda *kombinasi diasumsikan* memakai rujukan untuk komponennya (arah tiap penanda), tetapi
+penggabungannya menjadi satu kesimpulan belum divalidasi dan ditulis "Diasumsikan …" (D-21).
 
 ## Aturan → rujukan
 
@@ -43,6 +45,13 @@ dinyatakan asumsi, rujukan yang tidak dikenal, rujukan yang tidak dipakai, atau 
 | Mesin: bacaan fase protokol = istirahat | Laborde dkk. (2018) | semua blok protokol adalah istirahat duduk, jadi bacaan kuadran memakai fase 'istirahat' Vagal Tank Theory |
 | Mesin: label per fase dari median jendela | **asumsi** | label per fase dari median z jendela yang dianalisis, okupansi sel sebagai keterangan; asumsi, diuji di validasi v0.5 |
 | Mesin: artefak EEG seperti NB06 (D-13) | **asumsi** | artefak EEG seperti CASS/NB06: window 4 s ditolak bila > 20 % sampel melebihi 80 µV (D-13); asumsi, diuji banding dengan potongan 2 s Research View di v0.5 |
+| Kesimpulan: respons rileks khas (D-20) | Barry dkk. (2007); Lehrer & Gevirtz (2014); Laborde dkk. (2022) | respons rileks khas: korteks melambat saat mata tertutup dan vagal naik saat napas 6/menit, arah yang umumnya dijumpai (D-20) |
+| Kesimpulan: sulit rileks secara kortikal (D-20, D-21) | Barry dkk. (2007) · kombinasi **diasumsikan** | komponen: mata tertutup umumnya menaikkan alfa (korteks melambat); tidak melambat = sulit rileks secara kortikal diasumsikan (D-21) |
+| Kesimpulan: sulit rileks secara vagal (D-20, D-21) | Lehrer & Gevirtz (2014); Laborde dkk. (2022); Laborde dkk. (2018) · kombinasi **diasumsikan** | komponen: napas 6/menit umumnya menaikkan HRV vagal; reaktivitas vagal (Vagal Tank Theory); tidak naik = sulit rileks secara vagal diasumsikan (D-21) |
+| Kesimpulan: beban kortikal / berpikir berat (D-20) | Ehrhardt dkk. (2022); Borghini dkk. (2014) | alfa turun/beta naik (β/α naik) saat beban kognitif dan stres; bersama penarikan vagal (Q4) sesuai pola stres/beban mental (D-20) |
+| Kesimpulan: kelelahan / mengantuk (D-20) | Borghini dkk. (2014); Klimesch (1999) | Q3 dengan θ/β naik: theta naik bersama perlambatan kortikal saat lelah/mengantuk (D-20) |
+| Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21) | Laborde dkk. (2017); Thayer dkk. (2009) · kombinasi **diasumsikan** | komponen: RMSSD turun = penarikan vagal; tonus vagal mencerminkan kapasitas regulasi; tanpa tugas = tegang diasumsikan (D-21) |
+| Kesimpulan: perubahan sesudah intervensi (D-19, D-21) | Laborde dkk. (2022); Plews dkk. (2012); Laborde dkk. (2018) · kombinasi **diasumsikan** | lnRMSSD dipantau antarhari; latihan napas lambat mengubah HRV vagal; dibandingkan perubahan dari R0 masing-masing sesi (satuan asli), ambang 0,6 × skala R0 diasumsikan (D-19, D-21) |
 
 ## Protokol standar
 
@@ -79,7 +88,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[barry2007]** Barry RJ, Clarke AR, Johnstone SJ, Magee CA, Rushby JA (2007). EEG differences between eyes-closed and eyes-open resting conditions. *Clinical Neurophysiology 118(12):2765-2773*. doi:10.1016/j.clinph.2007.07.028
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Alfa rata-rata berkorelasi negatif dengan konduktansi kulit dan turun saat mata dibuka; alfa layak sebagai ukuran arousal istirahat.
-  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q2` Rileks–pulih, `X_HIGH` Aktivasi kortikal, `X_LOW` Korteks melambat, Protokol: mata terbuka vs tertutup
+  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q2` Rileks–pulih, `X_HIGH` Aktivasi kortikal, `X_LOW` Korteks melambat, Protokol: mata terbuka vs tertutup, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara kortikal (D-20, D-21)
 - **[berntson1991]** Berntson GG, Cacioppo JT, Quigley KS (1991). Autonomic determinism: the modes of autonomic control, the doctrine of autonomic space, and the laws of autonomic constraint. *Psychological Review 98(4):459-487*. doi:10.1037/0033-295X.98.4.459
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Mode kendali otonom tidak berada pada satu kontinum simpatis-parasimpatis, tetapi di ruang dua dimensi (autonomic space).
@@ -91,7 +100,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[borghini2014]** Borghini G, Astolfi L, Vecchiato G, Mattia D, Babiloni F (2014). Measuring neurophysiological signals in aircraft pilots and car drivers for the assessment of mental workload, fatigue and drowsiness. *Neuroscience and Biobehavioral Reviews 44:58-75*. doi:10.1016/j.neubiorev.2012.10.003
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Beban kerja tinggi: theta naik, alfa turun. Peralihan ke kelelahan: theta, delta, dan alfa naik.
-  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, Penanda tambahan Q3 (θ/β, fase pemulihan; D-12), `Q3` Hipoaktif, `Q4` Teraktivasi–terbebani
+  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, Penanda tambahan Q3 (θ/β, fase pemulihan; D-12), `Q3` Hipoaktif, `Q4` Teraktivasi–terbebani, Kesimpulan: beban kortikal / berpikir berat (D-20), Kesimpulan: kelelahan / mengantuk (D-20)
 - **[bourdillon2017]** Bourdillon N, dkk. (daftar penulis belum lengkap) (2017). Minimal window duration for accurate HRV recording in athletes. *Frontiers in Neuroscience 11:456*. doi:10.3389/fnins.2017.00456
   ⚠ penulis belum lengkap · *dibaca:* abstract
   Temuan yang dipakai: RMSSD cukup dengan jendela analisis 2 menit (posisi berbaring); perlu 1 menit stabilisasi sebelumnya, jadi 3 menit = 1 + 2; ukuran ranah frekuensi perlu 5 menit = 1 + 4.
@@ -111,7 +120,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[ehrhardt2022]** Ehrhardt NM, Fietz J, Kopf-Beck J, Kappelmann N, Brem AK (2022). Separating EEG correlates of stress: cognitive effort, time pressure, and social-evaluative threat. *European Journal of Neuroscience 55(9-10):2464-2473*. doi:10.1111/ejn.15211
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Saat PASAT dibanding istirahat, alfa frontal turun dan beta naik; daya EEG frontal membedakan stres dari istirahat, tetapi tidak membedakan derajat stres (n = 38).
-  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q4` Teraktivasi–terbebani, `X_HIGH` Aktivasi kortikal
+  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q4` Teraktivasi–terbebani, `X_HIGH` Aktivasi kortikal, Kesimpulan: beban kortikal / berpikir berat (D-20)
 - **[esco2014]** Esco MR, Flatt AA (2014). Ultra-short-term heart rate variability indexes at rest and post-exercise in athletes: evaluating the agreement with accepted recommendations. *Journal of Sports Science and Medicine 13(3):535-541*. (tanpa DOI)
   ⚠ tanpa DOI · *dibaca:* abstract
   Temuan yang dipakai: lnRMSSD 60 s sesuai dengan rekaman 5 menit pada atlet, saat istirahat dan pascalatihan.
@@ -131,7 +140,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[klimesch1999]** Klimesch W (1999). EEG alpha and theta oscillations reflect cognitive and memory performance: a review and analysis. *Brain Research Reviews 29(2-3):169-195*. doi:10.1016/S0165-0173(98)00056-3
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Theta terkait penyandian informasi baru; alfa atas terkait pencarian memori; pita alfa sebaiknya individual.
-  Dipakai untuk: Penanda tambahan Q3 (θ/β, fase pemulihan; D-12), Mesin: pita theta 4–8 Hz (D-12)
+  Dipakai untuk: Penanda tambahan Q3 (θ/β, fase pemulihan; D-12), Mesin: pita theta 4–8 Hz (D-12), Kesimpulan: kelelahan / mengantuk (D-20)
 - **[krigolson2017]** Krigolson OE, Williams CC, Norton A, Hassall CD, Colino FL, dkk. (daftar penulis belum lengkap) (2017). Choosing MUSE: validation of a low-cost, portable EEG system for ERP research. *Frontiers in Neuroscience 11:109*. doi:10.3389/fnins.2017.00109
   ⚠ penulis belum lengkap · *dibaca:* abstract
   Temuan yang dipakai: Muse (TP9, AF7, AF8, TP10) menangkap N200, P300, dan reward positivity pada 60 peserta.
@@ -143,19 +152,19 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[laborde2017]** Laborde S, Mosley E, Thayer JF (2017). Heart rate variability and cardiac vagal tone in psychophysiological research: recommendations for experiment planning, data analysis, and data reporting. *Frontiers in Psychology 8:213*. doi:10.3389/fpsyg.2017.00213
   ✓ · *dibaca:* abstract and secondary summaries
   Temuan yang dipakai: RMSSD dianjurkan untuk rekaman pendek; LF/HF tidak dianjurkan sebagai keseimbangan simpatovagal; PPG bukan pengganti EKG saat bergerak.
-  Dipakai untuk: Sumbu Y: RMSSD RR Polar, `Q4` Teraktivasi–terbebani, `Y_HIGH` Vagal naik, `Y_LOW` Penarikan vagal, Protokol: baseline relaks 5 menit
+  Dipakai untuk: Sumbu Y: RMSSD RR Polar, `Q4` Teraktivasi–terbebani, `Y_HIGH` Vagal naik, `Y_LOW` Penarikan vagal, Protokol: baseline relaks 5 menit, Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21)
 - **[laborde2018]** Laborde S, Mosley E, Mertgen A (2018). Vagal Tank Theory: the three Rs of cardiac vagal control functioning - resting, reactivity, and recovery. *Frontiers in Neuroscience 12:458*. doi:10.3389/fnins.2018.00458
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Kendali vagal dinilai pada tiga tingkat: istirahat, reaktivitas, pemulihan.
-  Dipakai untuk: Konteks fase istirahat/aktivitas/pemulihan, `Q2` Rileks–pulih, Mesin: bacaan fase protokol = istirahat
+  Dipakai untuk: Konteks fase istirahat/aktivitas/pemulihan, `Q2` Rileks–pulih, Mesin: bacaan fase protokol = istirahat, Kesimpulan: sulit rileks secara vagal (D-20, D-21), Kesimpulan: perubahan sesudah intervensi (D-19, D-21)
 - **[laborde2022]** Laborde S, Allen MS, Borges U, dkk. (daftar penulis belum lengkap) (2022). Effects of voluntary slow breathing on heart rate and heart rate variability: a systematic review and a meta-analysis. *Neuroscience and Biobehavioral Reviews 138:104711*. doi:10.1016/j.neubiorev.2022.104711
   ⚠ DOI belum terverifikasi, penulis belum lengkap · *dibaca:* abstract
   Temuan yang dipakai: Napas lambat sukarela menaikkan HRV vagal selama sesi, segera sesudah satu sesi, dan setelah intervensi (223 studi).
-  Dipakai untuk: Protokol: napas dalam 6/menit, Protokol: efek terbawa antarblok
+  Dipakai untuk: Protokol: napas dalam 6/menit, Protokol: efek terbawa antarblok, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21), Kesimpulan: perubahan sesudah intervensi (D-19, D-21)
 - **[lehrer2014]** Lehrer PM, Gevirtz R (2014). Heart rate variability biofeedback: how and why does it work?. *Frontiers in Psychology 5:756*. doi:10.3389/fpsyg.2014.00756
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Efek maksimal pada napas sekitar 0,1 Hz (6 napas/menit); napas spontan umumnya 0,15-0,4 Hz (9-24/menit); amplitudo osilasi denyut naik berlipat.
-  Dipakai untuk: Protokol: napas dalam 6/menit
+  Dipakai untuk: Protokol: napas dalam 6/menit, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21)
 - **[munoz2015]** Munoz ML, van Roon A, Riese H, Thio C, Oostenbroek E, Westrik I, de Geus EJC, Gansevoort R, Lefrandt J, Nolte IM, Snieder H (2015). Validity of (ultra-)short recordings for heart rate variability measurements. *PLoS ONE 10(9):e0138921*. doi:10.1371/journal.pone.0138921
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: RMSSD 10 s r = 0,85-0,86 terhadap 4-5 menit; tiga potongan 10 s r = 0,94; 120 s hampir sempurna (n = 3.387).
@@ -163,7 +172,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[plews2012]** Plews DJ, Laursen PB, Kilding AE, Buchheit M (2012). Heart rate variability in elite triathletes, is variation in variability the key to effective training? A case comparison. *European Journal of Applied Physiology 112(11):3729-3741*. doi:10.1007/s00421-012-2354-4
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Rata-rata 7 hari lnRMSSD menurun pada atlet yang mengalami non-functional overreaching.
-  Dipakai untuk: Y memakai lnRMSSD (D-10)
+  Dipakai untuk: Y memakai lnRMSSD (D-10), Kesimpulan: perubahan sesudah intervensi (D-19, D-21)
 - **[pope1995]** Pope AT, Bogart EH, Bartolome DS (1995). Biocybernetic system evaluates indices of operator engagement in automated task. *Biological Psychology 40:187-195*. doi:10.1016/0301-0511(95)05116-3
   ⚠ DOI belum terverifikasi · *dibaca:* abstract
   Temuan yang dipakai: Di antara indeks yang diuji, beta/(alpha + theta) paling baik mencerminkan keterlibatan tugas.
@@ -195,7 +204,7 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[thayer2009]** Thayer JF, Hansen AL, Saus-Rose E, Johnsen BH (2009). Heart rate variability, prefrontal neural function, and cognitive performance: the neurovisceral integration perspective on self-regulation, adaptation, and health. *Annals of Behavioral Medicine 37(2):141-153*. doi:10.1007/s12160-009-9101-z
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: HRV berkaitan dengan fungsi prefrontal dan kinerja eksekutif; mengubah HRV istirahat mengubah kinerja eksekutif.
-  Dipakai untuk: Dua sumbu ortogonal (bidang CorVa), `Q1` Terlibat–teratur
+  Dipakai untuk: Dua sumbu ortogonal (bidang CorVa), `Q1` Terlibat–teratur, Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21)
 - **[zaccaro2018]** Zaccaro A, dkk. (daftar penulis belum lengkap) (2018). How breath-control can change your life: a systematic review on psycho-physiological correlates of slow breathing. *Frontiers in Human Neuroscience 12:353*. doi:10.3389/fnhum.2018.00353
   ⚠ penulis belum lengkap · *dibaca:* abstract
   Temuan yang dipakai: Napas lambat (< 10/menit): EEG alfa naik dan theta turun; HRV dan RSA naik; rasa rileks naik.

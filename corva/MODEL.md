@@ -151,6 +151,25 @@ Tampilan v0.3 (`/corva/session/<id>`, tombol **Tampilkan CorVa** di dashboard) m
 peta 3 × 3 dengan lintasan dan median fase, kartu label per fase, lintasan waktu X dan Y, tabel fase,
 ekspor CSV (per fase dan per jendela), serta cetak/PDF (D-18).
 
+## 5b. Kesimpulan (D-19 s.d. D-21)
+
+Satu sesi menunjukkan **pola respons** terhadap kondisi protokol, relatif terhadap R0 orang itu. Keadaan
+selama baseline tidak terlihat, jadi untuk menempatkan seseorang dibanding waktu lain (mis. sebelum latihan
+meditasi) dipakai **sesi sebelum** sebagai pembanding, dan nanti **norma kelompok** (v0.5).
+
+| Kesimpulan | Pola | Status | Rujukan |
+|---|---|---|---|
+| Respons rileks khas | semua fase rileks yang memenuhi syarat (≥ 2 dari fase 3–5) sesuai harapan | dari rujukan | Barry 2007; Lehrer & Gevirtz 2014; Laborde 2022 |
+| Sulit rileks secara kortikal | mata tertutup (fase 4–5): X tidak masuk zona rendah | diasumsikan | Barry 2007 (arah) |
+| Sulit rileks secara vagal | napas dalam (fase 3, 5): Y tidak masuk zona tinggi | diasumsikan | Lehrer & Gevirtz 2014; Laborde 2022; Laborde 2018 |
+| Beban kortikal / berpikir berat | X tinggi di fase mana pun; Q4 = disertai penarikan vagal | dari rujukan | Ehrhardt 2022; Borghini 2014 |
+| Kelelahan / mengantuk | Q3 dengan θ/β naik | dari rujukan | Borghini 2014; Klimesch 1999 |
+| Tegang / penarikan vagal saat istirahat | fase 2 (istirahat tanpa tugas): Y rendah | diasumsikan | Laborde 2017; Thayer 2009 |
+| Perubahan sesudah intervensi | level R0 dan Δ dari R0 tiap fase (log(β/α), lnRMSSD) bergeser ≥ 0,6 × skala R0 antara sesi sebelum dan sesudah; kesimpulan yang muncul/hilang | diasumsikan | Plews 2012; Laborde 2022; Laborde 2018 |
+
+Kesimpulan *diasumsikan* ditulis "Diasumsikan …": komponennya (arah tiap penanda dalam tiap kondisi) dari
+rujukan, tetapi penggabungannya belum divalidasi. Semua kesimpulan deskriptif, bukan diagnosis.
+
 ## 6. Rencana validasi (ringkas, rincian di `ROADMAP.md`)
 
 - Kondisi yang sudah diketahui:

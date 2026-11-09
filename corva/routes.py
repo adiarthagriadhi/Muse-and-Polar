@@ -4,7 +4,9 @@ GET /corva                              → newest session recorded with the Cor
 GET /corva/session/{session}            → CorVa Space page: 3 × 3 map, phase cards, timelines
 GET /api/corva/sessions                 → sessions that carry CorVa protocol markers
 GET /api/corva/analysis/{session}       → corva.session.analyze_session() as JSON
-GET /api/corva/export/{session}?level=phases|windows → CSV
+GET /api/corva/export/{session}?level=phases|windows|conclusions[&pre=<id>] → CSV
+GET /api/corva/compare?pre=<id>&post=<id>  → change between a session before and after (D-19)
+GET /corva/session/{session}?pre=<id>      → the page with the comparison against an earlier session
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from aiohttp import web
 from cass_polar.live_routes import resolve_session, sessions
 
 from . import protocol
+from .conclusions import compare, conclusions_csv
 from .session import analyze_session, phases_csv, windows_csv
 from .view import build_html
 
@@ -86,16 +89,42 @@ def add_routes(app: web.Application, data_dir) -> None:
     async def export_csv(request):
         folder = resolve_session(root, request.match_info["session"])
         level = request.query.get("level", "phases")
-        if level not in ("phases", "windows"):
-            raise web.HTTPBadRequest(text="level harus phases atau windows")
+        if level not in ("phases", "windows", "conclusions"):
+            raise web.HTTPBadRequest(text="level harus phases, windows atau conclusions")
         try:
             result = await asyncio.to_thread(cached_analysis, folder)
+            comparison = await asyncio.to_thread(_comparison, request.query.get("pre"), folder, result)
         except (ValueError, OSError) as exc:
             return web.json_response({"error": str(exc)}, status=422)
-        body = phases_csv(result) if level == "phases" else windows_csv(result)
-        name = f"{folder.name}_CorVa_{'fase' if level == 'phases' else 'jendela'}.csv"
+        if level == "conclusions":
+            body = conclusions_csv(result, comparison if comparison and "error" not in comparison else None)
+        else:
+            body = phases_csv(result) if level == "phases" else windows_csv(result)
+        name = f"{folder.name}_CorVa_{ {'phases': 'fase', 'windows': 'jendela', 'conclusions': 'kesimpulan'}[level] }.csv"
         return web.Response(text=body, content_type="text/csv", charset="utf-8",
                             headers={"Content-Disposition": f'attachment; filename="{name}"'})
+
+    def _comparison(pre_id, folder, result):
+        """compare(pre, result) for ?pre=<id>; an error dict when the earlier session cannot be analysed."""
+        if not pre_id or pre_id == folder.name:
+            return None
+        try:
+            pre_folder = resolve_session(root, pre_id)
+            return compare(cached_analysis(pre_folder), result)
+        except web.HTTPException:
+            return {"pre": pre_id, "error": "Sesi sebelum tidak ditemukan."}
+        except (ValueError, OSError) as exc:
+            return {"pre": pre_id, "error": f"Sesi sebelum belum bisa dianalisis: {exc}"}
+
+    async def compare_json(request):
+        post = resolve_session(root, request.query.get("post", ""))
+        pre = resolve_session(root, request.query.get("pre", ""))
+        try:
+            a = await asyncio.to_thread(cached_analysis, pre)
+            b = await asyncio.to_thread(cached_analysis, post)
+        except (ValueError, OSError) as exc:
+            return web.json_response({"error": str(exc)}, status=422)
+        return web.json_response(compare(a, b), headers={"Cache-Control": "no-store"})
 
     async def listing(_request):
         rows = await asyncio.to_thread(corva_sessions, root)
@@ -106,6 +135,7 @@ def add_routes(app: web.Application, data_dir) -> None:
         try:
             result = await asyncio.to_thread(cached_analysis, folder)
             others = await asyncio.to_thread(corva_sessions, root)
+            comparison = await asyncio.to_thread(_comparison, request.query.get("pre"), folder, result)
         except (ValueError, OSError) as exc:
             return await asyncio.to_thread(_error_page, str(exc), root, 422)
         except Exception:  # noqa: BLE001
@@ -113,7 +143,7 @@ def add_routes(app: web.Application, data_dir) -> None:
             return await asyncio.to_thread(_error_page, "Kesalahan pemrosesan CorVa; periksa log Terminal.", root, 500)
         if not any(o["id"] == folder.name for o in others):
             others = [{"id": folder.name, "name": folder.name}, *others]
-        html = build_html(result, others, current=folder.name)
+        html = build_html(result, others, current=folder.name, comparison=comparison)
         return web.Response(text=html, content_type="text/html", charset="utf-8",
                             headers={"Cache-Control": "no-store"})
 
@@ -128,5 +158,6 @@ def add_routes(app: web.Application, data_dir) -> None:
     app.router.add_get("/api/corva/sessions", listing)
     app.router.add_get("/api/corva/analysis/{session}", analysis_json)
     app.router.add_get("/api/corva/export/{session}", export_csv)
+    app.router.add_get("/api/corva/compare", compare_json)
     app.router.add_get("/corva/session/{session}", page)
     app.router.add_get("/corva", index)

@@ -38,6 +38,13 @@ ELEMENT_NAMES = {
     "protocol_rest_reading": "Mesin: bacaan fase protokol = istirahat",
     "phase_label_median": "Mesin: label per fase dari median jendela",
     "eeg_artifact": "Mesin: artefak EEG seperti NB06 (D-13)",
+    "concl_relax_typical": "Kesimpulan: respons rileks khas (D-20)",
+    "concl_relax_cortical_difficulty": "Kesimpulan: sulit rileks secara kortikal (D-20, D-21)",
+    "concl_relax_vagal_difficulty": "Kesimpulan: sulit rileks secara vagal (D-20, D-21)",
+    "concl_cortical_load": "Kesimpulan: beban kortikal / berpikir berat (D-20)",
+    "concl_fatigue": "Kesimpulan: kelelahan / mengantuk (D-20)",
+    "concl_vagal_withdrawal_rest": "Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21)",
+    "concl_change_after": "Kesimpulan: perubahan sesudah intervensi (D-19, D-21)",
 }
 
 
@@ -59,6 +66,8 @@ def render() -> str:
         "Setiap aturan model menunjuk rujukannya, atau dinyatakan sebagai **asumsi** yang masih harus",
         "divalidasi. Tes `tests/test_corva_evidence.py` gagal bila ada aturan tanpa rujukan yang tidak",
         "dinyatakan asumsi, rujukan yang tidak dikenal, rujukan yang tidak dipakai, atau berkas ini tidak mutakhir.",
+        "Kesimpulan bertanda *kombinasi diasumsikan* memakai rujukan untuk komponennya (arah tiap penanda), tetapi",
+        "penggabungannya menjadi satu kesimpulan belum divalidasi dan ditulis \"Diasumsikan …\" (D-21).",
         "",
         "## Aturan → rujukan",
         "",
@@ -68,6 +77,8 @@ def render() -> str:
     evidence = all_evidence()
     for key, ev in evidence.items():
         cites = "; ".join(cite(k) for k in ev["refs"]) if ev["refs"] else "**asumsi**"
+        if ev.get("combination_assumed"):
+            cites += " · kombinasi **diasumsikan**"
         lines.append(f"| {_label(key)} | {cites} | {ev['basis']} |")
     lines += ["", "## Protokol standar", "",
               "| Fase | Durasi | Stabilisasi | Mata | Napas | Harapan | Dasar harapan |", "|---|---|---|---|---|---|---|"]

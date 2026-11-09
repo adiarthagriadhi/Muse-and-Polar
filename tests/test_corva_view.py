@@ -17,6 +17,7 @@ from musepolar.server import build_app
 from test_corva_session import _write_session
 
 SID = "2026-11-09_100000_corva_uji"
+PRE = "2026-11-08_100000_corva_sebelum"
 
 
 @pytest.fixture(scope="module")
@@ -24,6 +25,7 @@ def data_dir(tmp_path_factory):
     root = tmp_path_factory.mktemp("rec")
     d = _write_session(root / SID)
     (d / "session.json").write_text(json.dumps({"name": "corva uji"}))
+    _write_session(root / PRE, seed=4, theta_boost=True)
     plain = _write_session(root / "2026-11-09_090000_tanpa_protokol", seed=2)
     (plain / "marker.csv").write_text("timestamp,label\n1700000001,Baseline mulai\n")
     return root
@@ -46,6 +48,8 @@ def test_page_embeds_result_and_citations(result):
     assert set(data["cells"]) >= {"Q1", "Q2", "Q3", "Q4", "NEUTRAL", "NO_DATA"}
     assert [p["num"] for p in data["protocol"]] == [1, 2, 3, 4, 5]
     assert "hopkins2009" in data["cites"] and data["cites"]["hopkins2009"]["cite"]
+    assert data["result"]["conclusions"]["items"][0]["id"] == "relax_typical"
+    assert all(k in data["cites"] for i in data["result"]["conclusions"]["items"] for k in i["refs"])
 
 
 def test_page_data_cannot_break_out_of_script(result):
@@ -64,7 +68,7 @@ def test_csv_exports(result):
 
 
 def test_only_sessions_with_protocol_markers_are_listed(data_dir):
-    assert [s["id"] for s in corva_sessions(data_dir)] == [SID]
+    assert [s["id"] for s in corva_sessions(data_dir)] == [SID, PRE]
 
 
 def test_routes(data_dir):
@@ -88,6 +92,17 @@ def test_routes(data_dir):
             r = await client.get("/corva/session/2026-11-09_090000_tanpa_protokol")
             assert r.status == 422 and "tidak ditemukan" in await r.text()
             assert (await client.get("/api/corva/analysis/..")).status in (400, 404)
+            # comparison with an earlier session (D-19)
+            r = await client.get(f"/corva/session/{SID}?pre={PRE}")
+            cmp = _embedded(await r.text())["comparison"]
+            assert r.status == 200 and cmp["pre"] == PRE and cmp["post"] == SID and cmp["table"]
+            r = await client.get(f"/corva/session/{SID}?pre=tidak_ada")
+            assert r.status == 200 and _embedded(await r.text())["comparison"]["error"]
+            r = await client.get(f"/api/corva/compare?pre={PRE}&post={SID}")
+            assert r.status == 200 and (await r.json())["summary"]
+            r = await client.get(f"/api/corva/export/{SID}?level=conclusions&pre={PRE}")
+            text = await r.text()
+            assert r.status == 200 and "sesi," in text and "perbandingan," in text
             page = await (await client.get("/")).text()
             assert 'id="corvaShow"' in page
         finally:

@@ -28,12 +28,13 @@ import pandas as pd
 from cass_polar.engine import CH, MIN_RR, RR_SPAN_S, CASSInputError, _robust_location_scale, window_state
 from cass_polar.polar_adapter import RR_MAX_MS, RR_MIN_MS, hrv_window, read_rr
 
-from . import labels, protocol
+from . import conclusions, labels, protocol
 
 MIN_EEG_S = 40.0  # D-11: clean EEG per analysed segment (gudmundsson2007)
 MIN_RR_S = labels.MIN_RR_S  # D-11: valid RR per analysed segment (esco2014)
 PROTOCOL_PHASE = "rest"  # every protocol block is seated rest -> resting reading (laborde2018)
 BASELINE_ID = next(p["id"] for p in protocol.PROTOCOL if p["reference"])
+RAW_KEYS = ("log_beta_alpha", "ln_rmssd")  # natural-unit axes for change from R0 and between sessions
 
 EVIDENCE = {
     "r0_after_settle": {"refs": ["taskforce1996", "bourdillon2017"],
@@ -192,6 +193,8 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
     state["y_z"] = _robust_z(state["ln_rmssd"], state.loc[ref, "ln_rmssd"])
     state["theta_beta_z"] = _channel_mean_z(state, "theta_beta_raw", ref)
     state["engagement_z"] = _channel_mean_z(state, "engagement_raw", ref)
+    # raw log(beta/alpha), channel mean: phase change from R0 in natural units, comparable between sessions (D-19)
+    state["log_beta_alpha"] = state[[f"{ch}_cortical_raw" for ch in CH]].mean(axis=1, skipna=True)
 
     windows = []
     for _, w in state.iterrows():
@@ -211,7 +214,9 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
     r0 = {"phase_id": BASELINE_ID, "start": _num(sp0["analysis_start"], 2), "end": _num(sp0["analysis_end"], 2),
           "n_windows": int(ref.sum()), "rr_valid_s": round(r0_rr, 1), "eeg_clean_s": round(r0_eeg, 1),
           "adequate": not r0_reasons, "reasons": r0_reasons,
-          "ln_rmssd_median": _num(state.loc[ref, "ln_rmssd"].median())}
+          "ln_rmssd_median": _num(state.loc[ref, "ln_rmssd"].median()),
+          "raw": {k: _num(state.loc[ref, k].median()) for k in RAW_KEYS},
+          "raw_scale": {k: _num(_robust_location_scale(state.loc[ref, k])[1]) for k in RAW_KEYS}}
     if r0_reasons:
         warnings.append("R0 tidak memenuhi syarat data (" + "; ".join(r0_reasons) + "); semua label fase = Data kurang.")
 
@@ -240,6 +245,8 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
         valid_codes = [c for c in codes if c != labels.NO_DATA[0]]
         occupancy = {c: round(valid_codes.count(c) / len(valid_codes), 3) for c in sorted(set(valid_codes))}
         seg_rmssd = hrv_window(rr, sp["analysis_start"], sp["analysis_end"], min_ibi=MIN_RR)[0]
+        raw = {k: float(state.loc[sel, k].median()) if sel.any() else np.nan for k in RAW_KEYS}
+        delta = {k: raw[k] - r0["raw"][k] if r0["raw"][k] is not None and not reasons else np.nan for k in RAW_KEYS}
         if p["reference"]:
             comparison = "acuan (R0)"
         else:
@@ -249,6 +256,7 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
             "analysis_start": _num(sp["analysis_start"], 2), "analysis_end": _num(sp["analysis_end"], 2),
             "complete": sp["complete"],
             "medians": {k: _num(v) for k, v in med.items()},
+            "raw": {k: _num(v) for k, v in raw.items()}, "delta": {k: _num(v) for k, v in delta.items()},
             "label": lab, "comparison": comparison, "adequate": not reasons, "reasons": reasons,
             "data": {"n_windows": len(codes), "n_valid": len(valid_codes),
                      "valid_fraction": round(len(valid_codes) / len(codes), 3) if codes else 0.0,
@@ -263,8 +271,8 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
         phases.append(entry)
 
     compared = [ph for ph in phases if ph["comparison"] in ("sesuai harapan", "berbeda dari harapan")]
-    return {
-        "session_id": folder.name, "version": "0.2",
+    result = {
+        "session_id": folder.name, "version": "0.4.1",
         "method": {"x": "z log(beta/alpha), mean of TP9/AF7/AF8/TP10 (D-09)",
                    "y": "z lnRMSSD Polar RR (D-10)", "q3_marker": "z log(theta/beta) >= threshold (D-12)",
                    "comparison_x": "z log(beta/(alpha+theta)), not used for labels (D-09)",
@@ -282,6 +290,8 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
                     "n_as_expected": sum(ph["comparison"] == "sesuai harapan" for ph in compared)},
         "warnings": warnings,
     }
+    result["conclusions"] = conclusions.conclude(result)
+    return result
 
 
 PHASE_COLUMNS = ["id", "name", "recorded", "start", "end", "analysis_start", "analysis_end", "complete",

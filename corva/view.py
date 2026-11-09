@@ -19,24 +19,28 @@ import json
 from . import labels, protocol
 
 
-def _page_data(result: dict, others: list[dict], current: str) -> dict:
+def _page_data(result: dict, others: list[dict], current: str, comparison: dict | None = None) -> dict:
     refs = labels.references()
     used = set()
     for p in result["phases"]:
         used.update(p["label"]["refs"])
         used.update(p["expected_refs"])
+    for item in result.get("conclusions", {}).get("items", []) + (comparison or {}).get("items", []):
+        used.update(item["refs"])
     cites = {k: {"cite": labels.cite(k), "title": refs[k]["title"], "doi": refs[k]["doi"],
                  "ok": bool(refs[k]["authors_complete"] and refs[k]["doi_verified"])}
              for k in sorted(used) if k in refs}
     cells = {code: {"label": label, "meaning": meaning} for code, label, meaning in [*labels.CELLS.values(), labels.NO_DATA]}
     phases = [{"id": p["id"], "num": i + 1, "name": p["name"], "eyes": p["eyes"], "breathing": p["breathing"],
                "reference": p["reference"]} for i, p in enumerate(protocol.PROTOCOL)]
-    return {"result": result, "sessions": others, "current": current, "cites": cites, "cells": cells,
+    return {"result": result, "sessions": others, "current": current, "comparison": comparison,
+            "cites": cites, "cells": cells,
             "protocol": phases, "threshold": labels.THRESHOLD_Z}
 
 
-def build_html(result: dict, others: list[dict], current: str) -> str:
-    data = json.dumps(_page_data(result, others, current), ensure_ascii=False, allow_nan=False)
+def build_html(result: dict, others: list[dict], current: str, comparison: dict | None = None) -> str:
+    """comparison: corva.conclusions.compare(pre, result), or {"pre": id, "error": msg}, or None."""
+    data = json.dumps(_page_data(result, others, current, comparison), ensure_ascii=False, allow_nan=False)
     data = data.replace("</", "<\\/")  # keep the JSON inside its <script> element
     return TEMPLATE.replace("/*__DATA__*/", data)
 
@@ -129,6 +133,13 @@ dt { color: var(--text-muted); } dd { margin: 0; font-variant-numeric: tabular-n
   border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 4px 16px #0002;
   max-width: 260px; display: none; }
 .tip b { display: block; margin-bottom: 2px; }
+.concl-summary { font-size: 15px; font-weight: 600; margin: 6px 0 8px; }
+ul.concl { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+ul.concl li { border-left: 3px solid var(--border); padding: 2px 0 2px 12px; }
+ul.concl li.ref { border-left-color: var(--good); }
+ul.concl li.asm { border-left-color: var(--warning); }
+.badge { font-size: 11px; font-weight: 600; border-radius: 999px; padding: 1px 8px; margin-left: 6px; border: 1px solid currentColor; vertical-align: 1px; }
+.badge.ref { color: var(--good); } .badge.asm { color: var(--warning); }
 .reflist { font-size: 13px; color: var(--text-secondary); padding-left: 18px; }
 .reflist li { margin: 3px 0; }
 table { border-collapse: collapse; width: 100%; font-size: 13px; }
@@ -153,6 +164,9 @@ td.num { font-variant-numeric: tabular-nums; }
     <select id="sessionSel" aria-label="Pilih sesi"></select>
     <a class="btn" id="csvPhases">Unduh CSV fase</a>
     <a class="btn" id="csvWindows">Unduh CSV jendela</a>
+    <a class="btn" id="csvConcl">Unduh CSV kesimpulan</a>
+    <label class="small muted">Bandingkan dengan sesi sebelum:
+      <select id="preSel" aria-label="Sesi sebelum (acuan perbandingan)"></select></label>
     <button class="btn" id="printBtn">Cetak / PDF</button>
   </div>
 </header>
@@ -162,6 +176,21 @@ td.num { font-variant-numeric: tabular-nums; }
       stabilisasi), bukan norma populasi dan bukan diagnosis. Zona netral |z| &lt; <span id="thr"></span>.</p>
     <div class="summary" id="summary"></div>
     <ul class="warn" id="warnings"></ul>
+  </section>
+
+  <section class="panel" id="conclPanel">
+    <h2>Kesimpulan</h2>
+    <p class="concl-summary" id="conclSummary"></p>
+    <ul class="concl" id="conclList"></ul>
+    <p class="muted small" id="conclNote"></p>
+  </section>
+
+  <section class="panel" id="cmpPanel" hidden>
+    <h2 id="cmpTitle">Perbandingan dengan sesi sebelum</h2>
+    <p class="concl-summary" id="cmpSummary"></p>
+    <ul class="concl" id="cmpList"></ul>
+    <div class="table-wrap" id="cmpTable"></div>
+    <p class="muted small" id="cmpNote"></p>
   </section>
 
   <section class="panel">
@@ -230,6 +259,14 @@ document.title = `CorVa Space · ${name}`;
 $('thr').textContent = String(THR).replace('.', ',');
 $('sessionSel').innerHTML = D.sessions.map((s) => `<option value="${esc(s.id)}"${s.id === D.current ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
 $('sessionSel').addEventListener('change', (e) => { location.href = '/corva/session/' + encodeURIComponent(e.target.value); });
+const preId = D.comparison ? D.comparison.pre : '';
+$('preSel').innerHTML = `<option value="">— tidak dibandingkan —</option>` + D.sessions.filter((s) => s.id !== D.current)
+  .map((s) => `<option value="${esc(s.id)}"${s.id === preId ? ' selected' : ''}>${esc(s.name)}</option>`).join('');
+$('preSel').addEventListener('change', (e) => {
+  const v = e.target.value;
+  location.href = '/corva/session/' + encodeURIComponent(D.current) + (v ? '?pre=' + encodeURIComponent(v) : '');
+});
+$('csvConcl').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=conclusions` + (preId ? '&pre=' + encodeURIComponent(preId) : '');
 $('csvPhases').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=phases`;
 $('csvWindows').href = `/api/corva/export/${encodeURIComponent(D.current)}?level=windows`;
 $('printBtn').addEventListener('click', () => window.print());
@@ -242,6 +279,33 @@ $('summary').innerHTML = [
   [`${Math.round(r0.eeg_clean_s)} s`, 'EEG bersih di R0 (syarat ≥ 40 s)'],
 ].map(([b, s]) => `<div class="stat"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
 $('warnings').innerHTML = R.warnings.map((w) => `<li>${esc(w)}</li>`).join('');
+
+// ---------------------------------------------------------------- conclusions (D-19 to D-21)
+const citeOf = (keys) => keys.filter((k) => D.cites[k]).map((k) => esc(D.cites[k].cite) + (D.cites[k].ok ? '' : ' ⚠')).join('; ');
+const conclItem = (i) => `<li class="${i.assumed ? 'asm' : 'ref'}"><b>${esc(i.title)}</b>`
+  + `<span class="badge ${i.assumed ? 'asm' : 'ref'}">${i.assumed ? 'diasumsikan' : 'dari rujukan'}</span>`
+  + `<div>${esc(i.narrative)}</div>${i.refs.length ? `<div class="refs">Rujukan: ${citeOf(i.refs)}</div>` : ''}</li>`;
+const C = R.conclusions || { items: [], summary: '', note: '', missing: [] };
+$('conclSummary').textContent = C.summary;
+$('conclList').innerHTML = C.items.map(conclItem).join('');
+$('conclNote').textContent = C.note + (C.missing.length ? ` Fase tanpa label (tidak ikut disimpulkan): ${C.missing.join(', ')}.` : '');
+if (D.comparison) {
+  const X = D.comparison, preName = (D.sessions.find((s) => s.id === X.pre) || {}).name || X.pre;
+  $('cmpPanel').hidden = false;
+  $('cmpTitle').textContent = `Perbandingan dengan sesi sebelum: ${preName}`;
+  if (X.error) { $('cmpSummary').textContent = X.error; }
+  else {
+    $('cmpSummary').textContent = X.summary;
+    $('cmpList').innerHTML = X.items.map(conclItem).join('');
+    const cell = (v) => v == null ? '–' : (v < 0 ? '−' : '+') + Math.abs(v).toFixed(2);
+    $('cmpTable').innerHTML = `<table><thead><tr><th>Fase</th><th>Δ log(β/α) dari R0<br>sebelum → sesudah</th><th>Δ lnRMSSD dari R0<br>sebelum → sesudah</th><th>Label sebelum → sesudah</th></tr></thead><tbody>`
+      + X.table.map((r) => `<tr><td>${SPEC[r.id].num} · ${esc(r.name)}</td>`
+        + `<td class="num">${cell(r.log_beta_alpha.pre)} → ${cell(r.log_beta_alpha.post)}</td>`
+        + `<td class="num">${cell(r.ln_rmssd.pre)} → ${cell(r.ln_rmssd.post)}</td>`
+        + `<td>${esc(cellName(r.pre_code))} → ${esc(cellName(r.post_code))}</td></tr>`).join('') + `</tbody></table>`;
+    $('cmpNote').textContent = X.note;
+  }
+}
 
 // ---------------------------------------------------------------- shared
 const NS = 'http://www.w3.org/2000/svg';
