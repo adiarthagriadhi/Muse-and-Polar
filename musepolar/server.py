@@ -128,9 +128,10 @@ async def serve(args) -> None:
     hub = Hub(Path(args.data_dir))
     hub.mode = "demo" if args.demo else "sim" if args.sim else "live"
     if demo:
-        # CASS buttons work right away on the first demo session
-        meta = json.loads((demo[0] / "session.json").read_text(encoding="utf-8"))
-        hub.last_recording = {"active": False, "name": meta["name"], "dir": str(demo[0]),
+        # CASS and CorVa buttons work right away on the CorVa protocol demo (falls back to the first one)
+        last = next((d for d in demo if d.name.endswith("DEMO_P04")), demo[0])
+        meta = json.loads((last / "session.json").read_text(encoding="utf-8"))
+        hub.last_recording = {"active": False, "name": meta["name"], "dir": str(last),
                               "elapsed": meta["duration_sec"], "counts": meta["samples"]}
     slots = make_slots(hub, args)
     app = build_app(hub, slots)
@@ -162,8 +163,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--port", type=int, default=8765)
     p.add_argument("--data-dir", help="folder for recorded sessions (default recordings/, demo_recordings/ with --demo)")
     p.add_argument("--demo", action="store_true",
-                   help="try everything without devices: simulator, auto-connect, and three ready-made "
-                        "synthetic sessions for the CASS explorer, all in demo_recordings/")
+                   help="try everything without devices: simulator, auto-connect, and five ready-made "
+                        "synthetic sessions for the CASS explorer and CorVa Space, all in demo_recordings/")
     p.add_argument("--sim", action="store_true", help="use simulated devices (no Bluetooth)")
     p.add_argument("--autoconnect", action="store_true", help="connect both devices at startup")
     p.add_argument("--no-browser", action="store_true", help="don't open the browser automatically")

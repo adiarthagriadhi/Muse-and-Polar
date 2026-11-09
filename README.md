@@ -77,9 +77,11 @@ PYTHONPATH=src python app/server.py          # opens http://127.0.0.1:8600, read
 ```
 
 **Demo version.** `python -m musepolar --demo` (or double-click `run_demo.command` on macOS) starts
-the simulator and adds three ready-made synthetic 4-minute sessions in `demo_recordings/` (60 s rest,
-then a mental task, slow breathing, or recovery), so the CASS panel (**Tampilkan CASS**) can be tried
-immediately. Demo data are synthetic and have no physiological meaning.
+the simulator and adds five ready-made synthetic sessions in `demo_recordings/`: three 4-minute sessions
+(60 s rest, then a mental task, slow breathing, or recovery) for the CASS panel (**Tampilkan CASS**), and
+two 17-minute runs of the CorVa standard protocol for **Tampilkan CorVa** (`DEMO_P04` behaves as the
+protocol expects; in `DEMO_P05` the participant gets drowsy with eyes closed, so one phase differs from its
+expectation). Demo data are synthetic and have no physiological meaning.
 
 Or open `research/web/research-view.html` directly in a browser and press **Data contoh** (example
 data, synthetic).

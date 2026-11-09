@@ -7,7 +7,7 @@
 | **Merek** | **CorVa Space**: *Cortico-Vagal Space* |
 | **Nama teknis** | **CASS-NV**: *CASS Neurovisceral State Map* |
 | **Tagar** | **#NeuroVagal** |
-| **Status** | v0.3 (mesin + tampilan). Keputusan D-01 s.d. D-18 sudah diambil; ambang dan asumsi masih diuji di validasi v0.5. Lihat [`DECISIONS.md`](DECISIONS.md). |
+| **Status** | v0.4 (mesin + tampilan + demo). Keputusan D-01 s.d. D-18 sudah diambil; ambang dan asumsi masih diuji di validasi v0.5. Lihat [`DECISIONS.md`](DECISIONS.md). |
 
 ## Arti nama
 
@@ -48,7 +48,7 @@ Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 | [`ROADMAP.md`](ROADMAP.md) | tahapan pengembangan dan validasi |
 | [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, ambang Hopkins, nama alternatif, penanda tambahan). |
 | [`session.py`](session.py) | **mesin v0.2**: satu sesi rekaman → label per jendela dan per fase protokol, syarat data, perbandingan dengan harapan. `python -m corva.session <folder sesi> [--windows]` mencetak JSON. |
-| [`view.py`](view.py), [`routes.py`](routes.py) | **tampilan v0.3**: halaman CorVa Space per sesi (`/corva/session/<id>`, `/corva` = sesi terbaru): peta 3 × 3, kartu label per fase, lintasan waktu, tabel, ekspor CSV (`/api/corva/export/<id>?level=phases\|windows`), cetak/PDF; JSON di `/api/corva/analysis/<id>`. Tombol **Tampilkan CorVa** ada di panel Protokol CorVa di dashboard. |
+| [`view.py`](view.py), [`routes.py`](routes.py) | **tampilan v0.3**: halaman CorVa Space per sesi (`/corva/session/<id>`, `/corva` = sesi terbaru): peta 3 × 3, kartu label per fase, lintasan waktu, tabel, ekspor CSV (`/api/corva/export/<id>?level=phases\|windows`), cetak/PDF; JSON di `/api/corva/analysis/<id>`. Tombol **Tampilkan CorVa** ada di panel Protokol CorVa di dashboard. Coba tanpa alat: `python -m musepolar --demo` (sesi `DEMO_P04`, `DEMO_P05`). |
 | [`protocol.py`](protocol.py) | protokol standar (fase, durasi, instruksi, harapan, rujukan); dipakai panel **Protokol CorVa** di dashboard (`musepolar/static/corva.js`) |
 | `../tests/test_corva_labels.py` | uji aturan label |
 | `../tests/test_corva_evidence.py` | uji keterlacakan: setiap aturan punya rujukan atau dinyatakan asumsi |
