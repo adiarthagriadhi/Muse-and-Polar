@@ -41,14 +41,21 @@ Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 
 | Berkas | Isi |
 |---|---|
-| [`MODEL.md`](MODEL.md) | model: sumbu, zona, label, fase, aturan, batasan, rujukan |
+| [`MODEL.md`](MODEL.md) | model: sumbu, zona, label, fase, aturan, batasan |
+| [`references.json`](references.json) | **bibliografi**, sumber kebenaran rujukan: DOI, temuan yang dipakai, status verifikasi |
+| [`EVIDENCE.md`](EVIDENCE.md) | **peta bukti** aturan → rujukan, dihasilkan dari kode (`python -m corva.evidence_md`) |
 | [`DECISIONS.md`](DECISIONS.md) | keputusan yang sudah diambil dan yang masih terbuka |
 | [`ROADMAP.md`](ROADMAP.md) | tahapan pengembangan dan validasi |
 | [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, fase, penanda tambahan). Belum tersambung ke tampilan. |
 | `../tests/test_corva_labels.py` | uji aturan label |
+| `../tests/test_corva_evidence.py` | uji keterlacakan: setiap aturan punya rujukan atau dinyatakan asumsi |
 
 ## Prinsip
 
+- **Bukti dulu.** Setiap aturan dibangun di atas rujukan ilmiah yang tercatat di
+  [`references.json`](references.json) dan ditautkan di kode. Aturan tanpa rujukan ditandai
+  *asumsi* dan wajib divalidasi. Tes otomatis menjaga keterlacakan ini (lihat D-00 di
+  [`DECISIONS.md`](DECISIONS.md)).
 - **Deskriptif, bukan diagnosis.** Label menggambarkan posisi relatif terhadap acuan R0 orang itu
   sendiri, bukan norma populasi.
 - **Sumbu Y dari RR Polar (EKG)**, bukan PPG Muse. RMSSD ultra-singkat dari PPG dahi ditaksir berlebih

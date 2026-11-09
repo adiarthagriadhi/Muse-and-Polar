@@ -1,8 +1,12 @@
 # Model CASS-NV (CorVa Space), rancangan v0.1
 
 Status: **sementara**. Nama label, ambang, dan aturan masih menunggu keputusan di
-[`DECISIONS.md`](DECISIONS.md). Rujukan sudah dicek keberadaannya; sebagian baru dibaca abstraknya, jadi
-angka spesifik perlu dicek ke naskah asli sebelum dikutip di manuskrip.
+[`DECISIONS.md`](DECISIONS.md).
+
+**Fondasi rujukan.** Setiap aturan di model ini ditautkan ke rujukannya di kode
+(`EVIDENCE` di [`labels.py`](labels.py)) dan di bibliografi [`references.json`](references.json).
+Peta aturan → rujukan, beserta status verifikasi tiap rujukan, ada di [`EVIDENCE.md`](EVIDENCE.md)
+(dihasilkan otomatis). Aturan yang belum punya dasar rujukan ditandai **asumsi** dan wajib divalidasi.
 
 ## 1. Sumbu X: kondisi kortikal (EEG Muse 2)
 
@@ -13,7 +17,7 @@ angka spesifik perlu dicek ke naskah asli sebelum dikutip di manuskrip.
 |---|---|
 | Kelayakan Muse | Krigolson dkk. 2017 (ERP dengan Muse); Cannard, Wahbeh & Delorme 2021 (spektrum, frekuensi alfa individual, asimetri alfa frontal sebanding dengan sistem 64 kanal) |
 | Alfa turun = arousal naik | Barry dkk. 2007: alfa berkorelasi negatif dengan konduktansi kulit; alfa rata-rata layak sebagai ukuran arousal istirahat |
-| β/α sebagai indeks arousal | alfa frontal turun dan beta naik saat tugas kognitif (PASAT) dibanding istirahat; membedakan stres dari istirahat, kurang tajam untuk derajat stres |
+| β/α sebagai indeks arousal | Ehrhardt dkk. 2022: alfa frontal turun dan beta naik saat PASAT dibanding istirahat; membedakan stres dari istirahat, kurang tajam untuk derajat stres |
 | Alternatif | indeks *engagement* β/(α+θ) (Pope, Bogart & Bartolome 1995) |
 | Penanda tambahan | theta naik saat beban kerja; theta, delta, dan alfa naik bersama saat kelelahan (Klimesch 1999; Borghini dkk. 2014) |
 | Konteks olahraga | daya absolut **semua** pita naik saat dan sesudah latihan (Crabbe & Dishman 2004), jadi dipakai **rasio**, bukan alfa absolut |
@@ -35,7 +39,8 @@ angka spesifik perlu dicek ke naskah asli sebelum dikutip di manuskrip.
 Dasar dua sumbu: *autonomic space* (Berntson dkk. 1991) dan model sirkumpleks (Russell 1980). Keterkaitan
 korteks–jantung: Kubota dkk. 2001; Candia-Rivera dkk. 2022.
 
-Tiap sumbu dibagi tiga zona dengan ambang ±0,5 z (sama dengan ambang label lama Research View):
+Tiap sumbu dibagi tiga zona dengan ambang ±0,5 z (sama dengan ambang label lama Research View).
+Ambang ini **belum punya dasar rujukan**: ia asumsi yang diputuskan lewat D-06 dan validasi v0.5.
 
 ```
                  Y vagal ↑
@@ -107,27 +112,6 @@ Fase diambil dari marker dashboard (usulan: *Baseline mulai* = istirahat, *Tugas
 
 ## Rujukan
 
-1. Barry RJ, Clarke AR, Johnstone SJ, Magee CA, Rushby JA (2007). EEG differences between eyes-closed and eyes-open resting conditions. *Clin Neurophysiol* 118(12):2765–2773.
-2. Berntson GG, Cacioppo JT, Quigley KS (1991). Autonomic determinism: the modes of autonomic control, the doctrine of autonomic space, and the laws of autonomic constraint. *Psychol Rev* 98(4):459–487.
-3. Bird JJ, Manso LJ, Ribeiro EP, Ekárt A, Faria DR (2018). A study on mental state classification using EEG-based brain-machine interface. *IEEE Intelligent Systems (IS)*.
-4. Borghini G, Astolfi L, Vecchiato G, Mattia D, Babiloni F (2014). Measuring neurophysiological signals in aircraft pilots and car drivers for the assessment of mental workload, fatigue and drowsiness. *Neurosci Biobehav Rev* 44:58–75.
-5. Candia-Rivera D, Catrambone V, Thayer JF, Gentili C, Valenza G (2022). Cardiac sympathetic-vagal activity initiates a functional brain–body response to emotional arousal. *PNAS* 119(21):e2119599119.
-6. Cannard C, Wahbeh H, Delorme A (2021). Validating the wearable MUSE headset for EEG spectral analysis and frontal alpha asymmetry. *IEEE BIBM* 3603–3610.
-7. Crabbe JB, Dishman RK (2004). Brain electrocortical activity during and after exercise: a quantitative synthesis. *Psychophysiology* 41(4):563–574.
-8. Esco MR, Flatt AA (2014). Ultra-short-term heart rate variability indexes at rest and post-exercise in athletes: evaluating the agreement with accepted recommendations. *J Sports Sci Med* 13:535–541.
-9. Klimesch W (1999). EEG alpha and theta oscillations reflect cognitive and memory performance: a review and analysis. *Brain Res Rev* 29(2–3):169–195.
-10. Krigolson OE, Williams CC, Norton A, Hassall CD, Colino FL (2017). Choosing MUSE: validation of a low-cost, portable EEG system for ERP research. *Front Neurosci* 11:109.
-11. Kubota Y, Sato W, Toichi M, dkk. (2001). Frontal midline theta rhythm is correlated with cardiac autonomic activities during the performance of an attention demanding meditation procedure. *Cogn Brain Res* 11(2):281–287.
-12. Laborde S, Mosley E, Thayer JF (2017). Heart rate variability and cardiac vagal tone in psychophysiological research: recommendations for experiment planning, data analysis, and data reporting. *Front Psychol* 8:213.
-13. Laborde S, Mosley E, Mertgen A (2018). Vagal Tank Theory: the three Rs of cardiac vagal control functioning, resting, reactivity, and recovery. *Front Neurosci* 12:458.
-14. Muñoz ML, van Roon A, Riese H, dkk. (2015). Validity of (ultra-)short recordings for heart rate variability measurements. *PLoS ONE* 10(9):e0138921.
-15. Plews DJ, Laursen PB, Kilding AE, Buchheit M (2012). Heart rate variability in elite triathletes, is variation in variability the key to effective training? A case comparison. *Eur J Appl Physiol*.
-16. Pope AT, Bogart EH, Bartolome DS (1995). Biocybernetic system evaluates indices of operator engagement in automated task. *Biol Psychol* 40:187–195.
-17. Russell JA (1980). A circumplex model of affect. *J Pers Soc Psychol* 39(6):1161–1178.
-18. Shaffer F, Ginsberg JP (2017). An overview of heart rate variability metrics and norms. *Front Public Health* 5:258.
-19. Stanley J, Peake JM, Buchheit M (2013). Cardiac parasympathetic reactivation following exercise: implications for training prescription. *Sports Med* 43(12):1259–1277.
-20. Thayer JF, Lane RD (2000). A model of neurovisceral integration in emotion regulation and dysregulation. *J Affect Disord* 61:201–216.
-21. Thayer JF, Hansen AL, Saus-Rose E, Johnsen BH (2009). Heart rate variability, prefrontal neural function, and cognitive performance: the neurovisceral integration perspective on self-regulation, adaptation, and health. *Ann Behav Med* 37(2):141–153.
-22. Griadhi, Suadnyana & Wahyuni (2026). Validasi Muse 2 vs Polar H10 (studi B1). medRxiv preprint, doi:10.64898/2026.10.05.26364782.
-
-Nama penulis yang ditulis "dkk." dan halaman Bird dkk. (2018) perlu dilengkapi dari naskah aslinya.
+Daftar lengkap (penulis, tahun, judul, jurnal, DOI, temuan yang dipakai, status verifikasi, dan aturan
+yang memakainya) ada di [`EVIDENCE.md`](EVIDENCE.md), dihasilkan dari [`references.json`](references.json).
+Rujukan bertanda ⚠ perlu dicek ke naskah asli sebelum dikutip di manuskrip.
