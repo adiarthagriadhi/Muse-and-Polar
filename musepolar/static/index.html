@@ -135,6 +135,27 @@
       <div id="cassResult" class="sync-result"></div>
     </section>
 
+    <!-- CorVa protocol -->
+    <section class="panel corva">
+      <div class="panel-head"><h2>Protokol CorVa</h2><span id="pvTotal" class="muted small"></span></div>
+      <div id="pvIdle" class="cass-row">
+        <button class="btn" id="pvStart" title="Rekam dan pandu 5 fase: relaks (baseline), mata terbuka napas biasa/dalam, mata tertutup napas biasa/dalam">Mulai protokol standar</button>
+        <button class="btn" id="corvaShow" title="Buka CorVa Space untuk rekaman terakhir">Tampilkan CorVa ↗</button>
+        <a class="small" href="/corva" target="_blank" rel="noopener">semua sesi CorVa ↗</a>
+      </div>
+      <div id="pvRun" class="pv-run" hidden>
+        <div class="pv-head"><b id="pvName"></b><span id="pvStep" class="muted small"></span></div>
+        <div class="pv-head"><span id="pvTime" class="mono pv-time"></span><span id="pvSettle" class="muted small"></span></div>
+        <div class="pv-bar"><div id="pvBar"></div></div>
+        <div class="cass-row">
+          <button class="btn" id="pvScreen">Layar peserta</button>
+          <button class="btn" id="pvSkip">Lewati fase</button>
+          <button class="btn" id="pvStop">Hentikan</button>
+          <label class="small"><input type="checkbox" id="pvSound" checked> suara</label>
+        </div>
+      </div>
+    </section>
+
     <!-- Markers -->
     <section class="panel markers">
       <div class="panel-head"><h2>Penanda</h2><span class="muted small">tombol 1–5 = cepat</span></div>
@@ -148,6 +169,24 @@
   </div>
 </main>
 
+<!-- participant screen for the CorVa protocol -->
+<div id="pvOverlay" class="pv-overlay" hidden>
+  <div class="pv-card">
+    <div class="muted" id="pvOStep"></div>
+    <h2 id="pvOName"></h2>
+    <p id="pvOInstr"></p>
+    <div class="pv-pacer" id="pvPacer" hidden><div class="pv-ball" id="pvBall"></div><span id="pvBreath"></span></div>
+    <div class="mono pv-otime" id="pvOTime"></div>
+    <div class="pv-rate" id="pvRate" hidden>
+      <div id="pvRateRows"></div>
+      <div class="pv-rate-foot"><span class="muted small" id="pvRateLeft"></span>
+        <button class="btn" id="pvRateSkip" type="button">Lewati penilaian</button></div>
+    </div>
+    <div class="muted small" id="pvONext"></div>
+    <button class="btn" id="pvClose">Kembali ke dashboard</button>
+  </div>
+</div>
 <script src="/static/app.js"></script>
+<script src="/static/corva.js"></script>
 </body>
 </html>

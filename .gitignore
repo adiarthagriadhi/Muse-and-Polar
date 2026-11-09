@@ -11,3 +11,5 @@ recordings/
 *.xdf
 data/
 results*/
+demo_recordings/
+dist/

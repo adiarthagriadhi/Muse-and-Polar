@@ -1,0 +1,204 @@
+# Model CASS-NV (CorVa Space), v0.2
+
+Status: keputusan D-01 s.d. D-17 sudah diambil ([`DECISIONS.md`](DECISIONS.md)); mesin di
+[`session.py`](session.py). Ambang dan asumsi masih diuji di validasi v0.5.
+
+**Fondasi rujukan.** Setiap aturan di model ini ditautkan ke rujukannya di kode
+(`EVIDENCE` di [`labels.py`](labels.py)) dan di bibliografi [`references.json`](references.json).
+Peta aturan → rujukan, beserta status verifikasi tiap rujukan, ada di [`EVIDENCE.md`](EVIDENCE.md)
+(dihasilkan otomatis). Aturan yang belum punya dasar rujukan ditandai **asumsi** dan wajib divalidasi.
+
+## 1. Sumbu X: kondisi kortikal (EEG Muse 2)
+
+**Ukuran utama (D-09):** log(β/α) per kanal, diubah ke z robust terhadap R0 (median, 1,4826 × MAD),
+lalu dirata-rata untuk TP9, AF7, AF8, TP10. Ini sama dengan CASS sekarang.
+
+| Dasar | Isi |
+|---|---|
+| Kelayakan Muse | Krigolson dkk. 2017 (ERP dengan Muse); Cannard, Wahbeh & Delorme 2021 (spektrum, frekuensi alfa individual, asimetri alfa frontal sebanding dengan sistem 64 kanal) |
+| Alfa turun = arousal naik | Barry dkk. 2007: alfa berkorelasi negatif dengan konduktansi kulit; alfa rata-rata layak sebagai ukuran arousal istirahat |
+| β/α sebagai indeks arousal | Ehrhardt dkk. 2022: alfa frontal turun dan beta naik saat PASAT dibanding istirahat; membedakan stres dari istirahat, kurang tajam untuk derajat stres |
+| Alternatif | indeks *engagement* β/(α+θ) (Pope, Bogart & Bartolome 1995) |
+| Penanda tambahan | theta naik saat beban kerja; theta, delta, dan alfa naik bersama saat kelelahan (Klimesch 1999; Borghini dkk. 2014) |
+| Konteks olahraga | daya absolut **semua** pita naik saat dan sesudah latihan (Crabbe & Dishman 2004), jadi dipakai **rasio**, bukan alfa absolut |
+
+## 2. Sumbu Y: kondisi vagal (HRV Polar H10)
+
+**Ukuran utama (D-10):** lnRMSSD dari RR Polar, z robust terhadap R0.
+
+| Dasar | Isi |
+|---|---|
+| RMSSD sebagai penanda vagal | Laborde, Mosley & Thayer 2017 (dianjurkan untuk rekaman pendek; LF/HF tidak dianjurkan; PPG bukan pengganti EKG saat bergerak); Shaffer & Ginsberg 2017 |
+| Rekaman ultra-singkat | Muñoz dkk. 2015 (10 s r ≈ 0,85; 120 s hampir sempurna); Esco & Flatt 2014 (lnRMSSD 60 s sah saat istirahat dan pascalatihan) |
+| Kerangka tafsir | integrasi neuroviseral (Thayer & Lane 2000; Thayer dkk. 2009); *Vagal Tank Theory*: istirahat, reaktivitas, pemulihan (Laborde, Mosley & Mertgen 2018) |
+| Olahraga | reaktivasi parasimpatis pascalatihan dan lama pemulihan otonom menurut intensitas (Stanley, Peake & Buchheit 2013); tren lnRMSSD untuk memantau latihan (Plews dkk. 2012) |
+| Bukan penanda vagal | denyut jantung (dipengaruhi simpatis dan vagal); ditampilkan hanya sebagai keterangan |
+
+## 3. Penggabungan: grid 3 × 3
+
+Dasar dua sumbu: *autonomic space* (Berntson dkk. 1991) dan model sirkumpleks (Russell 1980). Keterkaitan
+korteks–jantung: Kubota dkk. 2001; Candia-Rivera dkk. 2022.
+
+Tiap sumbu dibagi tiga zona dengan ambang **|z| < 0,6 = netral** (D-06): batas "sedang" pada skala
+besaran Hopkins dkk. (2009). Besaran tiap sumbu ikut ditampilkan (trivial < 0,2 · kecil < 0,6 ·
+sedang < 1,2 · besar < 2,0 · sangat besar < 4,0). Skala ini aslinya distandardisasi terhadap SD
+antarsubjek; di sini diterapkan pada z robust terhadap R0 orang itu, jadi tetap diuji di validasi v0.5.
+
+Grid 3 × 3 tetap **dua dimensi** (D-05): sumbunya dua, hanya dipotong menjadi 9 sel.
+
+```
+                 Y vagal ↑
+        ┌──────────────────┬──────────────┬──────────────────┐
+        │ Q2 RILEKS–PULIH  │ VAGAL NAIK   │ Q1 TERLIBAT–     │
+        │                  │              │    TERATUR       │
+  X ↓   ├──────────────────┼──────────────┼──────────────────┤   X ↑
+        │ KORTEKS MELAMBAT │   NETRAL     │ AKTIVASI KORTIKAL│
+        ├──────────────────┼──────────────┼──────────────────┤
+        │ Q3 HIPOAKTIF     │ PENARIKAN    │ Q4 TERAKTIVASI–  │
+        │                  │ VAGAL        │    TERBEBANI     │
+        └──────────────────┴──────────────┴──────────────────┘
+                 Y vagal ↓
+```
+
+| Kode | Label | X | Y | Arti singkat |
+|---|---|---|---|---|
+| `Q1` | Terlibat–teratur | ↑ | ↑ | korteks aktif dengan regulasi vagal terjaga (fokus tenang) |
+| `Q2` | Rileks–pulih | ↓ | ↑ | korteks melambat, vagal naik (istirahat, napas lambat, pemulihan) |
+| `Q3` | Hipoaktif | ↓ | ↓ | korteks melambat, vagal turun (lelah/mengantuk atau pemulihan awal) |
+| `Q4` | Teraktivasi–terbebani | ↑ | ↓ | korteks aktif, penarikan vagal (stres, beban kerja, latihan) |
+| `X_HIGH` | Aktivasi kortikal | ↑ | netral | perubahan hanya di korteks |
+| `X_LOW` | Korteks melambat | ↓ | netral | perubahan hanya di korteks |
+| `Y_HIGH` | Vagal naik | netral | ↑ | perubahan hanya di vagal |
+| `Y_LOW` | Penarikan vagal | netral | ↓ | perubahan hanya di vagal |
+| `NEUTRAL` | Netral | netral | netral | sekitar acuan R0 |
+| `NO_DATA` | Data kurang | | | EEG bersih atau RR valid tidak cukup |
+
+**Penanda tambahan untuk Q3 (D-12):**
+- z log(θ/β) terhadap R0 ≥ 0,6: **lelah/mengantuk** (Borghini dkk. 2014; θ 4–8 Hz, Klimesch 1999).
+- Selain itu, bila fasenya pemulihan: **pemulihan awal** (vagal belum pulih; alfa naik pascalatihan).
+
+## 4. Fase: protokol standar CorVa (D-08)
+
+Dashboard live memandu peserta melalui lima fase dan mencatat awal tiap fase sebagai penanda
+"CorVa: …" (`corva/protocol.py`, panel **Protokol CorVa**). Fase berjalan otomatis, ada instruksi di
+layar peserta, pemandu napas visual dan nada, serta aba-aba suara untuk fase mata tertutup.
+
+| # | Fase | Durasi | Mata | Napas | Harapan CorVa |
+|---|---|---|---|---|---|
+| 1 | Relaks (baseline) = **R0** | 5 menit | terbuka | spontan | Netral (acuan) |
+| 2 | Mata terbuka · napas biasa | 3 menit | terbuka | spontan | Netral (kontrol) |
+| 3 | Mata terbuka · napas dalam | 3 menit | terbuka | 6/menit | Q2 atau Vagal naik |
+| 4 | Mata tertutup · napas biasa | 3 menit | tertutup | spontan | Korteks melambat atau Q2 |
+| 5 | Mata tertutup · napas dalam | 3 menit | tertutup | 6/menit | Q2 |
+
+Total 17 menit. Menit pertama tiap fase adalah **stabilisasi** dan tidak dianalisis.
+
+**Dasar durasi:**
+- **Baseline 5 menit** = standar rekaman HRV jangka pendek (Task Force 1996), atau 1 menit stabilisasi
+  + 4 menit analisis (Bourdillon dkk. 2017).
+- **Tiap blok 3 menit** = 1 menit stabilisasi + 2 menit analisis. RMSSD sah dengan jendela 2 menit
+  (Bourdillon dkk. 2017; Muñoz dkk. 2015: 120 s hampir sempurna; Esco & Flatt 2014: 60 s cukup).
+  EEG istirahat stabil dengan epoch ≥ 40 s (Gudmundsson dkk. 2007).
+- **Napas dalam 6/menit** (~0,1 Hz) memberi efek HRV maksimal (Lehrer & Gevirtz 2014). Napas lambat
+  menaikkan HRV vagal (Laborde dkk. 2022) dan alfa EEG (Zaccaro dkk. 2018). Frekuensi resonansi
+  individual bisa berbeda (Shaffer & Meehan 2020; D-16).
+- **Mata tertutup** menaikkan alfa dan menurunkan arousal dibanding mata terbuka (Barry dkk. 2007).
+
+**Catatan urutan (D-15):** efek napas lambat masih terlihat segera sesudah sesi (Laborde dkk. 2022),
+jadi blok 4 bisa terbawa efek blok 3. Menit stabilisasi mengurangi, tetapi tidak menghapus, efek ini.
+Pada studi validasi, urutan sebaiknya diseimbangkan antarpeserta.
+
+**Bacaan fase umum (Vagal Tank Theory).** Untuk protokol lain yang memuat aktivitas dan pemulihan,
+`classify(phase=…)` tetap memberi bacaan kuadran per fase istirahat/aktivitas/pemulihan:
+
+| | Istirahat | Aktivitas | Pemulihan |
+|---|---|---|---|
+| **Q1** | siaga tenang | keterlibatan teratur | pulih, sudah siaga |
+| **Q2** | istirahat baik | keterlibatan rendah | pemulihan baik |
+| **Q3** | mengantuk | kelelahan | pemulihan awal |
+| **Q4** | tidak lazim saat istirahat, periksa | respons wajar (reaktivitas) | pemulihan tertunda |
+
+## 5. Aturan label
+
+Setiap label membawa **nama CorVa** dan **semua nama alternatif dari rujukan** (D-07), misalnya Q2 =
+*Rileks–pulih*, juga disebut *Tenang* (label lama Research View), *relaxed* (Bird dkk. 2018), *pemulihan
+vagal* (Laborde dkk. 2018), dan *rileks/tenang* (analogi Russell 1980). Daftar lengkapnya ada di
+[`EVIDENCE.md`](EVIDENCE.md).
+
+
+Mesin v0.2 (`corva/session.py`, `python -m corva.session <folder>`):
+
+- **Fase** dibaca dari penanda `CorVa: …`. Setiap penanda CorVa (juga *selesai*/*dihentikan*) menutup
+  fase sebelumnya. Menit stabilisasi tiap fase tidak dianalisis. Bila protokol diulang dalam satu rekaman,
+  dipakai run terakhir.
+- **R0** = fase baseline setelah menit stabilisasi (4 menit). Semua z dihitung terhadap jendela R0
+  (median, 1,4826 × MAD): X = rata-rata z log(β/α) empat kanal (D-09), Y = z lnRMSSD (D-10),
+  penanda Q3 = rata-rata z log(θ/β) (D-12). Indeks *engagement* log(β/(α+θ)) dihitung sebagai pembanding.
+- **Per jendela 5 s** (langkah 2,5 s; RMSSD dari rentang RR 20 s seperti CASS): titik di peta dan label,
+  untuk lintasan (deskriptif). Jendela dianalisis bila berada di ruas analisis dan rentang RR-nya tidak
+  keluar dari fase.
+- **Per fase:** label dari median z jendela yang dianalisis (*asumsi*, D-17), dengan proporsi okupansi
+  sel sebagai keterangan. Semua blok protokol dibaca sebagai fase *istirahat*.
+- **Syarat (D-11):** ruas analisis memiliki ≥ 60 s RR valid (Esco & Flatt 2014) dan ≥ 40 s EEG bersih
+  (Gudmundsson dkk. 2007); bila tidak, `NO_DATA` dengan alasannya. R0 wajib memenuhi syarat yang sama.
+- **Keyakinan:** jumlah jendela, proporsi jendela valid, detik RR valid, dan detik EEG bersih ditampilkan
+  di samping label.
+- **Perbandingan:** label fase dibandingkan dengan harapan protokol: *sesuai harapan*, *berbeda dari
+  harapan*, atau *acuan (R0)* untuk baseline.
+- **Artefak EEG (D-13):** seperti CASS/NB06 (*asumsi*, diuji banding di v0.5).
+
+Tampilan v0.3 (`/corva/session/<id>`, tombol **Tampilkan CorVa** di dashboard) menyajikan hasil mesin:
+peta 3 × 3 dengan lintasan dan median fase, kartu label per fase, lintasan waktu X dan Y, tabel fase,
+ekspor CSV (per fase dan per jendela), serta cetak/PDF (D-18).
+
+## 5b. Kesimpulan (D-19 s.d. D-21)
+
+Satu sesi menunjukkan **pola respons** terhadap kondisi protokol, relatif terhadap R0 orang itu. Keadaan
+selama baseline tidak terlihat, jadi untuk menempatkan seseorang dibanding waktu lain (mis. sebelum latihan
+meditasi) dipakai **sesi sebelum** sebagai pembanding, dan nanti **norma kelompok** (v0.5).
+
+| Kesimpulan | Pola | Status | Rujukan |
+|---|---|---|---|
+| Respons rileks khas | semua fase rileks yang memenuhi syarat (≥ 2 dari fase 3–5) sesuai harapan | dari rujukan | Barry 2007; Lehrer & Gevirtz 2014; Laborde 2022 |
+| Sulit rileks secara kortikal | mata tertutup (fase 4–5): X tidak masuk zona rendah | diasumsikan | Barry 2007 (arah) |
+| Sulit rileks secara vagal | napas dalam (fase 3, 5): Y tidak masuk zona tinggi | diasumsikan | Lehrer & Gevirtz 2014; Laborde 2022; Laborde 2018 |
+| Beban kortikal / berpikir berat | X tinggi di fase mana pun; Q4 = disertai penarikan vagal | dari rujukan | Ehrhardt 2022; Borghini 2014 |
+| Kelelahan / mengantuk | Q3 dengan θ/β naik | dari rujukan | Borghini 2014; Klimesch 1999 |
+| Tegang / penarikan vagal saat istirahat | fase 2 (istirahat tanpa tugas): Y rendah | diasumsikan | Laborde 2017; Thayer 2009 |
+| Perubahan sesudah intervensi | level R0 dan Δ dari R0 tiap fase (log(β/α), lnRMSSD) bergeser ≥ 0,6 × skala R0 antara sesi sebelum dan sesudah; kesimpulan yang muncul/hilang | diasumsikan | Plews 2012; Laborde 2022; Laborde 2018 |
+
+Kesimpulan *diasumsikan* ditulis "Diasumsikan …": komponennya (arah tiap penanda dalam tiap kondisi) dari
+rujukan, tetapi penggabungannya belum divalidasi. Semua kesimpulan deskriptif, bukan diagnosis.
+
+## 5c. Skala subjektif dan norma (D-22, D-24)
+
+Setelah tiap fase, layar peserta menanyakan **kantuk** (Karolinska Sleepiness Scale 1–9; Åkerstedt & Gillberg
+1990) dan **rileks** (1–9). Jawaban tersimpan sebagai penanda `CorVa skala: …` dan tampil di kartu fase.
+Keduanya menjadi pembanding untuk menguji kesimpulan di validasi (`corva/validate.py`, D-23).
+
+Bila norma kelompok acuan dimuat (`--corva-norms`), respons tiap fase (Δ dari R0) juga ditempatkan sebagai
+**persentil kelompok acuan**, jadi "respons yang umumnya dijumpai" dinilai dalam besaran, bukan hanya arah.
+
+## 6. Rencana validasi (ringkas, rincian di `ROADMAP.md`)
+
+- Kondisi yang sudah diketahui:
+  - mata terbuka vs tertutup;
+  - aritmetika/PASAT, diharapkan Q4;
+  - napas 6/menit, diharapkan Q2;
+  - latihan lalu pemulihan, diharapkan lintasan Q4 → Q3 → Q2.
+- Pembanding subjektif: skala arousal/afek, NASA-TLX, Karolinska Sleepiness Scale.
+- Reliabilitas uji-ulang antarhari.
+
+## 7. Batasan
+
+- Label relatif terhadap R0 orang itu sendiri; deskriptif, bukan diagnosis.
+- Gerak menimbulkan artefak Muse (AF7/AF8) dan memengaruhi napas, sehingga kedua sumbu terganggu.
+- RMSSD saat latihan mendekati lantai, sehingga sumbu Y menyempit.
+- Q3 secara konstruksi paling ambigu; selalu dibaca bersama penanda tambahan dan fase.
+- β/α tidak khas untuk satu proses (stres, beban kerja, dan gerak bisa sama-sama menaikkannya).
+
+## Rujukan
+
+Daftar lengkap (penulis, tahun, judul, jurnal, DOI, temuan yang dipakai, status verifikasi, dan aturan
+yang memakainya) ada di [`EVIDENCE.md`](EVIDENCE.md), dihasilkan dari [`references.json`](references.json).
+Rujukan bertanda ⚠ perlu dicek ke naskah asli sebelum dikutip di manuskrip.

@@ -1,0 +1,676 @@
+{
+  "_about": "Sumber kebenaran rujukan CASS-NV (CorVa Space). Setiap aturan di corva/labels.py (EVIDENCE) menunjuk kunci di sini; tests/test_corva_evidence.py memeriksa keterlacakannya. doi_verified=false atau authors_complete=false berarti harus dicek ke naskah asli sebelum dikutip. read = bagian yang sudah dibaca (abstract/full text). verified = sumber dan tanggal verifikasi DOI/penulis (Crossref).",
+  "barry2007": {
+    "authors": [
+      "Barry RJ",
+      "Clarke AR",
+      "Johnstone SJ",
+      "Magee CA",
+      "Rushby JA"
+    ],
+    "authors_complete": true,
+    "year": 2007,
+    "title": "EEG differences between eyes-closed and eyes-open resting conditions",
+    "journal": "Clinical Neurophysiology",
+    "volume": "118",
+    "issue": "12",
+    "pages": "2765-2773",
+    "doi": "10.1016/j.clinph.2007.07.028",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Alfa rata-rata berkorelasi negatif dengan konduktansi kulit dan turun saat mata dibuka; alfa layak sebagai ukuran arousal istirahat."
+  },
+  "berntson1991": {
+    "authors": [
+      "Berntson GG",
+      "Cacioppo JT",
+      "Quigley KS"
+    ],
+    "authors_complete": true,
+    "year": 1991,
+    "title": "Autonomic determinism: the modes of autonomic control, the doctrine of autonomic space, and the laws of autonomic constraint",
+    "journal": "Psychological Review",
+    "volume": "98",
+    "issue": "4",
+    "pages": "459-487",
+    "doi": "10.1037/0033-295X.98.4.459",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Mode kendali otonom tidak berada pada satu kontinum simpatis-parasimpatis, tetapi di ruang dua dimensi (autonomic space)."
+  },
+  "bird2018": {
+    "authors": [
+      "Bird JJ",
+      "Manso LJ",
+      "Ribeiro EP",
+      "Ekárt A",
+      "Faria DR"
+    ],
+    "authors_complete": true,
+    "year": 2018,
+    "title": "A study on mental state classification using EEG-based brain-machine interface",
+    "journal": "IEEE International Conference on Intelligent Systems (IS)",
+    "volume": null,
+    "issue": null,
+    "pages": "795-800",
+    "doi": "10.1109/IS.2018.8710576",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Muse 4 kanal diklasifikasikan menjadi relaxed/neutral/concentrating (n = 5); preseden label kualitatif dari Muse.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "borghini2014": {
+    "authors": [
+      "Borghini G",
+      "Astolfi L",
+      "Vecchiato G",
+      "Mattia D",
+      "Babiloni F"
+    ],
+    "authors_complete": true,
+    "year": 2014,
+    "title": "Measuring neurophysiological signals in aircraft pilots and car drivers for the assessment of mental workload, fatigue and drowsiness",
+    "journal": "Neuroscience and Biobehavioral Reviews",
+    "volume": "44",
+    "issue": null,
+    "pages": "58-75",
+    "doi": "10.1016/j.neubiorev.2012.10.003",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Beban kerja tinggi: theta naik, alfa turun. Peralihan ke kelelahan: theta, delta, dan alfa naik."
+  },
+  "candiarivera2022": {
+    "authors": [
+      "Candia-Rivera D",
+      "Catrambone V",
+      "Thayer JF",
+      "Gentili C",
+      "Valenza G"
+    ],
+    "authors_complete": true,
+    "year": 2022,
+    "title": "Cardiac sympathetic-vagal activity initiates a functional brain-body response to emotional arousal",
+    "journal": "Proceedings of the National Academy of Sciences",
+    "volume": "119",
+    "issue": "21",
+    "pages": "e2119599119",
+    "doi": "10.1073/pnas.2119599119",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Interaksi otak-jantung dua arah; aktivitas simpatis-vagal jantung memodulasi respons otak terhadap arousal."
+  },
+  "cannard2021": {
+    "authors": [
+      "Cannard C",
+      "Wahbeh H",
+      "Delorme A"
+    ],
+    "authors_complete": true,
+    "year": 2021,
+    "title": "Validating the wearable MUSE headset for EEG spectral analysis and Frontal Alpha Asymmetry",
+    "journal": "IEEE International Conference on Bioinformatics and Biomedicine (BIBM)",
+    "volume": null,
+    "issue": null,
+    "pages": "3603-3610",
+    "doi": "10.1109/BIBM52615.2021.9669778",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Muse menangkap spektrum daya, frekuensi alfa individual, dan asimetri alfa frontal sebanding dengan BioSemi 64 kanal."
+  },
+  "crabbe2004": {
+    "authors": [
+      "Crabbe JB",
+      "Dishman RK"
+    ],
+    "authors_complete": true,
+    "year": 2004,
+    "title": "Brain electrocortical activity during and after exercise: a quantitative synthesis",
+    "journal": "Psychophysiology",
+    "volume": "41",
+    "issue": "4",
+    "pages": "563-574",
+    "doi": "10.1111/j.1469-8986.2004.00176.x",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Saat dan sesudah latihan daya absolut alfa naik, tetapi delta, theta, dan beta juga naik; tidak khas alfa.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "ehrhardt2022": {
+    "authors": [
+      "Ehrhardt NM",
+      "Fietz J",
+      "Kopf-Beck J",
+      "Kappelmann N",
+      "Brem AK"
+    ],
+    "authors_complete": true,
+    "year": 2022,
+    "title": "Separating EEG correlates of stress: cognitive effort, time pressure, and social-evaluative threat",
+    "journal": "European Journal of Neuroscience",
+    "volume": "55",
+    "issue": "9-10",
+    "pages": "2464-2473",
+    "doi": "10.1111/ejn.15211",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Saat PASAT dibanding istirahat, alfa frontal turun dan beta naik; daya EEG frontal membedakan stres dari istirahat, tetapi tidak membedakan derajat stres (n = 38)."
+  },
+  "esco2014": {
+    "authors": [
+      "Esco MR",
+      "Flatt AA"
+    ],
+    "authors_complete": true,
+    "year": 2014,
+    "title": "Ultra-short-term heart rate variability indexes at rest and post-exercise in athletes: evaluating the agreement with accepted recommendations",
+    "journal": "Journal of Sports Science and Medicine",
+    "volume": "13",
+    "issue": "3",
+    "pages": "535-541",
+    "doi": null,
+    "doi_verified": false,
+    "read": "abstract",
+    "finding": "lnRMSSD 60 s sesuai dengan rekaman 5 menit pada atlet, saat istirahat dan pascalatihan.",
+    "verified": "Tidak terdaftar di Crossref (artikel JSSM 2014 tanpa DOI); cek naskah asli."
+  },
+  "griadhi2026": {
+    "authors": [
+      "Griadhi IPA",
+      "Suadnyana IAA",
+      "Wahyuni N"
+    ],
+    "authors_complete": true,
+    "year": 2026,
+    "title": "Muse 2 forehead photoplethysmography agrees with Polar H10 for heart rate but overestimates ultra-short RMSSD",
+    "journal": "medRxiv (preprint, not peer reviewed)",
+    "volume": null,
+    "issue": null,
+    "pages": null,
+    "doi": "10.64898/2026.10.05.26364782",
+    "doi_verified": true,
+    "read": "full text",
+    "finding": "Denyut Muse 2 sesuai dengan Polar H10, tetapi RMSSD ultra-singkat (60 s) dari PPG dahi ditaksir berlebih.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "klimesch1999": {
+    "authors": [
+      "Klimesch W"
+    ],
+    "authors_complete": true,
+    "year": 1999,
+    "title": "EEG alpha and theta oscillations reflect cognitive and memory performance: a review and analysis",
+    "journal": "Brain Research Reviews",
+    "volume": "29",
+    "issue": "2-3",
+    "pages": "169-195",
+    "doi": "10.1016/S0165-0173(98)00056-3",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Theta terkait penyandian informasi baru; alfa atas terkait pencarian memori; pita alfa sebaiknya individual."
+  },
+  "krigolson2017": {
+    "authors": [
+      "Krigolson OE",
+      "Williams CC",
+      "Norton A",
+      "Hassall CD",
+      "Colino FL"
+    ],
+    "authors_complete": true,
+    "year": 2017,
+    "title": "Choosing MUSE: validation of a low-cost, portable EEG system for ERP research",
+    "journal": "Frontiers in Neuroscience",
+    "volume": "11",
+    "issue": null,
+    "pages": "109",
+    "doi": "10.3389/fnins.2017.00109",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Muse (TP9, AF7, AF8, TP10) menangkap N200, P300, dan reward positivity pada 60 peserta.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "kubota2001": {
+    "authors": [
+      "Kubota Y",
+      "Sato W",
+      "Toichi M",
+      "Murai T",
+      "Okada T",
+      "Hayashi A",
+      "Sengoku A"
+    ],
+    "authors_complete": true,
+    "year": 2001,
+    "title": "Frontal midline theta rhythm is correlated with cardiac autonomic activities during the performance of an attention demanding meditation procedure",
+    "journal": "Cognitive Brain Research",
+    "volume": "11",
+    "issue": "2",
+    "pages": "281-287",
+    "doi": "10.1016/S0926-6410(00)00086-0",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Saat theta frontal-midline muncul pada meditasi atentif, indeks vagal dan simpatis berubah; korteks frontal medial terkait fungsi otonom jantung.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "laborde2017": {
+    "authors": [
+      "Laborde S",
+      "Mosley E",
+      "Thayer JF"
+    ],
+    "authors_complete": true,
+    "year": 2017,
+    "title": "Heart rate variability and cardiac vagal tone in psychophysiological research: recommendations for experiment planning, data analysis, and data reporting",
+    "journal": "Frontiers in Psychology",
+    "volume": "8",
+    "issue": null,
+    "pages": "213",
+    "doi": "10.3389/fpsyg.2017.00213",
+    "doi_verified": true,
+    "read": "abstract and secondary summaries",
+    "finding": "RMSSD dianjurkan untuk rekaman pendek; LF/HF tidak dianjurkan sebagai keseimbangan simpatovagal; PPG bukan pengganti EKG saat bergerak."
+  },
+  "laborde2018": {
+    "authors": [
+      "Laborde S",
+      "Mosley E",
+      "Mertgen A"
+    ],
+    "authors_complete": true,
+    "year": 2018,
+    "title": "Vagal Tank Theory: the three Rs of cardiac vagal control functioning - resting, reactivity, and recovery",
+    "journal": "Frontiers in Neuroscience",
+    "volume": "12",
+    "issue": null,
+    "pages": "458",
+    "doi": "10.3389/fnins.2018.00458",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Kendali vagal dinilai pada tiga tingkat: istirahat, reaktivitas, pemulihan."
+  },
+  "munoz2015": {
+    "authors": [
+      "Munoz ML",
+      "van Roon A",
+      "Riese H",
+      "Thio C",
+      "Oostenbroek E",
+      "Westrik I",
+      "de Geus EJC",
+      "Gansevoort R",
+      "Lefrandt J",
+      "Nolte IM",
+      "Snieder H"
+    ],
+    "authors_complete": true,
+    "year": 2015,
+    "title": "Validity of (ultra-)short recordings for heart rate variability measurements",
+    "journal": "PLoS ONE",
+    "volume": "10",
+    "issue": "9",
+    "pages": "e0138921",
+    "doi": "10.1371/journal.pone.0138921",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "RMSSD 10 s r = 0,85-0,86 terhadap 4-5 menit; tiga potongan 10 s r = 0,94; 120 s hampir sempurna (n = 3.387)."
+  },
+  "plews2012": {
+    "authors": [
+      "Plews DJ",
+      "Laursen PB",
+      "Kilding AE",
+      "Buchheit M"
+    ],
+    "authors_complete": true,
+    "year": 2012,
+    "title": "Heart rate variability in elite triathletes, is variation in variability the key to effective training? A case comparison",
+    "journal": "European Journal of Applied Physiology",
+    "volume": "112",
+    "issue": "11",
+    "pages": "3729-3741",
+    "doi": "10.1007/s00421-012-2354-4",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Rata-rata 7 hari lnRMSSD menurun pada atlet yang mengalami non-functional overreaching."
+  },
+  "pope1995": {
+    "authors": [
+      "Pope AT",
+      "Bogart EH",
+      "Bartolome DS"
+    ],
+    "authors_complete": true,
+    "year": 1995,
+    "title": "Biocybernetic system evaluates indices of operator engagement in automated task",
+    "journal": "Biological Psychology",
+    "volume": "40",
+    "issue": "1-2",
+    "pages": "187-195",
+    "doi": "10.1016/0301-0511(95)05116-3",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Di antara indeks yang diuji, beta/(alpha + theta) paling baik mencerminkan keterlibatan tugas.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "russell1980": {
+    "authors": [
+      "Russell JA"
+    ],
+    "authors_complete": true,
+    "year": 1980,
+    "title": "A circumplex model of affect",
+    "journal": "Journal of Personality and Social Psychology",
+    "volume": "39",
+    "issue": "6",
+    "pages": "1161-1178",
+    "doi": "10.1037/h0077714",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Keadaan afektif dipetakan pada dua dimensi (valensi, arousal) dengan penamaan kualitatif per wilayah."
+  },
+  "shaffer2017": {
+    "authors": [
+      "Shaffer F",
+      "Ginsberg JP"
+    ],
+    "authors_complete": true,
+    "year": 2017,
+    "title": "An overview of heart rate variability metrics and norms",
+    "journal": "Frontiers in Public Health",
+    "volume": "5",
+    "issue": null,
+    "pages": "258",
+    "doi": "10.3389/fpubh.2017.00258",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Norma HRV bergantung pada panjang rekaman, usia, dan jenis kelamin; norma 24 jam, jangka pendek, dan ultra-pendek tidak bisa dipertukarkan."
+  },
+  "stanley2013": {
+    "authors": [
+      "Stanley J",
+      "Peake JM",
+      "Buchheit M"
+    ],
+    "authors_complete": true,
+    "year": 2013,
+    "title": "Cardiac parasympathetic reactivation following exercise: implications for training prescription",
+    "journal": "Sports Medicine",
+    "volume": "43",
+    "issue": "12",
+    "pages": "1259-1277",
+    "doi": "10.1007/s40279-013-0083-4",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Reaktivasi parasimpatis pascalatihan; pemulihan otonom penuh hingga 24 jam (intensitas rendah), 24-48 jam (ambang), dan >= 48 jam (intensitas tinggi)."
+  },
+  "thayer2000": {
+    "authors": [
+      "Thayer JF",
+      "Lane RD"
+    ],
+    "authors_complete": true,
+    "year": 2000,
+    "title": "A model of neurovisceral integration in emotion regulation and dysregulation",
+    "journal": "Journal of Affective Disorders",
+    "volume": "61",
+    "issue": "3",
+    "pages": "201-216",
+    "doi": "10.1016/S0165-0327(00)00338-4",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Model integrasi neuroviseral: sistem otonom, atensi, dan afek dalam satu jaringan; kegagalan inhibisi memunculkan aktivasi simpatis relatif."
+  },
+  "thayer2009": {
+    "authors": [
+      "Thayer JF",
+      "Hansen AL",
+      "Saus-Rose E",
+      "Johnsen BH"
+    ],
+    "authors_complete": true,
+    "year": 2009,
+    "title": "Heart rate variability, prefrontal neural function, and cognitive performance: the neurovisceral integration perspective on self-regulation, adaptation, and health",
+    "journal": "Annals of Behavioral Medicine",
+    "volume": "37",
+    "issue": "2",
+    "pages": "141-153",
+    "doi": "10.1007/s12160-009-9101-z",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "HRV berkaitan dengan fungsi prefrontal dan kinerja eksekutif; mengubah HRV istirahat mengubah kinerja eksekutif."
+  },
+  "bourdillon2017": {
+    "authors": [
+      "Bourdillon N",
+      "Schmitt L",
+      "Yazdani S",
+      "Vesin JM",
+      "Millet GP"
+    ],
+    "authors_complete": true,
+    "year": 2017,
+    "title": "Minimal window duration for accurate HRV recording in athletes",
+    "journal": "Frontiers in Neuroscience",
+    "volume": "11",
+    "issue": null,
+    "pages": "456",
+    "doi": "10.3389/fnins.2017.00456",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "RMSSD cukup dengan jendela analisis 2 menit (posisi berbaring); perlu 1 menit stabilisasi sebelumnya, jadi 3 menit = 1 + 2; ukuran ranah frekuensi perlu 5 menit = 1 + 4.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "taskforce1996": {
+    "authors": [
+      "Task Force of the European Society of Cardiology and the North American Society of Pacing and Electrophysiology"
+    ],
+    "authors_complete": true,
+    "year": 1996,
+    "title": "Heart rate variability: standards of measurement, physiological interpretation and clinical use",
+    "journal": "Circulation",
+    "volume": "93",
+    "issue": "5",
+    "pages": "1043-1065",
+    "doi": "10.1161/01.CIR.93.5.1043",
+    "doi_verified": true,
+    "read": "secondary summaries",
+    "finding": "Rekaman jangka pendek standar adalah 5 menit; metode harus distandardisasi.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "gudmundsson2007": {
+    "authors": [
+      "Gudmundsson S",
+      "Runarsson TP",
+      "Sigurdsson S",
+      "Eiriksdottir G",
+      "Johnsen K"
+    ],
+    "authors_complete": true,
+    "year": 2007,
+    "title": "Reliability of quantitative EEG features",
+    "journal": "Clinical Neurophysiology",
+    "volume": "118",
+    "issue": "10",
+    "pages": "2162-2171",
+    "doi": "10.1016/j.clinph.2007.06.018",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Reliabilitas fitur EEG istirahat naik dengan panjang epoch sampai 40 s; 60 s tidak menambah reliabilitas.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "lehrer2014": {
+    "authors": [
+      "Lehrer PM",
+      "Gevirtz R"
+    ],
+    "authors_complete": true,
+    "year": 2014,
+    "title": "Heart rate variability biofeedback: how and why does it work?",
+    "journal": "Frontiers in Psychology",
+    "volume": "5",
+    "issue": null,
+    "pages": "756",
+    "doi": "10.3389/fpsyg.2014.00756",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Efek maksimal pada napas sekitar 0,1 Hz (6 napas/menit); napas spontan umumnya 0,15-0,4 Hz (9-24/menit); amplitudo osilasi denyut naik berlipat."
+  },
+  "laborde2022": {
+    "authors": [
+      "Laborde S",
+      "Allen M",
+      "Borges U",
+      "Dosseville F",
+      "Hosang T",
+      "Iskra M",
+      "Mosley E",
+      "Salvotti C",
+      "Spolverato L",
+      "Zammit N",
+      "Javelle F"
+    ],
+    "authors_complete": true,
+    "year": 2022,
+    "title": "Effects of voluntary slow breathing on heart rate and heart rate variability: a systematic review and a meta-analysis",
+    "journal": "Neuroscience and Biobehavioral Reviews",
+    "volume": "138",
+    "issue": null,
+    "pages": "104711",
+    "doi": "10.1016/j.neubiorev.2022.104711",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Napas lambat sukarela menaikkan HRV vagal selama sesi, segera sesudah satu sesi, dan setelah intervensi (223 studi).",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "zaccaro2018": {
+    "authors": [
+      "Zaccaro A",
+      "Piarulli A",
+      "Laurino M",
+      "Garbella E",
+      "Menicucci D",
+      "Neri B",
+      "Gemignani A"
+    ],
+    "authors_complete": true,
+    "year": 2018,
+    "title": "How breath-control can change your life: a systematic review on psycho-physiological correlates of slow breathing",
+    "journal": "Frontiers in Human Neuroscience",
+    "volume": "12",
+    "issue": null,
+    "pages": "353",
+    "doi": "10.3389/fnhum.2018.00353",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Napas lambat (< 10/menit): EEG alfa naik dan theta turun; HRV dan RSA naik; rasa rileks naik.",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "shaffer2020": {
+    "authors": [
+      "Shaffer F",
+      "Meehan ZM"
+    ],
+    "authors_complete": true,
+    "year": 2020,
+    "title": "A practical guide to resonance frequency assessment for heart rate variability biofeedback",
+    "journal": "Frontiers in Neuroscience",
+    "volume": "14",
+    "issue": null,
+    "pages": "570400",
+    "doi": "10.3389/fnins.2020.570400",
+    "doi_verified": true,
+    "read": "abstract",
+    "finding": "Frekuensi resonansi tiap orang tidak selalu 6 napas/menit; bisa lebih rendah atau lebih tinggi."
+  },
+  "hopkins2009": {
+    "authors": [
+      "Hopkins WG",
+      "Marshall SW",
+      "Batterham AM",
+      "Hanin J"
+    ],
+    "authors_complete": true,
+    "year": 2009,
+    "title": "Progressive statistics for studies in sports medicine and exercise science",
+    "journal": "Medicine and Science in Sports and Exercise",
+    "volume": "41",
+    "issue": "1",
+    "pages": "3-12",
+    "doi": "10.1249/MSS.0b013e31818cb278",
+    "doi_verified": true,
+    "read": "secondary summaries",
+    "finding": "Ambang besaran perbedaan terstandar: 0,2 kecil, 0,6 sedang, 1,2 besar, 2,0 sangat besar, 4,0 amat sangat besar (distandardisasi terhadap SD antarsubjek).",
+    "verified": "Crossref, 2026-11-09"
+  },
+  "akerstedt1990": {
+    "authors": [
+      "Åkerstedt T",
+      "Gillberg M"
+    ],
+    "authors_complete": true,
+    "year": 1990,
+    "title": "Subjective and objective sleepiness in the active individual",
+    "journal": "International Journal of Neuroscience",
+    "volume": "52",
+    "issue": "1-2",
+    "pages": "29-37",
+    "doi": "10.3109/00207459008994241",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "Karolinska Sleepiness Scale (KSS) 1–9 berkorelasi dengan penanda EEG dan EOG kantuk (alfa/theta naik); skor ≥ 7 menandai kantuk yang disertai tanda fisiologis"
+  },
+  "shrout1979": {
+    "authors": [
+      "Shrout PE",
+      "Fleiss JL"
+    ],
+    "authors_complete": true,
+    "year": 1979,
+    "title": "Intraclass correlations: uses in assessing rater reliability",
+    "journal": "Psychological Bulletin",
+    "volume": "86",
+    "issue": "2",
+    "pages": "420-428",
+    "doi": "10.1037/0033-2909.86.2.420",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "bentuk ICC untuk reliabilitas; ICC(2,1) = model dua arah acak, kesepakatan absolut, satu pengukuran"
+  },
+  "koo2016": {
+    "authors": [
+      "Koo TK",
+      "Li MY"
+    ],
+    "authors_complete": true,
+    "year": 2016,
+    "title": "A guideline of selecting and reporting intraclass correlation coefficients for reliability research",
+    "journal": "Journal of Chiropractic Medicine",
+    "volume": "15",
+    "issue": "2",
+    "pages": "155-163",
+    "doi": "10.1016/j.jcm.2016.02.012",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "pedoman memilih dan melaporkan ICC; tafsir < 0,5 buruk, 0,5–0,75 sedang, 0,75–0,9 baik, > 0,9 sangat baik"
+  },
+  "cohen1960": {
+    "authors": [
+      "Cohen J"
+    ],
+    "authors_complete": true,
+    "year": 1960,
+    "title": "A coefficient of agreement for nominal scales",
+    "journal": "Educational and Psychological Measurement",
+    "volume": "20",
+    "issue": "1",
+    "pages": "37-46",
+    "doi": "10.1177/001316446002000104",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "koefisien kappa: kesepakatan dua klasifikasi nominal setelah dikoreksi untuk kesepakatan kebetulan"
+  }
+}

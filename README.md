@@ -4,12 +4,13 @@
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23252791.svg)](https://doi.org/10.5281/zenodo.23252791)
 
 Open research software for **recording and analysing a Muse 2 EEG headband together with a Polar H10
-chest strap**. It has three parts:
+chest strap**. It has three parts, plus a variant in development:
 
 | Part | Folder | What it does |
 |---|---|---|
 | **Live dashboard** (`musepolar`) | [`musepolar/`](musepolar/) | Connects directly to Muse 2 and Polar H10 over Bluetooth Low Energy, shows the signals live in the browser, records raw CSV with per-sample timestamps, event markers, and a movement-based Muse–Polar clock synchronisation. Includes a simulator. |
 | **Research View** (`muse2_pipeline`) | [`research/`](research/README.md) | Offline analysis of musepolar recordings and of EDF/EDF+/BDF and other EEG CSV files: EEG band power per segment, head maps, artefact rejection, between-segment tests, pulse (PRV) and Polar (HRV) intervals, CSV/PNG/Word export. Also available as a single HTML file that runs in the browser without Python. |
+| **CorVa Space · CASS-NV** (in development) | [`corva/`](corva/README.md) | Development hub for a CASS variant that maps cortical (Muse EEG log β/α) × vagal (Polar lnRMSSD) states on a 3 × 3 grid with qualitative labels and rest/activity/recovery context. #NeuroVagal |
 | **Tools** | [`tools/`](tools/) | `penanda-waktu-tari.html`: a browser tool to mark time points (and a 1–5 movement-quality rating) on a video, exported as CSV for alignment with EEG recordings. |
 
 > **Not a medical device.** This software is for research and teaching. It does not diagnose, monitor
@@ -74,6 +75,23 @@ keys `1`–`5`, then stop. The session is written to `recordings/<date_time>_<na
 cd research
 PYTHONPATH=src python app/server.py          # opens http://127.0.0.1:8600, reads ../recordings
 ```
+
+**Demo version.** `python -m musepolar --demo` (or double-click `run_demo.command` on macOS) starts
+the simulator and adds five ready-made synthetic sessions in `demo_recordings/`: three 4-minute sessions
+(60 s rest, then a mental task, slow breathing, or recovery) for the CASS panel (**Tampilkan CASS**), and
+two 17-minute runs of the CorVa standard protocol for **Tampilkan CorVa** (`DEMO_P04` behaves as the
+protocol expects; in `DEMO_P05` the participant gets drowsy with eyes closed, so one phase differs from its
+expectation). Demo data are synthetic and have no physiological meaning.
+
+**CorVa validation (v0.5).** The CorVa protocol asks two 1–9 ratings after every phase (sleepiness, KSS;
+relaxation). `python -m corva.validate <sessions> --out <folder> [--norms-out norms.json]` analyses many
+sessions at once (agreement with the protocol expectation, conclusions vs ratings, test–retest ICC) and can
+write reference-group norms, which the dashboard reads with `--corva-norms norms.json`. Run it on data in a
+private repository; participant data never go into this one.
+
+**CorVa Space download.** `python tools/build_corva_package.py` builds `dist/CorVa-Space-<version>.zip`: a
+standalone package (dashboard + CASS + CorVa, run scripts for macOS/Linux and Windows, guide `BACA-DULU.md`) that
+uses port 8775 and `corva_recordings/`, so it runs next to an existing dashboard install.
 
 Or open `research/web/research-view.html` directly in a browser and press **Data contoh** (example
 data, synthetic).

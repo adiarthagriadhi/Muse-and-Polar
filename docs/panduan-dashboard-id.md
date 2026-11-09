@@ -128,6 +128,7 @@ Opsi baris perintah (`python -m musepolar --help`):
 | `--no-ecg` | matikan EKG Polar |
 | `--no-polar-acc` | matikan akselerometer Polar (sinkronisasi tidak bisa dipakai) |
 | `--no-browser` | jangan buka browser otomatis |
+| `--demo` | versi demo: simulator + 3 sesi contoh di `demo_recordings/` |
 | `-v` | log detail |
 
 Mencari nama/alamat perangkat di sekitar:
@@ -137,6 +138,49 @@ python -m musepolar.scan
 ```
 
 Di macOS, "alamat" berupa UUID CoreBluetooth (bukan MAC) yang tetap sama untuk Mac yang sama.
+
+## Versi demo (tanpa alat)
+
+```bash
+python -m musepolar --demo
+```
+
+Di Mac cukup klik dua kali `run_demo.command` (atau `bash run_demo.command` di Terminal).
+Dashboard berjalan dengan Muse dan Polar simulasi (label **DEMO** di judul), dan tiga sesi contoh
+4 menit dibuat sekali di folder `demo_recordings/` (terpisah dari `recordings/`):
+
+| Sesi | 0–60 s (R0) | 60–240 s (R1) | Pola CASS yang diharapkan |
+|---|---|---|---|
+| `DEMO_P01` | istirahat | tugas mental | kebanyakan Q4 (kortikal ↑, otonom ↓) |
+| `DEMO_P02` | istirahat | napas lambat 6/menit | kebanyakan Q2 (kortikal ↓, otonom ↑) |
+| `DEMO_P03` | istirahat | pemulihan setelah latihan | bergeser kembali ke arah R0 |
+
+Tombol **Tampilkan CASS** langsung aktif untuk `DEMO_P01`; sesi lain dipilih lewat *Peserta*.
+Merekam di mode demo juga bisa (data simulasi). Semua data demo **sintetis**, tidak bermakna
+fisiologis, dan hanya untuk mencoba perangkat lunak.
+
+## Protokol CorVa (protokol standar)
+
+Panel **Protokol CorVa** di kolom kanan memandu peserta melalui lima fase (total 17 menit):
+
+1. Relaks (baseline): 5 menit
+2. Mata terbuka · napas biasa: 3 menit
+3. Mata terbuka · napas dalam (6/menit): 3 menit
+4. Mata tertutup · napas biasa: 3 menit
+5. Mata tertutup · napas dalam (6/menit): 3 menit
+
+Cara pakai:
+- Isi **Nama sesi**, hubungkan Muse dan Polar, lalu klik **Mulai protokol standar**. Rekaman dimulai
+  otomatis bila belum berjalan, dan berhenti otomatis setelah fase terakhir.
+- **Layar peserta** menampilkan instruksi besar, hitung mundur, dan bola pemandu napas (5 s tarik,
+  5 s hembus). Aba-aba suara (bahasa Indonesia) dan nada naik/turun memandu fase mata tertutup;
+  pastikan suara Mac menyala, atau hilangkan centang **suara**.
+- Awal tiap fase tercatat sebagai penanda `CorVa: <nama fase>` di `marker.csv`. Menit pertama tiap fase
+  adalah stabilisasi dan tidak dianalisis.
+- Untuk mencoba alur dengan cepat (30× lebih cepat), buka `http://localhost:8765/?protokol=cepat`.
+
+Dasar durasi dan harapan tiap fase ada di [`corva/MODEL.md`](../corva/MODEL.md) dan
+[`corva/EVIDENCE.md`](../corva/EVIDENCE.md).
 
 ## CASS (EEG Muse × RR Polar)
 

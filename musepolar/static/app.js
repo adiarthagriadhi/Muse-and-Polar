@@ -386,7 +386,7 @@ function cassSession() {
 }
 function renderCass() {
   const s = cassSession();
-  for (const b of ['cassExport', 'cassShow']) {
+  for (const b of ['cassExport', 'cassShow', 'corvaShow']) {
     $(b).disabled = !!s.why;
     $(b).title = s.why || `Sesi ${s.id}`;
   }
@@ -411,6 +411,10 @@ $('cassExport').addEventListener('click', async () => {
 $('cassShow').addEventListener('click', () => {
   const { id } = cassSession();
   if (id) window.open(`/cass/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
+});
+$('corvaShow').addEventListener('click', () => {
+  const { id } = cassSession();
+  if (id) window.open(`/corva/session/${encodeURIComponent(id)}`, '_blank', 'noopener');
 });
 
 function renderMetrics(m) {
@@ -535,6 +539,11 @@ function connect() {
       case 'hello':
         syncClock(m.server_time); status = m.status; renderStatus();
         if (m.recording) { recording = m.recording; renderRecording(); }
+        if (m.mode && m.mode !== 'live') {
+          $('liveDot').textContent = m.mode === 'demo' ? 'DEMO' : 'SIM';
+          $('liveDot').title = 'Data sintetis, bukan dari perangkat';
+          $('liveDot').classList.add('demo');
+        }
         if (m.sync) renderSync(m.sync);
         break;
       case 'status': status = m.status; renderStatus(); break;

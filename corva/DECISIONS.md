@@ -1,0 +1,56 @@
+# Keputusan CASS-NV (CorVa Space)
+
+Setiap perubahan metode dicatat di sini **sebelum** dikodekan. Format: kode, keputusan, alasan,
+tanggal, status.
+
+## Aturan kerja: bukti dulu (D-00)
+
+1. Setiap keputusan metode menyebut **kunci rujukan** dari [`references.json`](references.json).
+2. Rujukan baru dimasukkan ke `references.json` lengkap dengan DOI, temuan yang dipakai, bagian yang
+   sudah dibaca, dan status verifikasi.
+3. Aturan di kode ditautkan lewat `EVIDENCE` di [`labels.py`](labels.py). Aturan tanpa rujukan harus
+   ditandai `assumption` dan masuk rencana validasi.
+4. Setelah mengubah rujukan atau aturan, jalankan `python -m corva.evidence_md` untuk memperbarui
+   [`EVIDENCE.md`](EVIDENCE.md).
+5. `tests/test_corva_evidence.py` menolak:
+   - aturan tanpa rujukan yang tidak dinyatakan asumsi;
+   - kunci rujukan yang tidak ada;
+   - rujukan yang tidak dipakai;
+   - `EVIDENCE.md` yang tidak mutakhir.
+6. Rujukan bertanda ⚠ (DOI atau penulis belum terverifikasi) tidak dikutip di manuskrip sebelum dicek.
+
+## Sudah diputuskan
+
+| Kode | Keputusan | Alasan | Rujukan | Tanggal |
+|---|---|---|---|---|
+| D-00 | Aturan kerja *bukti dulu* (di atas) | model harus bisa dilacak ke literatur | | 2026-11-09 |
+| D-01 | Nama: merek **CorVa Space**, nama teknis **CASS-NV** (*CASS Neurovisceral State Map*), tagar **#NeuroVagal** | ruang dua sumbu dan integrasi neuroviseral | berntson1991, thayer2000 | 2026-11-09 |
+| D-02 | Hub di folder `corva/` dalam repo Muse-and-Polar; kode dan metode saja, tanpa data peserta | repo publik; dekat dengan `cass_polar/` dan dashboard | | 2026-11-09 |
+| D-03 | Sumbu Y dari **RR Polar H10**, bukan PPG Muse | RMSSD ultra-singkat PPG dahi ditaksir berlebih; PPG bukan pengganti EKG saat bergerak | griadhi2026, laborde2017 | 2026-11-09 |
+| D-04 | Denyut jantung **bukan** komponen label, hanya keterangan | denyut bukan penanda vagal; label lama Research View mencampurnya | laborde2017, shaffer2017 | 2026-11-09 |
+| D-05 | Grid **3 × 3**. Tetap **2 dimensi** (dua sumbu, X dan Y), bukan 3D: tiap sumbu dibagi tiga zona sehingga bidang terpotong menjadi 9 sel. 3D baru terjadi bila ada sumbu ketiga (mis. denyut atau waktu). | zona netral menghindari label dari perubahan kecil | berntson1991, russell1980 | 2026-11-09 |
+| D-06 | Zona netral **\|z\| < 0,6**, batas "sedang" skala besaran Hopkins; besaran tiap sumbu ditampilkan: trivial < 0,2 · kecil < 0,6 · sedang < 1,2 · besar < 2,0 · sangat besar < 4,0 | ambang yang lazim dan berdasar di ilmu olahraga, menggantikan ±0,5 z tanpa rujukan; diadaptasi dari SD antarsubjek ke z robust terhadap R0, jadi tetap diuji di v0.5 | hopkins2009 | 2026-11-09 |
+| D-07 | Semua nama alternatif dari rujukan dipakai: nama CorVa sebagai label utama, ditambah istilah tiap sumber (dan analogi Russell, ditandai *analogi*) | lihat `ALT_NAMES` di `labels.py` dan tabel di `EVIDENCE.md` | bird2018, pope1995, thayer2000, thayer2009, borghini2014, ehrhardt2022, stanley2013, laborde2017, laborde2018, barry2007, russell1980 | 2026-11-09 |
+| D-08 | Fase = **protokol standar** di dashboard, dicatat sebagai penanda "CorVa: …": Relaks (baseline) 5 menit; mata terbuka napas biasa, mata terbuka napas dalam, mata tertutup napas biasa, mata tertutup napas dalam, masing-masing 3 menit (menit pertama = stabilisasi, tidak dianalisis). Total 17 menit. Napas dalam = 6/menit (5 s tarik, 5 s hembus). | durasi dari standar HRV jangka pendek dan jendela minimal RMSSD; EEG istirahat stabil ≥ 40 s | taskforce1996, bourdillon2017, munoz2015, esco2014, gudmundsson2007, barry2007, lehrer2014, laborde2022, zaccaro2018 | 2026-11-09 |
+| D-09 | Sumbu X = z **log(β/α) rata-rata 4 kanal** (TP9, AF7, AF8, TP10), sama dengan CASS. Indeks *engagement* log(β/(α+θ)) dihitung per jendela sebagai **pembanding**, tidak dipakai untuk label. | AF7/AF8 saja paling rentan artefak kedip dan memakai separuh data; β/(α+θ) memakai θ yang juga menjadi penanda Q3, sehingga kedua ukuran tidak independen | ehrhardt2022, barry2007; pembanding pope1995 | 2026-11-09 |
+| D-10 | Sumbu Y = z **lnRMSSD** terhadap R0. CASS lama tetap memakai RMSSD. | sebaran RMSSD miring ke kanan; log membuat z robust lebih stabil; lazim untuk pemantauan atlet | plews2012, esco2014 | 2026-11-09 |
+| D-11 | Label per fase hanya bila ruas analisis (setelah menit stabilisasi) memiliki **≥ 60 s RR valid** dan **≥ 40 s EEG bersih**; bila tidak, `NO_DATA` dengan alasannya. R0 wajib memenuhi syarat yang sama; bila tidak, semua label fase `NO_DATA`. Cakupan data ditampilkan sebagai keyakinan. | 60 s cukup untuk lnRMSSD; EEG istirahat stabil ≥ 40 s; ≥ 120 s membuat satu gangguan kecil sudah menghapus label | esco2014, munoz2015, gudmundsson2007 | 2026-11-09 |
+| D-12 | Penanda tambahan Q3 = z **log(θ/β)** terhadap R0 ≥ 0,6 (ambang D-06) → *lelah/mengantuk*. Pita θ 4–8 Hz ditambahkan ke mesin CASS. | rasio lebih aman daripada θ absolut karena daya semua pita naik saat dan sesudah latihan | borghini2014, klimesch1999, crabbe2004 | 2026-11-09 |
+| D-13 | Artefak EEG **seperti CASS/NB06** (window 4 s ditolak bila > 20 % sampel > 80 µV). Ditandai **asumsi**; uji banding dengan potongan 2 s Research View di v0.5. | satu mesin dengan CASS; belum ada rujukan khusus untuk aturan ini | asumsi (`eeg_artifact` di `session.py`) | 2026-11-09 |
+| D-14 | Label lama Research View **tidak dihidupkan lagi**; CASS-NV menggantikannya untuk CASS. Nama lamanya tetap tampil sebagai nama alternatif (D-07). | label lama mencampur denyut jantung (bertentangan dengan D-04) | keputusan desain, tanpa rujukan | 2026-11-09 |
+| D-15 | Urutan blok **tetap** seperti D-08 untuk v0.2–v0.4; **diseimbangkan antarpeserta** di studi validasi v0.5. Mesin membaca fase dari **nama penanda**, bukan dari urutan, jadi urutan acak tetap terbaca. | efek napas lambat bisa terbawa ke blok berikutnya | laborde2022 | 2026-11-09 |
+| D-16 | Napas dalam **6/menit untuk semua** peserta. Frekuensi resonansi individual baru dipertimbangkan setelah v0.5. | asesmen resonansi menambah 15–20 menit dan memperumit protokol | lehrer2014, shaffer2020 | 2026-11-09 |
+| D-17 | Mesin v0.2 (`corva/session.py`): R0 = fase baseline setelah menit stabilisasi; setiap penanda `CorVa: …` (termasuk *selesai*/*dihentikan*) menutup fase sebelumnya; bila protokol diulang, dipakai run terakhir; jendela dianalisis bila berada di ruas analisis dan rentang RR 20 s-nya tidak keluar dari fase; label per fase dari **median z** jendela yang dianalisis (**asumsi**), dengan okupansi sel sebagai keterangan; bacaan fase protokol = *istirahat*. | menghubungkan label ke mesin CASS sesuai roadmap v0.2 | taskforce1996, bourdillon2017, munoz2015, laborde2018; median = asumsi | 2026-11-09 |
+| D-18 | Tampilan v0.3: halaman terpisah dari explorer CASS (`/corva/session/<id>`). Di peta, **warna = napas** (biru biasa, oranye dalam), **bentuk = mata** (lingkaran terbuka, kotak tertutup), abu-abu = baseline R0, dan median tiap fase diberi nomor 1–5. Titik di menit stabilisasi disembunyikan secara bawaan. Rentang sumbu peta menyesuaikan data (±2,5 s.d. ±8); titik di luar rentang ditempel ke tepi. Halaman dibagi menjadi **layar-layar terpisah** (tab + tombol Sebelumnya/Berikutnya, panah ←/→, geser di layar sentuh, alamat `#halaman`), bukan satu halaman panjang yang digulir: Kesimpulan · Perbandingan (bila ada) · Peta · Fase (satu fase per layar) · Lintasan waktu · Tabel · Metode · Rujukan. Cetak/PDF memuat semua halaman. | lima kelompok di grafik sebar melebihi batas tiga warna yang tetap terbedakan bagi pembaca buta warna; dua kanal (warna + bentuk) ditambah nomor membuat fase tidak bergantung pada warna saja. Keputusan tampilan, bukan aturan metode. | keputusan desain, tanpa rujukan | 2026-11-09 |
+| D-19 | Mode perbandingan **(c)**: (a) **pola respons dalam satu sesi** relatif terhadap R0; (b) **sesi sebelum vs sesudah** intervensi (mis. meditasi), memakai **perubahan dari R0 masing-masing dalam satuan asli** (Δ log(β/α), Δ lnRMSSD) dan level R0, dalam satuan rata-rata skala R0 kedua sesi, ambang 0,6; (c) **norma kelompok acuan** direncanakan di v0.5. | z tiap sesi berskala R0 sesi itu, jadi tidak bisa dibandingkan langsung antarsesi; rasio log menetralkan sebagian perbedaan penguatan dan posisi sensor antarhari. Satu sesi hanya menunjukkan pola respons (reaktivitas), bukan keadaan absolut: keadaan selama baseline tidak terlihat. | laborde2018, plews2012, laborde2022; ambang antarsesi = asumsi | 2026-11-09 |
+| D-20 | Tujuh kesimpulan: **respons rileks khas**, **sulit rileks secara kortikal**, **sulit rileks secara vagal**, **beban kortikal / berpikir berat**, **kelelahan / mengantuk**, **tegang / penarikan vagal saat istirahat**, **perubahan sesudah intervensi**. Aturan polanya di `corva/conclusions.py`. | kombinasi label fase menjadi kesimpulan yang bisa dipakai untuk menempatkan individu | barry2007, lehrer2014, laborde2022, laborde2018, ehrhardt2022, borghini2014, klimesch1999, laborde2017, thayer2009, plews2012 | 2026-11-09 |
+| D-21 | Kesimpulan yang komponennya dari rujukan tetapi **kombinasinya belum divalidasi** ditulis **"Diasumsikan …"** dan ditandai *diasumsikan* (di kode: `combination_assumed`): sulit rileks secara kortikal, sulit rileks secara vagal, tegang, dan semua perubahan antarsesi. Respons rileks khas, beban kortikal, dan kelelahan ditandai *dari rujukan*. Diuji di v0.5 terhadap skala subjektif (mis. Karolinska Sleepiness Scale, NASA-TLX). | kesimpulan tetap ditampilkan, dengan status bukti yang jujur | D-00 | 2026-11-09 |
+| D-22 | **Skala subjektif di dashboard** setelah tiap fase: **Karolinska Sleepiness Scale** (1–9) dan **rileks** (1–9, satu butir). Jawaban disimpan sebagai penanda `CorVa skala: <fase> KSS=.. rileks=..`; tombol *Lewati*, dilewati otomatis setelah 45 s. Fase tetap berakhir sesuai durasinya; fase berikutnya mulai setelah penilaian, jadi waktu menilai tidak ikut dianalisis. | pembanding subjektif untuk menguji kesimpulan (D-21); terjemahan label KSS dan skala rileks belum divalidasi (asumsi) | akerstedt1990; skala rileks = asumsi | 2026-11-09 |
+| D-23 | **Alat validasi** `python -m corva.validate <folder> --out <folder>` (kode di repo ini, data di repo privat): kesesuaian dengan harapan per fase; kesimpulan vs skala subjektif (kelelahan ↔ KSS ≥ 7, respons rileks ↔ rileks ≥ 6) dengan **Cohen's κ**; korelasi Spearman; **reliabilitas uji-ulang ICC(2,1)** pada dua sesi pertama tiap peserta, ditafsir menurut Koo & Li. Peserta = nama sesi di `session.json`. | uji terstruktur atas semua aturan bertanda asumsi | cohen1960, shrout1979, koo2016, akerstedt1990; ambang rileks ≥ 6 = asumsi | 2026-11-09 |
+| D-24 | **Norma kelompok** = persentil Δ dari R0 per fase (log(β/α), lnRMSSD), satu sesi per peserta, ditulis `--norms-out`; disimpan di **repo riset privat** dan dibaca dashboard lewat `python -m musepolar --corva-norms <berkas>`; halaman Fase menampilkan persentil respons seseorang. N < 20 ditandai *sementara*. | menempatkan respons dalam besaran, bukan hanya arah (D-19c); data kelompok tidak masuk repo publik | asumsi (persentil empiris) | 2026-11-09 |
+
+## Masih terbuka
+
+Tidak ada untuk v0.2. Asumsi yang masih harus diuji (D-13, median per fase di D-17, adaptasi ambang
+Hopkins di D-06, kombinasi kesimpulan dan ambang antarsesi di D-19 dan D-21, skala rileks dan ambangnya di D-22 dan D-23,
+norma di D-24) masuk rencana validasi v0.5.

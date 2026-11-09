@@ -19,7 +19,7 @@ from .polar_adapter import hrv_window, read_rr
 
 FS_EEG = 256.0
 CH = ("TP9", "AF7", "AF8", "TP10")
-BANDS = {"alpha": (8.0, 13.0), "beta": (13.0, 30.0)}
+BANDS = {"theta": (4.0, 8.0), "alpha": (8.0, 13.0), "beta": (13.0, 30.0)}  # theta for CorVa log(theta/beta), D-12
 WINDOW_S = 5.0
 STEP_S = 2.5
 RR_SPAN_S = 20.0
@@ -145,7 +145,11 @@ def window_state(folder: Path, r0_end: float | None, rr_span_s: float = RR_SPAN_
         for channel in CH:
             a = float(overlap[f"{channel}_alpha"].median())
             b = float(overlap[f"{channel}_beta"].median())
+            th = float(overlap[f"{channel}_theta"].median())
             row[f"{channel}_cortical_raw"] = np.log(b / a) if a > 0 and b > 0 else np.nan
+            # CorVa (corva/session.py): log(theta/beta) for the Q3 qualifier, log(beta/(alpha+theta)) for comparison
+            row[f"{channel}_theta_beta_raw"] = np.log(th / b) if th > 0 and b > 0 else np.nan
+            row[f"{channel}_engagement_raw"] = np.log(b / (a + th)) if a > 0 and b > 0 and th > 0 else np.nan
         half = rr_span_s / 2
         lo, hi = w["window_mid"] - half, w["window_mid"] + half
         # CASS PRV-span patch clamps the window to available range.
@@ -159,7 +163,11 @@ def window_state(folder: Path, r0_end: float | None, rr_span_s: float = RR_SPAN_
         rows.append(row)
     if not rows:
         raise CASSInputError("Tidak ada window CASS yang memiliki bandpower EEG.")
-    return pd.DataFrame(rows), duration, warnings
+    state = pd.DataFrame(rows)
+    # for callers that place markers on this time base and need clean-EEG coverage (corva/session.py)
+    state.attrs["eeg_start_unix"] = float(eeg_start)
+    state.attrs["eeg_clean_windows"] = [(float(a), float(b)) for a, b in zip(bp.t_start, bp.t_end)]
+    return state, duration, warnings
 
 
 def analyze(folder: str | Path, r0_end: float, rr_span_s: float = RR_SPAN_S) -> dict:
@@ -212,7 +220,7 @@ def analyze(folder: str | Path, r0_end: float, rr_span_s: float = RR_SPAN_S) -> 
     return {"session_id": folder.name,
             "autonomic_scalar": "polar_rr_rmssd", "cortical_metric": "log_beta_alpha",
             "method": {"eeg_fs_hz": FS_EEG, "eeg_filter": "notch50 Q30, 1-40 Hz Butterworth order4",
-                       "eeg_bandpower": "Welch 4s / 2s, alpha 8-13, beta 13-30",
+                       "eeg_bandpower": "Welch 4s / 2s, theta 4-8, alpha 8-13, beta 13-30",
                        "cortical_window_s": WINDOW_S, "cortical_step_s": STEP_S,
                        "autonomic_span_s": rr_span_s, "min_rr_intervals": 8,
                        "rr_validity": "300–2000ms, consecutive plausible RR changes <=20%",
