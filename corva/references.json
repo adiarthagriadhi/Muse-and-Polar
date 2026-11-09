@@ -1,5 +1,5 @@
 {
-  "_about": "Sumber kebenaran rujukan CASS-NV (CorVa Space). Setiap aturan di corva/labels.py (EVIDENCE) menunjuk kunci di sini; tests/test_corva_evidence.py memeriksa keterlacakannya. doi_verified=false atau authors_complete=false berarti harus dicek ke naskah asli sebelum dikutip. read = bagian yang sudah dibaca (abstract/full text).",
+  "_about": "Sumber kebenaran rujukan CASS-NV (CorVa Space). Setiap aturan di corva/labels.py (EVIDENCE) menunjuk kunci di sini; tests/test_corva_evidence.py memeriksa keterlacakannya. doi_verified=false atau authors_complete=false berarti harus dicek ke naskah asli sebelum dikutip. read = bagian yang sudah dibaca (abstract/full text). verified = sumber dan tanggal verifikasi DOI/penulis (Crossref).",
   "barry2007": {
     "authors": [
       "Barry RJ",
@@ -46,17 +46,18 @@
       "Ekárt A",
       "Faria DR"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2018,
     "title": "A study on mental state classification using EEG-based brain-machine interface",
     "journal": "IEEE International Conference on Intelligent Systems (IS)",
     "volume": null,
     "issue": null,
-    "pages": null,
+    "pages": "795-800",
     "doi": "10.1109/IS.2018.8710576",
     "doi_verified": true,
     "read": "abstract",
-    "finding": "Muse 4 kanal diklasifikasikan menjadi relaxed/neutral/concentrating (n = 5); preseden label kualitatif dari Muse."
+    "finding": "Muse 4 kanal diklasifikasikan menjadi relaxed/neutral/concentrating (n = 5); preseden label kualitatif dari Muse.",
+    "verified": "Crossref, 2026-11-09"
   },
   "borghini2014": {
     "authors": [
@@ -129,9 +130,10 @@
     "issue": "4",
     "pages": "563-574",
     "doi": "10.1111/j.1469-8986.2004.00176.x",
-    "doi_verified": false,
+    "doi_verified": true,
     "read": "abstract",
-    "finding": "Saat dan sesudah latihan daya absolut alfa naik, tetapi delta, theta, dan beta juga naik; tidak khas alfa."
+    "finding": "Saat dan sesudah latihan daya absolut alfa naik, tetapi delta, theta, dan beta juga naik; tidak khas alfa.",
+    "verified": "Crossref, 2026-11-09"
   },
   "ehrhardt2022": {
     "authors": [
@@ -168,17 +170,18 @@
     "doi": null,
     "doi_verified": false,
     "read": "abstract",
-    "finding": "lnRMSSD 60 s sesuai dengan rekaman 5 menit pada atlet, saat istirahat dan pascalatihan."
+    "finding": "lnRMSSD 60 s sesuai dengan rekaman 5 menit pada atlet, saat istirahat dan pascalatihan.",
+    "verified": "Tidak terdaftar di Crossref (artikel JSSM 2014 tanpa DOI); cek naskah asli."
   },
   "griadhi2026": {
     "authors": [
-      "Griadhi",
-      "Suadnyana",
-      "Wahyuni"
+      "Griadhi IPA",
+      "Suadnyana IAA",
+      "Wahyuni N"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2026,
-    "title": "Muse 2 versus Polar H10 validation study (B1)",
+    "title": "Muse 2 forehead photoplethysmography agrees with Polar H10 for heart rate but overestimates ultra-short RMSSD",
     "journal": "medRxiv (preprint, not peer reviewed)",
     "volume": null,
     "issue": null,
@@ -186,7 +189,8 @@
     "doi": "10.64898/2026.10.05.26364782",
     "doi_verified": true,
     "read": "full text",
-    "finding": "Denyut Muse 2 sesuai dengan Polar H10, tetapi RMSSD ultra-singkat (60 s) dari PPG dahi ditaksir berlebih."
+    "finding": "Denyut Muse 2 sesuai dengan Polar H10, tetapi RMSSD ultra-singkat (60 s) dari PPG dahi ditaksir berlebih.",
+    "verified": "Crossref, 2026-11-09"
   },
   "klimesch1999": {
     "authors": [
@@ -212,7 +216,7 @@
       "Hassall CD",
       "Colino FL"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2017,
     "title": "Choosing MUSE: validation of a low-cost, portable EEG system for ERP research",
     "journal": "Frontiers in Neuroscience",
@@ -222,14 +226,20 @@
     "doi": "10.3389/fnins.2017.00109",
     "doi_verified": true,
     "read": "abstract",
-    "finding": "Muse (TP9, AF7, AF8, TP10) menangkap N200, P300, dan reward positivity pada 60 peserta."
+    "finding": "Muse (TP9, AF7, AF8, TP10) menangkap N200, P300, dan reward positivity pada 60 peserta.",
+    "verified": "Crossref, 2026-11-09"
   },
   "kubota2001": {
     "authors": [
       "Kubota Y",
-      "et al."
+      "Sato W",
+      "Toichi M",
+      "Murai T",
+      "Okada T",
+      "Hayashi A",
+      "Sengoku A"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2001,
     "title": "Frontal midline theta rhythm is correlated with cardiac autonomic activities during the performance of an attention demanding meditation procedure",
     "journal": "Cognitive Brain Research",
@@ -239,7 +249,8 @@
     "doi": "10.1016/S0926-6410(00)00086-0",
     "doi_verified": true,
     "read": "abstract",
-    "finding": "Saat theta frontal-midline muncul pada meditasi atentif, indeks vagal dan simpatis berubah; korteks frontal medial terkait fungsi otonom jantung."
+    "finding": "Saat theta frontal-midline muncul pada meditasi atentif, indeks vagal dan simpatis berubah; korteks frontal medial terkait fungsi otonom jantung.",
+    "verified": "Crossref, 2026-11-09"
   },
   "laborde2017": {
     "authors": [
@@ -333,12 +344,13 @@
     "title": "Biocybernetic system evaluates indices of operator engagement in automated task",
     "journal": "Biological Psychology",
     "volume": "40",
-    "issue": null,
+    "issue": "1-2",
     "pages": "187-195",
     "doi": "10.1016/0301-0511(95)05116-3",
-    "doi_verified": false,
+    "doi_verified": true,
     "read": "abstract",
-    "finding": "Di antara indeks yang diuji, beta/(alpha + theta) paling baik mencerminkan keterlibatan tugas."
+    "finding": "Di antara indeks yang diuji, beta/(alpha + theta) paling baik mencerminkan keterlibatan tugas.",
+    "verified": "Crossref, 2026-11-09"
   },
   "russell1980": {
     "authors": [
@@ -430,9 +442,12 @@
   "bourdillon2017": {
     "authors": [
       "Bourdillon N",
-      "et al."
+      "Schmitt L",
+      "Yazdani S",
+      "Vesin JM",
+      "Millet GP"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2017,
     "title": "Minimal window duration for accurate HRV recording in athletes",
     "journal": "Frontiers in Neuroscience",
@@ -442,7 +457,8 @@
     "doi": "10.3389/fnins.2017.00456",
     "doi_verified": true,
     "read": "abstract",
-    "finding": "RMSSD cukup dengan jendela analisis 2 menit (posisi berbaring); perlu 1 menit stabilisasi sebelumnya, jadi 3 menit = 1 + 2; ukuran ranah frekuensi perlu 5 menit = 1 + 4."
+    "finding": "RMSSD cukup dengan jendela analisis 2 menit (posisi berbaring); perlu 1 menit stabilisasi sebelumnya, jadi 3 menit = 1 + 2; ukuran ranah frekuensi perlu 5 menit = 1 + 4.",
+    "verified": "Crossref, 2026-11-09"
   },
   "taskforce1996": {
     "authors": [
@@ -456,26 +472,31 @@
     "issue": "5",
     "pages": "1043-1065",
     "doi": "10.1161/01.CIR.93.5.1043",
-    "doi_verified": false,
+    "doi_verified": true,
     "read": "secondary summaries",
-    "finding": "Rekaman jangka pendek standar adalah 5 menit; metode harus distandardisasi."
+    "finding": "Rekaman jangka pendek standar adalah 5 menit; metode harus distandardisasi.",
+    "verified": "Crossref, 2026-11-09"
   },
   "gudmundsson2007": {
     "authors": [
       "Gudmundsson S",
-      "et al."
+      "Runarsson TP",
+      "Sigurdsson S",
+      "Eiriksdottir G",
+      "Johnsen K"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2007,
     "title": "Reliability of quantitative EEG features",
     "journal": "Clinical Neurophysiology",
     "volume": "118",
-    "issue": null,
+    "issue": "10",
     "pages": "2162-2171",
-    "doi": null,
-    "doi_verified": false,
+    "doi": "10.1016/j.clinph.2007.06.018",
+    "doi_verified": true,
     "read": "abstract",
-    "finding": "Reliabilitas fitur EEG istirahat naik dengan panjang epoch sampai 40 s; 60 s tidak menambah reliabilitas."
+    "finding": "Reliabilitas fitur EEG istirahat naik dengan panjang epoch sampai 40 s; 60 s tidak menambah reliabilitas.",
+    "verified": "Crossref, 2026-11-09"
   },
   "lehrer2014": {
     "authors": [
@@ -497,11 +518,18 @@
   "laborde2022": {
     "authors": [
       "Laborde S",
-      "Allen MS",
+      "Allen M",
       "Borges U",
-      "et al."
+      "Dosseville F",
+      "Hosang T",
+      "Iskra M",
+      "Mosley E",
+      "Salvotti C",
+      "Spolverato L",
+      "Zammit N",
+      "Javelle F"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2022,
     "title": "Effects of voluntary slow breathing on heart rate and heart rate variability: a systematic review and a meta-analysis",
     "journal": "Neuroscience and Biobehavioral Reviews",
@@ -509,16 +537,22 @@
     "issue": null,
     "pages": "104711",
     "doi": "10.1016/j.neubiorev.2022.104711",
-    "doi_verified": false,
+    "doi_verified": true,
     "read": "abstract",
-    "finding": "Napas lambat sukarela menaikkan HRV vagal selama sesi, segera sesudah satu sesi, dan setelah intervensi (223 studi)."
+    "finding": "Napas lambat sukarela menaikkan HRV vagal selama sesi, segera sesudah satu sesi, dan setelah intervensi (223 studi).",
+    "verified": "Crossref, 2026-11-09"
   },
   "zaccaro2018": {
     "authors": [
       "Zaccaro A",
-      "et al."
+      "Piarulli A",
+      "Laurino M",
+      "Garbella E",
+      "Menicucci D",
+      "Neri B",
+      "Gemignani A"
     ],
-    "authors_complete": false,
+    "authors_complete": true,
     "year": 2018,
     "title": "How breath-control can change your life: a systematic review on psycho-physiological correlates of slow breathing",
     "journal": "Frontiers in Human Neuroscience",
@@ -528,7 +562,8 @@
     "doi": "10.3389/fnhum.2018.00353",
     "doi_verified": true,
     "read": "abstract",
-    "finding": "Napas lambat (< 10/menit): EEG alfa naik dan theta turun; HRV dan RSA naik; rasa rileks naik."
+    "finding": "Napas lambat (< 10/menit): EEG alfa naik dan theta turun; HRV dan RSA naik; rasa rileks naik.",
+    "verified": "Crossref, 2026-11-09"
   },
   "shaffer2020": {
     "authors": [
@@ -562,8 +597,9 @@
     "issue": "1",
     "pages": "3-12",
     "doi": "10.1249/MSS.0b013e31818cb278",
-    "doi_verified": false,
+    "doi_verified": true,
     "read": "secondary summaries",
-    "finding": "Ambang besaran perbedaan terstandar: 0,2 kecil, 0,6 sedang, 1,2 besar, 2,0 sangat besar, 4,0 amat sangat besar (distandardisasi terhadap SD antarsubjek)."
+    "finding": "Ambang besaran perbedaan terstandar: 0,2 kecil, 0,6 sedang, 1,2 besar, 2,0 sangat besar, 4,0 amat sangat besar (distandardisasi terhadap SD antarsubjek).",
+    "verified": "Crossref, 2026-11-09"
   }
 }
