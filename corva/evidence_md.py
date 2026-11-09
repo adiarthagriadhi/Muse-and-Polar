@@ -45,6 +45,15 @@ ELEMENT_NAMES = {
     "concl_fatigue": "Kesimpulan: kelelahan / mengantuk (D-20)",
     "concl_vagal_withdrawal_rest": "Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21)",
     "concl_change_after": "Kesimpulan: perubahan sesudah intervensi (D-19, D-21)",
+    "scale_kss": "Skala: Karolinska Sleepiness Scale setelah tiap fase (D-22)",
+    "scale_relax": "Skala: rileks 1–9 setelah tiap fase (D-22)",
+    "norms_percentiles": "Norma kelompok: persentil respons per fase (D-24)",
+    "val_agreement": "Validasi: kesesuaian dengan harapan protokol (D-23)",
+    "val_kss_threshold": "Validasi: KSS ≥ 7 = mengantuk (D-23)",
+    "val_relax_threshold": "Validasi: rileks ≥ 6 = merasa rileks (D-23)",
+    "val_kappa": "Validasi: Cohen's kappa kesimpulan vs skala (D-23)",
+    "val_correlation": "Validasi: korelasi Spearman (D-23)",
+    "val_icc": "Validasi: reliabilitas uji-ulang ICC(2,1) (D-23)",
 }
 
 

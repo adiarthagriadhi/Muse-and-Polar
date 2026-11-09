@@ -83,6 +83,12 @@ two 17-minute runs of the CorVa standard protocol for **Tampilkan CorVa** (`DEMO
 protocol expects; in `DEMO_P05` the participant gets drowsy with eyes closed, so one phase differs from its
 expectation). Demo data are synthetic and have no physiological meaning.
 
+**CorVa validation (v0.5).** The CorVa protocol asks two 1–9 ratings after every phase (sleepiness, KSS;
+relaxation). `python -m corva.validate <sessions> --out <folder> [--norms-out norms.json]` analyses many
+sessions at once (agreement with the protocol expectation, conclusions vs ratings, test–retest ICC) and can
+write reference-group norms, which the dashboard reads with `--corva-norms norms.json`. Run it on data in a
+private repository; participant data never go into this one.
+
 Or open `research/web/research-view.html` directly in a browser and press **Data contoh** (example
 data, synthetic).
 

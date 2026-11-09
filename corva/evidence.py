@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from . import conclusions, labels, protocol, session
+from . import conclusions, labels, norms, protocol, session, validate
 
 
 def all_evidence() -> dict:
-    return {**labels.EVIDENCE, **protocol.EVIDENCE, **session.EVIDENCE, **conclusions.EVIDENCE}
+    return {**labels.EVIDENCE, **protocol.EVIDENCE, **session.EVIDENCE, **conclusions.EVIDENCE,
+            **norms.EVIDENCE, **validate.EVIDENCE}

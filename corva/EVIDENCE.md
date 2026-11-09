@@ -37,6 +37,8 @@ penggabungannya menjadi satu kesimpulan belum divalidasi dan ditulis "Diasumsika
 | Protokol: tiap blok 3 menit (1 stabilisasi + 2 analisis) | Bourdillon dkk. (2017); Munoz dkk. (2015); Esco & Flatt (2014); Gudmundsson dkk. (2007) | RMSSD sah dengan jendela 2 menit setelah 1 menit stabilisasi; EEG istirahat stabil dengan epoch ≥ 40 s |
 | Protokol: mata terbuka vs tertutup | Barry dkk. (2007) | membuka mata menurunkan alfa dan menaikkan arousal; mata tertutup sebagai kondisi alfa tinggi |
 | Protokol: napas dalam 6/menit | Lehrer & Gevirtz (2014); Laborde dkk. (2022); Zaccaro dkk. (2018); Shaffer & Meehan (2020) | 6 napas/menit (~0,1 Hz) menaikkan HRV vagal; alfa naik dan theta turun; resonansi individual bisa berbeda |
+| Skala: Karolinska Sleepiness Scale setelah tiap fase (D-22) | Åkerstedt & Gillberg (1990) | Karolinska Sleepiness Scale 1–9 setelah tiap fase sebagai pembanding subjektif kesimpulan kelelahan/mengantuk (D-22); terjemahan label bahasa Indonesia belum divalidasi |
+| Skala: rileks 1–9 setelah tiap fase (D-22) | **asumsi** | skala rileks satu butir 1–9 setelah tiap fase sebagai pembanding kesimpulan respons rileks dan sulit rileks (D-22); asumsi, belum ada versi tervalidasi yang dipakai |
 | Protokol: efek terbawa antarblok | Laborde dkk. (2022) | efek napas lambat masih terlihat segera sesudah sesi, sehingga urutan blok bisa terbawa ke blok berikutnya |
 | Mesin: R0 = baseline setelah menit stabilisasi | Task Force (1996); Bourdillon dkk. (2017) | R0 = fase baseline setelah menit stabilisasi (4 menit analisis), seperti rekaman HRV jangka pendek standar |
 | Syarat ≥ 40 s EEG bersih per ruas (D-11) | Gudmundsson dkk. (2007) | label per fase hanya bila ruas analisis memiliki ≥ 40 s EEG bersih (D-11); EEG istirahat stabil dengan epoch ≥ 40 s |
@@ -52,6 +54,13 @@ penggabungannya menjadi satu kesimpulan belum divalidasi dan ditulis "Diasumsika
 | Kesimpulan: kelelahan / mengantuk (D-20) | Borghini dkk. (2014); Klimesch (1999) | Q3 dengan θ/β naik: theta naik bersama perlambatan kortikal saat lelah/mengantuk (D-20) |
 | Kesimpulan: tegang / penarikan vagal saat istirahat (D-20, D-21) | Laborde dkk. (2017); Thayer dkk. (2009) · kombinasi **diasumsikan** | komponen: RMSSD turun = penarikan vagal; tonus vagal mencerminkan kapasitas regulasi; tanpa tugas = tegang diasumsikan (D-21) |
 | Kesimpulan: perubahan sesudah intervensi (D-19, D-21) | Laborde dkk. (2022); Plews dkk. (2012); Laborde dkk. (2018) · kombinasi **diasumsikan** | lnRMSSD dipantau antarhari; latihan napas lambat mengubah HRV vagal; dibandingkan perubahan dari R0 masing-masing sesi (satuan asli), ambang 0,6 × skala R0 diasumsikan (D-19, D-21) |
+| Norma kelompok: persentil respons per fase (D-24) | **asumsi** | norma = persentil empiris perubahan dari R0 per fase, satu sesi per peserta, dari kelompok acuan; posisi seseorang = persentil hasil interpolasi; N < 20 ditandai sementara (D-24) |
+| Validasi: kesesuaian dengan harapan protokol (D-23) | Barry dkk. (2007); Lehrer & Gevirtz (2014); Laborde dkk. (2022) | persentase fase yang sesuai harapan protokol, per fase dan keseluruhan (D-23) |
+| Validasi: KSS ≥ 7 = mengantuk (D-23) | Åkerstedt & Gillberg (1990) | KSS ≥ 7 = mengantuk, pembanding subjektif kesimpulan kelelahan/mengantuk (D-23) |
+| Validasi: rileks ≥ 6 = merasa rileks (D-23) | **asumsi** | rileks ≥ 6 (di atas titik tengah skala 1–9) = merasa rileks, pembanding respons rileks (D-23) |
+| Validasi: Cohen's kappa kesimpulan vs skala (D-23) | Cohen (1960) | kesepakatan kesimpulan fisiologis dengan skala subjektif dinyatakan dengan Cohen's kappa (D-23) |
+| Validasi: korelasi Spearman (D-23) | **asumsi** | korelasi Spearman z vagal ↔ rileks dan z θ/β ↔ KSS sebagai ringkasan deskriptif (D-23) |
+| Validasi: reliabilitas uji-ulang ICC(2,1) (D-23) | Shrout & Fleiss (1979); Koo & Li (2016) | reliabilitas uji-ulang dengan ICC(2,1) (dua arah acak, kesepakatan absolut) pada dua sesi pertama tiap peserta; tafsir menurut Koo & Li (D-23) |
 
 ## Protokol standar
 
@@ -85,10 +94,14 @@ penggabungannya menjadi satu kesimpulan belum divalidasi dan ditulis "Diasumsika
 Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebelum dikutip.
 *Dibaca* = bagian yang sudah dibaca untuk model ini.
 
+- **[akerstedt1990]** Åkerstedt T, Gillberg M (1990). Subjective and objective sleepiness in the active individual. *International Journal of Neuroscience 52(1-2):29-37*. doi:10.3109/00207459008994241
+  ✓ · *dibaca:* abstract
+  Temuan yang dipakai: Karolinska Sleepiness Scale (KSS) 1–9 berkorelasi dengan penanda EEG dan EOG kantuk (alfa/theta naik); skor ≥ 7 menandai kantuk yang disertai tanda fisiologis
+  Dipakai untuk: Skala: Karolinska Sleepiness Scale setelah tiap fase (D-22), Validasi: KSS ≥ 7 = mengantuk (D-23)
 - **[barry2007]** Barry RJ, Clarke AR, Johnstone SJ, Magee CA, Rushby JA (2007). EEG differences between eyes-closed and eyes-open resting conditions. *Clinical Neurophysiology 118(12):2765-2773*. doi:10.1016/j.clinph.2007.07.028
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Alfa rata-rata berkorelasi negatif dengan konduktansi kulit dan turun saat mata dibuka; alfa layak sebagai ukuran arousal istirahat.
-  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q2` Rileks–pulih, `X_HIGH` Aktivasi kortikal, `X_LOW` Korteks melambat, Protokol: mata terbuka vs tertutup, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara kortikal (D-20, D-21)
+  Dipakai untuk: Sumbu X: log(β/α) EEG Muse, `Q2` Rileks–pulih, `X_HIGH` Aktivasi kortikal, `X_LOW` Korteks melambat, Protokol: mata terbuka vs tertutup, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara kortikal (D-20, D-21), Validasi: kesesuaian dengan harapan protokol (D-23)
 - **[berntson1991]** Berntson GG, Cacioppo JT, Quigley KS (1991). Autonomic determinism: the modes of autonomic control, the doctrine of autonomic space, and the laws of autonomic constraint. *Psychological Review 98(4):459-487*. doi:10.1037/0033-295X.98.4.459
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Mode kendali otonom tidak berada pada satu kontinum simpatis-parasimpatis, tetapi di ruang dua dimensi (autonomic space).
@@ -113,6 +126,10 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Muse menangkap spektrum daya, frekuensi alfa individual, dan asimetri alfa frontal sebanding dengan BioSemi 64 kanal.
   Dipakai untuk: Sumbu X: log(β/α) EEG Muse
+- **[cohen1960]** Cohen J (1960). A coefficient of agreement for nominal scales. *Educational and Psychological Measurement 20(1):37-46*. doi:10.1177/001316446002000104
+  ✓ · *dibaca:* abstract
+  Temuan yang dipakai: koefisien kappa: kesepakatan dua klasifikasi nominal setelah dikoreksi untuk kesepakatan kebetulan
+  Dipakai untuk: Validasi: Cohen's kappa kesimpulan vs skala (D-23)
 - **[crabbe2004]** Crabbe JB, Dishman RK (2004). Brain electrocortical activity during and after exercise: a quantitative synthesis. *Psychophysiology 41(4):563-574*. doi:10.1111/j.1469-8986.2004.00176.x
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Saat dan sesudah latihan daya absolut alfa naik, tetapi delta, theta, dan beta juga naik; tidak khas alfa.
@@ -141,6 +158,10 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Theta terkait penyandian informasi baru; alfa atas terkait pencarian memori; pita alfa sebaiknya individual.
   Dipakai untuk: Penanda tambahan Q3 (θ/β, fase pemulihan; D-12), Mesin: pita theta 4–8 Hz (D-12), Kesimpulan: kelelahan / mengantuk (D-20)
+- **[koo2016]** Koo TK, Li MY (2016). A guideline of selecting and reporting intraclass correlation coefficients for reliability research. *Journal of Chiropractic Medicine 15(2):155-163*. doi:10.1016/j.jcm.2016.02.012
+  ✓ · *dibaca:* abstract
+  Temuan yang dipakai: pedoman memilih dan melaporkan ICC; tafsir < 0,5 buruk, 0,5–0,75 sedang, 0,75–0,9 baik, > 0,9 sangat baik
+  Dipakai untuk: Validasi: reliabilitas uji-ulang ICC(2,1) (D-23)
 - **[krigolson2017]** Krigolson OE, Williams CC, Norton A, Hassall CD, Colino FL (2017). Choosing MUSE: validation of a low-cost, portable EEG system for ERP research. *Frontiers in Neuroscience 11:109*. doi:10.3389/fnins.2017.00109
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Muse (TP9, AF7, AF8, TP10) menangkap N200, P300, dan reward positivity pada 60 peserta.
@@ -160,11 +181,11 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
 - **[laborde2022]** Laborde S, Allen M, Borges U, Dosseville F, Hosang T, Iskra M, Mosley E, Salvotti C, Spolverato L, Zammit N, Javelle F (2022). Effects of voluntary slow breathing on heart rate and heart rate variability: a systematic review and a meta-analysis. *Neuroscience and Biobehavioral Reviews 138:104711*. doi:10.1016/j.neubiorev.2022.104711
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Napas lambat sukarela menaikkan HRV vagal selama sesi, segera sesudah satu sesi, dan setelah intervensi (223 studi).
-  Dipakai untuk: Protokol: napas dalam 6/menit, Protokol: efek terbawa antarblok, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21), Kesimpulan: perubahan sesudah intervensi (D-19, D-21)
+  Dipakai untuk: Protokol: napas dalam 6/menit, Protokol: efek terbawa antarblok, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21), Kesimpulan: perubahan sesudah intervensi (D-19, D-21), Validasi: kesesuaian dengan harapan protokol (D-23)
 - **[lehrer2014]** Lehrer PM, Gevirtz R (2014). Heart rate variability biofeedback: how and why does it work?. *Frontiers in Psychology 5:756*. doi:10.3389/fpsyg.2014.00756
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Efek maksimal pada napas sekitar 0,1 Hz (6 napas/menit); napas spontan umumnya 0,15-0,4 Hz (9-24/menit); amplitudo osilasi denyut naik berlipat.
-  Dipakai untuk: Protokol: napas dalam 6/menit, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21)
+  Dipakai untuk: Protokol: napas dalam 6/menit, Kesimpulan: respons rileks khas (D-20), Kesimpulan: sulit rileks secara vagal (D-20, D-21), Validasi: kesesuaian dengan harapan protokol (D-23)
 - **[munoz2015]** Munoz ML, van Roon A, Riese H, Thio C, Oostenbroek E, Westrik I, de Geus EJC, Gansevoort R, Lefrandt J, Nolte IM, Snieder H (2015). Validity of (ultra-)short recordings for heart rate variability measurements. *PLoS ONE 10(9):e0138921*. doi:10.1371/journal.pone.0138921
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: RMSSD 10 s r = 0,85-0,86 terhadap 4-5 menit; tiga potongan 10 s r = 0,94; 120 s hampir sempurna (n = 3.387).
@@ -189,6 +210,10 @@ Status: ✓ = DOI dan penulis sudah dicek; ⚠ = perlu dicek ke naskah asli sebe
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Frekuensi resonansi tiap orang tidak selalu 6 napas/menit; bisa lebih rendah atau lebih tinggi.
   Dipakai untuk: Protokol: napas dalam 6/menit
+- **[shrout1979]** Shrout PE, Fleiss JL (1979). Intraclass correlations: uses in assessing rater reliability. *Psychological Bulletin 86(2):420-428*. doi:10.1037/0033-2909.86.2.420
+  ✓ · *dibaca:* abstract
+  Temuan yang dipakai: bentuk ICC untuk reliabilitas; ICC(2,1) = model dua arah acak, kesepakatan absolut, satu pengukuran
+  Dipakai untuk: Validasi: reliabilitas uji-ulang ICC(2,1) (D-23)
 - **[stanley2013]** Stanley J, Peake JM, Buchheit M (2013). Cardiac parasympathetic reactivation following exercise: implications for training prescription. *Sports Medicine 43(12):1259-1277*. doi:10.1007/s40279-013-0083-4
   ✓ · *dibaca:* abstract
   Temuan yang dipakai: Reaktivasi parasimpatis pascalatihan; pemulihan otonom penuh hingga 24 jam (intensitas rendah), 24-48 jam (ambang), dan >= 48 jam (intensitas tinggi).

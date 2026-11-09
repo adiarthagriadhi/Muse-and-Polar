@@ -48,6 +48,13 @@ CORVA_PROFILES = [
 ]
 
 
+# subjective ratings after each phase (KSS 1-9, rileks 1-9), written like the dashboard does
+DEMO_RATINGS = {
+    "DEMO_P04": {"baseline": (3, 5), "eo_reg": (3, 5), "eo_deep": (3, 7), "ec_reg": (4, 7), "ec_deep": (4, 8)},
+    "DEMO_P05": {"baseline": (4, 5), "eo_reg": (5, 5), "eo_deep": (5, 6), "ec_reg": (8, 6), "ec_deep": (7, 7)},
+}
+
+
 def _level(t: np.ndarray, key: str, after: dict | None) -> np.ndarray:
     """Parameter over time: rest until MARKER_S, then a 10 s ramp to the condition."""
     rest = REST[key]
@@ -155,7 +162,13 @@ def make_protocol_session(base: Path, name: str, note: str, conditions: dict, st
 
     schedule, total = protocol_schedule()
     markers = [(0.5, "SYNC mulai")] + [(s + 0.2, protocol.marker_label(pid)) for pid, s in schedule]
-    markers.append((total - 0.5, protocol.MARKER_PREFIX + "selesai"))
+    seconds = {ph["id"]: ph["seconds"] for ph in protocol.PROTOCOL}
+    for pid, s in schedule:  # ratings at the end of each phase (no pause in the synthetic timeline)
+        kss_relax = DEMO_RATINGS.get(name, {}).get(pid)
+        if kss_relax:
+            markers.append((s + seconds[pid] - 0.3, protocol.scale_label(pid, {"KSS": kss_relax[0], "rileks": kss_relax[1]})))
+    markers.append((total - 0.1, protocol.MARKER_PREFIX + "selesai"))
+    markers.sort()
     return _make(base, name, note, _phase_level(conditions), total, markers, start, seed)
 
 

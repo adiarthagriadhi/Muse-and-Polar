@@ -82,6 +82,25 @@ def test_only_sessions_with_protocol_markers_are_listed(data_dir):
     assert [s["id"] for s in corva_sessions(data_dir)] == [SID, PRE]
 
 
+def test_norms_reach_the_page(data_dir):
+    from corva import norms as N
+
+    nm = N.build([{"participant": i, "phase_id": "ec_deep", "log_beta_alpha": -0.2, "ln_rmssd": i / 20} for i in range(25)])
+
+    async def run():
+        client = TestClient(TestServer(build_app(Hub(data_dir), {}, corva_norms=nm)))
+        await client.start_server()
+        try:
+            data = _embedded(await (await client.get(f"/corva/session/{SID}")).text())
+            assert data["result"]["norms"] == {"n_participants": 25, "provisional": False}
+            ph = next(p for p in data["result"]["phases"] if p["id"] == "ec_deep")
+            assert set(ph["norms"]) == {"log_beta_alpha", "ln_rmssd"}
+        finally:
+            await client.close()
+
+    asyncio.run(run())
+
+
 def test_routes(data_dir):
     async def run():
         client = TestClient(TestServer(build_app(Hub(data_dir), {})))

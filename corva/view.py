@@ -380,7 +380,7 @@ const conclItem = (i) => `<li class="${i.assumed ? 'asm' : 'ref'}"><b>${esc(i.ti
 const C = R.conclusions || { items: [], summary: '', note: '', missing: [] };
 $('conclSummary').textContent = C.summary;
 $('conclList').innerHTML = C.items.map(conclItem).join('');
-$('conclNote').textContent = C.note + (C.missing.length ? ` Fase tanpa label (tidak ikut disimpulkan): ${C.missing.join(', ')}.` : '');
+$('conclNote').textContent = (R.norms ? `Norma kelompok acuan aktif (N = ${R.norms.n_participants}${R.norms.provisional ? ', sementara: N < 20' : ''}); persentil ada di halaman Fase. ` : '') + C.note + (C.missing.length ? ` Fase tanpa label (tidak ikut disimpulkan): ${C.missing.join(', ')}.` : '');
 if (D.comparison) {
   const X = D.comparison, preName = (D.sessions.find((s) => s.id === X.pre) || {}).name || X.pre;
   $('cmpTitle').textContent = `Perbandingan dengan sesi sebelum: ${preName}`;
@@ -537,7 +537,12 @@ $('cards').innerHTML = R.phases.map((p) => {
       + `<dt>θ/β · β/(α+θ)</dt><dd>${fz(m.theta_beta_z)} · ${fz(m.engagement_z)}</dd>`
       + `<dt>RMSSD ruas</dt><dd>${p.segment_rmssd_ms != null ? p.segment_rmssd_ms.toFixed(1) + ' ms' : '–'}</dd>`
       + `<dt>Keyakinan</dt><dd>${d.n_windows} jendela, ${Math.round(d.valid_fraction * 100)} % valid<br>RR valid ${Math.round(d.rr_valid_s)} s · EEG bersih ${Math.round(d.eeg_clean_s)} s</dd>`
-      + `<dt>Okupansi</dt><dd>${occ}</dd></dl>`;
+      + `<dt>Okupansi</dt><dd>${occ}</dd>`
+      + (p.norms ? `<dt>Kelompok acuan</dt><dd>${['log_beta_alpha', 'ln_rmssd'].filter((k) => p.norms[k]).map((k) =>
+          `${k === 'ln_rmssd' ? 'respons vagal' : 'respons kortikal'} persentil ${p.norms[k].percentile ?? '–'}`).join(' · ')}`
+          + ` <span class="muted">(N = ${R.norms.n_participants}${R.norms.provisional ? ', sementara' : ''})</span></dd>` : '')
+      + `<dt>Penilaian peserta</dt><dd>${p.subjective == null ? '–' : Object.keys(p.subjective).length
+        ? `kantuk (KSS) ${p.subjective.KSS ?? '–'} · rileks ${p.subjective.rileks ?? '–'} <span class="muted">(1–9)</span>` : 'dilewati'}</dd></dl>`;
   }
   if (p.reasons && p.reasons.length) body += `<p class="reasons">✕ ${p.reasons.map(esc).join('; ')}</p>`;
   if (lab.alternatives.length) body += `<p class="alts">Juga disebut: ${lab.alternatives.map((a) => esc(a.name) + (a.kind === 'analogi' ? ' (analogi)' : '')).join('; ')}</p>`;
@@ -612,11 +617,12 @@ timeline($('tlx'), 'x_z');
 timeline($('tly'), 'y_z');
 
 // ---------------------------------------------------------------- table view
-$('table').innerHTML = `<table><thead><tr><th>Fase</th><th>Label</th><th>Perbandingan</th><th>X z</th><th>Y z</th><th>θ/β z</th><th>RR valid</th><th>EEG bersih</th></tr></thead><tbody>`
+$('table').innerHTML = `<table><thead><tr><th>Fase</th><th>Label</th><th>Perbandingan</th><th>X z</th><th>Y z</th><th>θ/β z</th><th>RR valid</th><th>EEG bersih</th><th>KSS</th><th>Rileks</th></tr></thead><tbody>`
   + R.phases.map((p) => `<tr><td>${SPEC[p.id].num} · ${esc(p.name)}</td><td>${esc(p.label.label)} <span class="code">${p.label.code}</span></td>`
     + `<td>${esc(p.comparison || (p.reasons || []).join('; '))}</td>`
     + `<td class="num">${fz(p.medians && p.medians.x_z)}</td><td class="num">${fz(p.medians && p.medians.y_z)}</td><td class="num">${fz(p.medians && p.medians.theta_beta_z)}</td>`
-    + `<td class="num">${p.data ? Math.round(p.data.rr_valid_s) + ' s' : '–'}</td><td class="num">${p.data ? Math.round(p.data.eeg_clean_s) + ' s' : '–'}</td></tr>`).join('')
+    + `<td class="num">${p.data ? Math.round(p.data.rr_valid_s) + ' s' : '–'}</td><td class="num">${p.data ? Math.round(p.data.eeg_clean_s) + ' s' : '–'}</td>`
+    + `<td class="num">${(p.subjective || {}).KSS ?? '–'}</td><td class="num">${(p.subjective || {}).rileks ?? '–'}</td></tr>`).join('')
   + `</tbody></table>`;
 
 // ---------------------------------------------------------------- method + references

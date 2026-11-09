@@ -22,6 +22,7 @@ from cass_polar.live_routes import resolve_session, sessions
 
 from . import protocol
 from .conclusions import compare, conclusions_csv
+from .norms import annotate
 from .session import analyze_session, phases_csv, windows_csv
 from .view import build_html
 
@@ -47,15 +48,15 @@ def corva_sessions(root: Path) -> list[dict]:
     return out
 
 
-def cached_analysis(folder: Path) -> dict:
-    """analyze_session() memoised on the session's input files."""
+def cached_analysis(folder: Path, norms: dict | None = None) -> dict:
+    """analyze_session() memoised on the session's input files; norms add percentiles (corva/norms.py)."""
     folder = Path(folder)
     key = tuple((f.name, f.stat().st_mtime_ns, f.stat().st_size)
-                for f in (folder / n for n in ("muse_eeg.csv", "polar_rr.csv", "marker.csv")) if f.exists())
+                for f in (folder / n for n in ("muse_eeg.csv", "polar_rr.csv", "marker.csv")) if f.exists()) + (id(norms),)
     hit = _CACHE.get(folder)
     if hit and hit[0] == key:
         return hit[1]
-    result = analyze_session(folder)
+    result = annotate(analyze_session(folder), norms)
     _CACHE[folder] = (key, result)
     return result
 
@@ -75,13 +76,14 @@ def _error_page(msg: str, root: Path, status: int) -> web.Response:
     return web.Response(text=html, content_type="text/html", charset="utf-8", status=status)
 
 
-def add_routes(app: web.Application, data_dir) -> None:
+def add_routes(app: web.Application, data_dir, norms: dict | None = None) -> None:
     root = Path(data_dir)
+    analysed = lambda folder: cached_analysis(folder, norms)  # noqa: E731
 
     async def analysis_json(request):
         folder = resolve_session(root, request.match_info["session"])
         try:
-            result = await asyncio.to_thread(cached_analysis, folder)
+            result = await asyncio.to_thread(analysed, folder)
         except (ValueError, OSError) as exc:
             return web.json_response({"error": str(exc)}, status=422)
         return web.json_response(result, headers={"Cache-Control": "no-store"})
@@ -92,7 +94,7 @@ def add_routes(app: web.Application, data_dir) -> None:
         if level not in ("phases", "windows", "conclusions"):
             raise web.HTTPBadRequest(text="level harus phases, windows atau conclusions")
         try:
-            result = await asyncio.to_thread(cached_analysis, folder)
+            result = await asyncio.to_thread(analysed, folder)
             comparison = await asyncio.to_thread(_comparison, request.query.get("pre"), folder, result)
         except (ValueError, OSError) as exc:
             return web.json_response({"error": str(exc)}, status=422)
@@ -110,7 +112,7 @@ def add_routes(app: web.Application, data_dir) -> None:
             return None
         try:
             pre_folder = resolve_session(root, pre_id)
-            return compare(cached_analysis(pre_folder), result)
+            return compare(analysed(pre_folder), result)
         except web.HTTPException:
             return {"pre": pre_id, "error": "Sesi sebelum tidak ditemukan."}
         except (ValueError, OSError) as exc:
@@ -120,8 +122,8 @@ def add_routes(app: web.Application, data_dir) -> None:
         post = resolve_session(root, request.query.get("post", ""))
         pre = resolve_session(root, request.query.get("pre", ""))
         try:
-            a = await asyncio.to_thread(cached_analysis, pre)
-            b = await asyncio.to_thread(cached_analysis, post)
+            a = await asyncio.to_thread(analysed, pre)
+            b = await asyncio.to_thread(analysed, post)
         except (ValueError, OSError) as exc:
             return web.json_response({"error": str(exc)}, status=422)
         return web.json_response(compare(a, b), headers={"Cache-Control": "no-store"})
@@ -133,7 +135,7 @@ def add_routes(app: web.Application, data_dir) -> None:
     async def page(request):
         folder = resolve_session(root, request.match_info["session"])
         try:
-            result = await asyncio.to_thread(cached_analysis, folder)
+            result = await asyncio.to_thread(analysed, folder)
             others = await asyncio.to_thread(corva_sessions, root)
             comparison = await asyncio.to_thread(_comparison, request.query.get("pre"), folder, result)
         except (ValueError, OSError) as exc:

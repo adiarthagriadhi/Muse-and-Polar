@@ -93,6 +93,23 @@ def read_markers(folder: Path, eeg_start_unix: float) -> pd.DataFrame:
     return mk[["time_s", "label", "phase_id"]]
 
 
+def read_ratings(folder: Path, eeg_start_unix: float, run_start_s: float) -> dict:
+    """Subjective ratings after each phase of the run that starts at run_start_s (D-22):
+    {phase id: {"KSS": 7, "rileks": 6}} ({} = skipped). The last rating of a phase wins."""
+    path = Path(folder) / "marker.csv"
+    if not path.is_file():
+        return {}
+    mk = pd.read_csv(path)
+    if not {"timestamp", "label"} <= set(mk.columns):
+        return {}
+    out = {}
+    for t, label in zip(pd.to_numeric(mk["timestamp"], errors="coerce") - eeg_start_unix, mk["label"].astype(str)):
+        parsed = protocol.parse_scale(label)
+        if parsed and np.isfinite(t) and t >= run_start_s:
+            out[parsed[0]] = parsed[1]
+    return out
+
+
 def phase_spans(markers: pd.DataFrame, duration: float) -> dict:
     """phase id -> {start, end, analysis_start, analysis_end, complete} from markers.
 
@@ -176,6 +193,7 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
         raise CASSInputError(f"Penanda '{protocol.marker_label(BASELINE_ID)}' tidak ditemukan; "
                              "rekam sesi dengan panel Protokol CorVa.")
     rr = read_rr(folder / "polar_rr.csv", eeg_start)
+    ratings = read_ratings(folder, eeg_start, float(markers["time_s"].iloc[0]))
 
     # phase membership of each window: fully inside the phase; analysed = after settling with its RR span
     # inside the phase as well, so the 20 s RR span does not reach into the next phase
@@ -224,7 +242,8 @@ def analyze_session(folder: str | Path, rr_span_s: float = RR_SPAN_S) -> dict:
     for p in protocol.PROTOCOL:
         pid = p["id"]
         entry = {"id": pid, "name": p["name"], "expected": p["expected"], "reference": p["reference"],
-                 "expected_refs": protocol.EXPECTATION_REFS[pid], "recorded": pid in spans}
+                 "expected_refs": protocol.EXPECTATION_REFS[pid], "recorded": pid in spans,
+                 "subjective": ratings.get(pid)}
         if pid not in spans:
             lab = labels.classify(None, None)
             entry.update({"label": lab, "comparison": None, "reasons": ["fase tidak direkam"], "adequate": False})
@@ -298,7 +317,7 @@ PHASE_COLUMNS = ["id", "name", "recorded", "start", "end", "analysis_start", "an
                  "code", "label", "phase_reading", "qualifier", "expected", "comparison", "adequate", "reasons",
                  "x_z", "y_z", "theta_beta_z", "engagement_z", "x_magnitude", "y_magnitude",
                  "n_windows", "n_valid", "valid_fraction", "rr_valid_s", "eeg_clean_s", "analysis_s",
-                 "segment_rmssd_ms", "segment_ln_rmssd", "occupancy", "refs"]
+                 "segment_rmssd_ms", "segment_ln_rmssd", "occupancy", "kss", "rileks", "refs"]
 WINDOW_COLUMNS = ["t0", "t1", "tm", "phase_id", "analysed", "x_z", "y_z", "theta_beta_z", "engagement_z",
                   "rmssd_ms", "ln_rmssd", "n_ibi", "code", "label"]
 
@@ -328,6 +347,7 @@ def phases_csv(result: dict) -> str:
                      **med, **data,
                      "segment_rmssd_ms": p.get("segment_rmssd_ms"), "segment_ln_rmssd": p.get("segment_ln_rmssd"),
                      "occupancy": " ".join(f"{c}={v}" for c, v in p.get("occupancy", {}).items()),
+                     "kss": (p.get("subjective") or {}).get("KSS"), "rileks": (p.get("subjective") or {}).get("rileks"),
                      "refs": " ".join(lab["refs"])})
     return _csv(rows, PHASE_COLUMNS)
 

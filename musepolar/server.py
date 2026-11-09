@@ -85,7 +85,7 @@ async def handle_command(hub: Hub, slots: dict[str, DeviceSlot], msg: dict) -> N
         log.warning("unknown command: %s", msg)
 
 
-def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
+def build_app(hub: Hub, slots: dict[str, DeviceSlot], corva_norms: dict | None = None) -> web.Application:
     async def index(_request):
         return web.FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
 
@@ -114,7 +114,7 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
         return web.json_response(corva_protocol.as_json())
 
     app.router.add_get("/api/corva/protocol", corva_protocol_json)
-    add_corva_routes(app, hub.data_dir)
+    add_corva_routes(app, hub.data_dir, norms=corva_norms)
     app.router.add_static("/static", STATIC)
     return app
 
@@ -134,7 +134,13 @@ async def serve(args) -> None:
         hub.last_recording = {"active": False, "name": meta["name"], "dir": str(last),
                               "elapsed": meta["duration_sec"], "counts": meta["samples"]}
     slots = make_slots(hub, args)
-    app = build_app(hub, slots)
+    norms = None
+    if getattr(args, "corva_norms", None):
+        from corva.norms import load as load_norms
+
+        norms = load_norms(args.corva_norms)
+        log.info("CorVa norms: %s (N = %s)", args.corva_norms, norms["n_participants"])
+    app = build_app(hub, slots, corva_norms=norms)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, args.host, args.port)
@@ -175,6 +181,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--no-ppg", action="store_true", help="disable Muse PPG (EEG-only preset p21)")
     p.add_argument("--no-ecg", action="store_true", help="disable Polar ECG")
     p.add_argument("--no-polar-acc", action="store_true", help="disable Polar accelerometer (needed for sync)")
+    p.add_argument("--corva-norms", help="reference-group norms for CorVa Space (JSON from `python -m corva.validate "
+                                         "--norms-out`, kept in the private research repository)")
     p.add_argument("-v", "--verbose", action="store_true")
     args = p.parse_args(argv)
     if args.demo:

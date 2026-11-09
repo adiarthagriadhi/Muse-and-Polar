@@ -238,3 +238,14 @@ figcaption > span:first-child { overflow: hidden; text-overflow: ellipsis; }
 .pv-ball.in { transform: scale(1); }
 #pvBreath { font-size: 22px; font-weight: 650; }
 #pvIdle[hidden], .pv-run[hidden] { display: none; }
+.pv-rate { display: grid; gap: 18px; width: 100%; }
+.pv-rate[hidden] { display: none; }
+.pv-q { display: grid; gap: 8px; }
+.pv-q b { font-size: 19px; }
+.pv-scale { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 6px; }
+.pv-scale button { font: inherit; font-size: 20px; font-weight: 650; padding: 12px 0; border-radius: 10px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); }
+.pv-scale button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); border-color: var(--text-primary); }
+.pv-anchors { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; color: var(--text-muted); }
+.pv-chosen { min-height: 1.3em; font-size: 14px; color: var(--text-secondary); }
+.pv-rate-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; }

@@ -170,6 +170,15 @@ meditasi) dipakai **sesi sebelum** sebagai pembanding, dan nanti **norma kelompo
 Kesimpulan *diasumsikan* ditulis "Diasumsikan …": komponennya (arah tiap penanda dalam tiap kondisi) dari
 rujukan, tetapi penggabungannya belum divalidasi. Semua kesimpulan deskriptif, bukan diagnosis.
 
+## 5c. Skala subjektif dan norma (D-22, D-24)
+
+Setelah tiap fase, layar peserta menanyakan **kantuk** (Karolinska Sleepiness Scale 1–9; Åkerstedt & Gillberg
+1990) dan **rileks** (1–9). Jawaban tersimpan sebagai penanda `CorVa skala: …` dan tampil di kartu fase.
+Keduanya menjadi pembanding untuk menguji kesimpulan di validasi (`corva/validate.py`, D-23).
+
+Bila norma kelompok acuan dimuat (`--corva-norms`), respons tiap fase (Δ dari R0) juga ditempatkan sebagai
+**persentil kelompok acuan**, jadi "respons yang umumnya dijumpai" dinilai dalam besaran, bukan hanya arah.
+
 ## 6. Rencana validasi (ringkas, rincian di `ROADMAP.md`)
 
 - Kondisi yang sudah diketahui:

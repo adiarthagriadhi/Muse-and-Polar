@@ -601,5 +601,76 @@
     "read": "secondary summaries",
     "finding": "Ambang besaran perbedaan terstandar: 0,2 kecil, 0,6 sedang, 1,2 besar, 2,0 sangat besar, 4,0 amat sangat besar (distandardisasi terhadap SD antarsubjek).",
     "verified": "Crossref, 2026-11-09"
+  },
+  "akerstedt1990": {
+    "authors": [
+      "Åkerstedt T",
+      "Gillberg M"
+    ],
+    "authors_complete": true,
+    "year": 1990,
+    "title": "Subjective and objective sleepiness in the active individual",
+    "journal": "International Journal of Neuroscience",
+    "volume": "52",
+    "issue": "1-2",
+    "pages": "29-37",
+    "doi": "10.3109/00207459008994241",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "Karolinska Sleepiness Scale (KSS) 1–9 berkorelasi dengan penanda EEG dan EOG kantuk (alfa/theta naik); skor ≥ 7 menandai kantuk yang disertai tanda fisiologis"
+  },
+  "shrout1979": {
+    "authors": [
+      "Shrout PE",
+      "Fleiss JL"
+    ],
+    "authors_complete": true,
+    "year": 1979,
+    "title": "Intraclass correlations: uses in assessing rater reliability",
+    "journal": "Psychological Bulletin",
+    "volume": "86",
+    "issue": "2",
+    "pages": "420-428",
+    "doi": "10.1037/0033-2909.86.2.420",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "bentuk ICC untuk reliabilitas; ICC(2,1) = model dua arah acak, kesepakatan absolut, satu pengukuran"
+  },
+  "koo2016": {
+    "authors": [
+      "Koo TK",
+      "Li MY"
+    ],
+    "authors_complete": true,
+    "year": 2016,
+    "title": "A guideline of selecting and reporting intraclass correlation coefficients for reliability research",
+    "journal": "Journal of Chiropractic Medicine",
+    "volume": "15",
+    "issue": "2",
+    "pages": "155-163",
+    "doi": "10.1016/j.jcm.2016.02.012",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "pedoman memilih dan melaporkan ICC; tafsir < 0,5 buruk, 0,5–0,75 sedang, 0,75–0,9 baik, > 0,9 sangat baik"
+  },
+  "cohen1960": {
+    "authors": [
+      "Cohen J"
+    ],
+    "authors_complete": true,
+    "year": 1960,
+    "title": "A coefficient of agreement for nominal scales",
+    "journal": "Educational and Psychological Measurement",
+    "volume": "20",
+    "issue": "1",
+    "pages": "37-46",
+    "doi": "10.1177/001316446002000104",
+    "doi_verified": true,
+    "read": "abstract",
+    "verified": "Crossref, 2026-11-09",
+    "finding": "koefisien kappa: kesepakatan dua klasifikasi nominal setelah dikoreksi untuk kesepakatan kebetulan"
   }
 }

@@ -7,7 +7,7 @@
 | **Merek** | **CorVa Space**: *Cortico-Vagal Space* |
 | **Nama teknis** | **CASS-NV**: *CASS Neurovisceral State Map* |
 | **Tagar** | **#NeuroVagal** |
-| **Status** | v0.4.1 (mesin + tampilan + demo + kesimpulan). Keputusan D-01 s.d. D-21 sudah diambil; ambang dan asumsi masih diuji di validasi v0.5. Lihat [`DECISIONS.md`](DECISIONS.md). |
+| **Status** | v0.5 perangkat siap (mesin, tampilan, demo, kesimpulan, skala subjektif, alat validasi, norma). Keputusan D-01 s.d. D-24 sudah diambil; pengambilan data validasi berikutnya; ambang dan asumsi masih diuji di validasi v0.5. Lihat [`DECISIONS.md`](DECISIONS.md). |
 
 ## Arti nama
 
@@ -49,12 +49,15 @@ Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 | [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, ambang Hopkins, nama alternatif, penanda tambahan). |
 | [`session.py`](session.py) | **mesin v0.2**: satu sesi rekaman → label per jendela dan per fase protokol, syarat data, perbandingan dengan harapan. `python -m corva.session <folder sesi> [--windows]` mencetak JSON. |
 | [`conclusions.py`](conclusions.py) | **kesimpulan**: narasi sesi (respons rileks khas, sulit rileks kortikal/vagal, beban kortikal, kelelahan, tegang) dan perbandingan sesi sebelum vs sesudah; kesimpulan yang kombinasinya belum divalidasi ditulis "Diasumsikan …" (D-19 s.d. D-21) |
+| [`validate.py`](validate.py) | **alat validasi v0.5**: `python -m corva.validate <folder sesi> --out <folder keluaran> [--norms-out norma.json]` (jalankan di repo riset privat) → CSV fase, kesimpulan, galat; laporan JSON/MD: kesesuaian harapan, κ kesimpulan vs KSS/rileks, Spearman, ICC uji-ulang |
+| [`norms.py`](norms.py) | **norma kelompok**: persentil Δ dari R0 per fase; dibaca dashboard lewat `python -m musepolar --corva-norms <berkas>` |
 | [`view.py`](view.py), [`routes.py`](routes.py) | **tampilan v0.3**: halaman CorVa Space per sesi (`/corva/session/<id>`, `/corva` = sesi terbaru), dibagi menjadi layar-layar terpisah (tab, Sebelumnya/Berikutnya, ←/→): peta 3 × 3, kartu label per fase, lintasan waktu, tabel, ekspor CSV (`/api/corva/export/<id>?level=phases\|windows`), cetak/PDF; JSON di `/api/corva/analysis/<id>`. Tombol **Tampilkan CorVa** ada di panel Protokol CorVa di dashboard. Coba tanpa alat: `python -m musepolar --demo` (sesi `DEMO_P04`, `DEMO_P05`). |
 | [`protocol.py`](protocol.py) | protokol standar (fase, durasi, instruksi, harapan, rujukan); dipakai panel **Protokol CorVa** di dashboard (`musepolar/static/corva.js`) |
 | `../tests/test_corva_labels.py` | uji aturan label |
 | `../tests/test_corva_evidence.py` | uji keterlacakan: setiap aturan punya rujukan atau dinyatakan asumsi |
 | `../tests/test_corva_protocol.py` | uji protokol: fase, durasi, penanda |
 | `../tests/test_corva_conclusions.py` | uji kesimpulan: pola → kesimpulan, status *diasumsikan*, perbandingan antarsesi, CSV |
+| `../tests/test_corva_validate.py` | uji skala subjektif, κ, ICC, norma, dan alat validasi |
 | `../tests/test_corva_view.py` | uji tampilan: halaman, JSON, CSV, rute, tombol dashboard |
 | `../tests/test_corva_session.py` | uji mesin: penanda → fase → R0 → label per fase, syarat data, perbandingan dengan harapan (sesi sintetis 17 menit) |
 
