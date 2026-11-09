@@ -1,7 +1,7 @@
-# Model CASS-NV (CorVa Space), rancangan v0.1
+# Model CASS-NV (CorVa Space), v0.2
 
-Status: **sementara**. Nama label, ambang, dan aturan masih menunggu keputusan di
-[`DECISIONS.md`](DECISIONS.md).
+Status: keputusan D-01 s.d. D-17 sudah diambil ([`DECISIONS.md`](DECISIONS.md)); mesin di
+[`session.py`](session.py). Ambang dan asumsi masih diuji di validasi v0.5.
 
 **Fondasi rujukan.** Setiap aturan di model ini ditautkan ke rujukannya di kode
 (`EVIDENCE` di [`labels.py`](labels.py)) dan di bibliografi [`references.json`](references.json).
@@ -10,8 +10,8 @@ Peta aturan → rujukan, beserta status verifikasi tiap rujukan, ada di [`EVIDEN
 
 ## 1. Sumbu X: kondisi kortikal (EEG Muse 2)
 
-**Ukuran utama:** log(β/α) per kanal, rata-rata TP9, AF7, AF8, TP10, lalu diubah ke z robust terhadap R0
-(median, 1,4826 × MAD). Ini sama dengan CASS sekarang.
+**Ukuran utama (D-09):** log(β/α) per kanal, diubah ke z robust terhadap R0 (median, 1,4826 × MAD),
+lalu dirata-rata untuk TP9, AF7, AF8, TP10. Ini sama dengan CASS sekarang.
 
 | Dasar | Isi |
 |---|---|
@@ -24,7 +24,7 @@ Peta aturan → rujukan, beserta status verifikasi tiap rujukan, ada di [`EVIDEN
 
 ## 2. Sumbu Y: kondisi vagal (HRV Polar H10)
 
-**Ukuran utama:** lnRMSSD dari RR Polar, z robust terhadap R0.
+**Ukuran utama (D-10):** lnRMSSD dari RR Polar, z robust terhadap R0.
 
 | Dasar | Isi |
 |---|---|
@@ -73,8 +73,8 @@ Grid 3 × 3 tetap **dua dimensi** (D-05): sumbunya dua, hanya dipotong menjadi 9
 | `NEUTRAL` | Netral | netral | netral | sekitar acuan R0 |
 | `NO_DATA` | Data kurang | | | EEG bersih atau RR valid tidak cukup |
 
-**Penanda tambahan untuk Q3:**
-- θ/β naik (≥ ambang): **lelah/mengantuk** (Borghini dkk. 2014).
+**Penanda tambahan untuk Q3 (D-12):**
+- z log(θ/β) terhadap R0 ≥ 0,6: **lelah/mengantuk** (Borghini dkk. 2014; θ 4–8 Hz, Klimesch 1999).
 - Selain itu, bila fasenya pemulihan: **pemulihan awal** (vagal belum pulih; alfa naik pascalatihan).
 
 ## 4. Fase: protokol standar CorVa (D-08)
@@ -126,10 +126,26 @@ vagal* (Laborde dkk. 2018), dan *rileks/tenang* (analogi Russell 1980). Daftar l
 [`EVIDENCE.md`](EVIDENCE.md).
 
 
-- **Per jendela 5 s:** titik di peta, untuk lintasan (deskriptif).
-- **Per ruas:** label dari median X dan Y ruas, dengan proporsi okupansi sebagai keterangan.
-- **Syarat:** ≥ 60 s RR valid (Esco & Flatt 2014) dan cukup jendela EEG bersih; bila tidak, `NO_DATA`.
-- **Keyakinan:** proporsi jendela valid dan artefak ditampilkan di samping label.
+Mesin v0.2 (`corva/session.py`, `python -m corva.session <folder>`):
+
+- **Fase** dibaca dari penanda `CorVa: …`. Setiap penanda CorVa (juga *selesai*/*dihentikan*) menutup
+  fase sebelumnya. Menit stabilisasi tiap fase tidak dianalisis. Bila protokol diulang dalam satu rekaman,
+  dipakai run terakhir.
+- **R0** = fase baseline setelah menit stabilisasi (4 menit). Semua z dihitung terhadap jendela R0
+  (median, 1,4826 × MAD): X = rata-rata z log(β/α) empat kanal (D-09), Y = z lnRMSSD (D-10),
+  penanda Q3 = rata-rata z log(θ/β) (D-12). Indeks *engagement* log(β/(α+θ)) dihitung sebagai pembanding.
+- **Per jendela 5 s** (langkah 2,5 s; RMSSD dari rentang RR 20 s seperti CASS): titik di peta dan label,
+  untuk lintasan (deskriptif). Jendela dianalisis bila berada di ruas analisis dan rentang RR-nya tidak
+  keluar dari fase.
+- **Per fase:** label dari median z jendela yang dianalisis (*asumsi*, D-17), dengan proporsi okupansi
+  sel sebagai keterangan. Semua blok protokol dibaca sebagai fase *istirahat*.
+- **Syarat (D-11):** ruas analisis memiliki ≥ 60 s RR valid (Esco & Flatt 2014) dan ≥ 40 s EEG bersih
+  (Gudmundsson dkk. 2007); bila tidak, `NO_DATA` dengan alasannya. R0 wajib memenuhi syarat yang sama.
+- **Keyakinan:** jumlah jendela, proporsi jendela valid, detik RR valid, dan detik EEG bersih ditampilkan
+  di samping label.
+- **Perbandingan:** label fase dibandingkan dengan harapan protokol: *sesuai harapan*, *berbeda dari
+  harapan*, atau *acuan (R0)* untuk baseline.
+- **Artefak EEG (D-13):** seperti CASS/NB06 (*asumsi*, diuji banding di v0.5).
 
 ## 6. Rencana validasi (ringkas, rincian di `ROADMAP.md`)
 

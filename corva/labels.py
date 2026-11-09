@@ -72,16 +72,19 @@ ALT_NAMES = {
 # say "assumption": True and name the decision or validation step that will settle it.
 EVIDENCE = {
     "axis_x": {"refs": ["krigolson2017", "cannard2021", "barry2007", "ehrhardt2022", "borghini2014", "crabbe2004"],
-               "basis": "spektrum Muse sahih; alfa turun dan beta naik saat arousal dan beban kognitif naik; "
-                        "dipakai rasio karena saat latihan daya absolut semua pita ikut naik"},
+               "basis": "X = rata-rata z log(β/α) empat kanal (D-09); spektrum Muse sahih; alfa turun dan beta naik "
+                        "saat arousal dan beban kognitif naik; dipakai rasio karena saat latihan daya absolut semua pita ikut naik"},
     "axis_y": {"refs": ["laborde2017", "shaffer2017", "munoz2015", "esco2014", "griadhi2026"],
                "basis": "RMSSD menandai aktivitas vagal jantung pada rekaman pendek; diambil dari RR EKG Polar "
                         "karena RMSSD PPG dahi ditaksir berlebih"},
     "two_axes": {"refs": ["berntson1991", "russell1980", "thayer2000", "thayer2009", "kubota2001", "candiarivera2022"],
                  "basis": "keadaan perlu dua sumbu ortogonal; integrasi neuroviseral menghubungkan fungsi prefrontal dan vagal"},
     "y_log": {"refs": ["plews2012", "esco2014"],
-              "basis": "lnRMSSD (transformasi log) lazim untuk pemantauan atlet; calon keputusan D-10"},
-    "x_alternative": {"refs": ["pope1995"], "basis": "indeks engagement beta/(alfa + theta); calon keputusan D-09"},
+              "basis": "Y = z lnRMSSD terhadap R0 (D-10): transformasi log lazim untuk pemantauan atlet dan "
+                       "membuat sebaran RMSSD lebih simetris"},
+    "x_alternative": {"refs": ["pope1995"],
+                      "basis": "indeks engagement beta/(alfa + theta) dihitung per jendela sebagai pembanding, tidak dipakai "
+                               "untuk label (D-09)"},
     "qualitative_labels": {"refs": ["russell1980", "bird2018"],
                            "basis": "penamaan wilayah pada ruang dua sumbu; kelas keadaan kualitatif dari Muse"},
     "threshold": {"refs": ["hopkins2009"],
@@ -89,9 +92,12 @@ EVIDENCE = {
                            "ke z robust terhadap R0 orang itu, sehingga tetap diuji di validasi v0.5"},
     "phases": {"refs": ["laborde2018", "stanley2013"],
                "basis": "kendali vagal dibaca saat istirahat, reaktivitas, dan pemulihan; kinetika pemulihan pascalatihan"},
-    "min_rr": {"refs": ["esco2014", "munoz2015"], "basis": "lnRMSSD 60 s sesuai dengan 5 menit; 120 s hampir sempurna"},
+    "min_rr": {"refs": ["esco2014", "munoz2015"],
+               "basis": "label per fase hanya bila ruas analisis memiliki ≥ 60 s RR valid (D-11): lnRMSSD 60 s sesuai "
+                        "dengan 5 menit; 120 s hampir sempurna"},
     "q3_qualifier": {"refs": ["borghini2014", "klimesch1999", "stanley2013"],
-                     "basis": "theta bersama delta/alfa naik saat lelah; pemulihan vagal tertinggal setelah latihan"},
+                     "basis": "z log(θ/β) ≥ 0,6 (ambang D-06) = lelah/mengantuk (D-12): theta bersama delta/alfa naik saat "
+                              "lelah; pemulihan vagal tertinggal setelah latihan"},
     "Q1": {"refs": ["thayer2009", "kubota2001"], "basis": "keterlibatan kortikal dengan regulasi vagal yang terjaga"},
     "Q2": {"refs": ["barry2007", "laborde2018", "stanley2013"], "basis": "alfa naik (arousal turun) bersama vagal naik (istirahat/pemulihan)"},
     "Q3": {"refs": ["borghini2014", "stanley2013"], "basis": "korteks melambat dengan vagal rendah: lelah, atau pemulihan awal"},

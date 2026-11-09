@@ -3,7 +3,7 @@
 | Versi | Isi | Status |
 |---|---|---|
 | **v0.1 Rancangan** | Hub, model, rujukan, daftar keputusan, kode label 3 × 3 dengan uji, protokol standar di dashboard | selesai (folder ini) |
-| **v0.2 Mesin** | `labels.py` dihubungkan ke `cass_polar/engine.window_state()`: lnRMSSD, θ/β per jendela, fase protokol dari penanda "CorVa: …" (R0 = baseline setelah menit stabilisasi), label per jendela dan per fase, syarat data, perbandingan dengan harapan | setelah D-09 s.d. D-13 diputuskan |
+| **v0.2 Mesin** | `corva/session.py` menghubungkan `labels.py` ke `cass_polar/engine.window_state()`: lnRMSSD, θ/β (dan β/(α+θ) pembanding) per jendela, fase protokol dari penanda "CorVa: …" (R0 = baseline setelah menit stabilisasi), label per jendela dan per fase, syarat data (D-11), perbandingan dengan harapan; `python -m corva.session <folder>` | selesai (D-09 s.d. D-17) |
 | **v0.3 Tampilan** | Explorer CorVa Space: grid 3 × 3 di peta CASS, kartu label per ruas (label, arti, fase, keyakinan), tombol **Tampilkan CorVa** di dashboard, ekspor CSV/PDF | |
 | **v0.4 Demo** | Sesi demo dengan fase istirahat → aktivitas → pemulihan, untuk uji coba tanpa alat | |
 | **v0.5 Validasi** | Protokol kondisi-diketahui (mata terbuka/tertutup, PASAT, napas 6/menit, latihan + pemulihan) dengan pembanding subjektif; reliabilitas uji-ulang. Data dan analisis di repo riset privat, bukan di sini. | |

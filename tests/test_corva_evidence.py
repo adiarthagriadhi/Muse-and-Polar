@@ -20,7 +20,8 @@ def test_every_rule_has_evidence_or_is_a_declared_assumption():
     refs = references()
     codes = {c[0] for c in CELLS.values()} | {NO_DATA[0]}
     rules = {"axis_x", "axis_y", "two_axes", "threshold", "phases", "min_rr", "q3_qualifier",
-             "protocol_baseline", "protocol_block", "protocol_eyes", "protocol_slow_breathing"}
+             "protocol_baseline", "protocol_block", "protocol_eyes", "protocol_slow_breathing",
+             "r0_after_settle", "min_eeg", "theta_band", "eeg_artifact", "phase_label_median"}
     assert codes | rules <= set(all_evidence())
     for name, ev in all_evidence().items():
         assert ev["basis"], name

@@ -19,7 +19,7 @@ ELEMENT_NAMES = {
     "axis_x": "Sumbu X: log(β/α) EEG Muse",
     "axis_y": "Sumbu Y: RMSSD RR Polar",
     "y_log": "Y memakai lnRMSSD (D-10)",
-    "x_alternative": "Alternatif X: β/(α+θ) (D-09)",
+    "x_alternative": "Pembanding X: β/(α+θ) (D-09)",
     "two_axes": "Dua sumbu ortogonal (bidang CorVa)",
     "qualitative_labels": "Penamaan kualitatif wilayah",
     "threshold": "Ambang zona netral |z| < 0,6 (D-06)",
@@ -29,8 +29,15 @@ ELEMENT_NAMES = {
     "protocol_slow_breathing": "Protokol: napas dalam 6/menit",
     "protocol_carryover": "Protokol: efek terbawa antarblok",
     "phases": "Konteks fase istirahat/aktivitas/pemulihan",
-    "min_rr": "Syarat ≥ 60 s RR valid per ruas",
-    "q3_qualifier": "Penanda tambahan Q3 (θ/β, fase pemulihan)",
+    "min_rr": "Syarat ≥ 60 s RR valid per ruas (D-11)",
+    "q3_qualifier": "Penanda tambahan Q3 (θ/β, fase pemulihan; D-12)",
+    "r0_after_settle": "Mesin: R0 = baseline setelah menit stabilisasi",
+    "min_eeg": "Syarat ≥ 40 s EEG bersih per ruas (D-11)",
+    "window_rr_span": "Mesin: RMSSD per jendela dari rentang RR 20 s",
+    "theta_band": "Mesin: pita theta 4–8 Hz (D-12)",
+    "protocol_rest_reading": "Mesin: bacaan fase protokol = istirahat",
+    "phase_label_median": "Mesin: label per fase dari median jendela",
+    "eeg_artifact": "Mesin: artefak EEG seperti NB06 (D-13)",
 }
 
 
@@ -46,7 +53,7 @@ def render() -> str:
     lines = [
         "# Peta bukti CASS-NV (CorVa Space)",
         "",
-        "<!-- Dihasilkan oleh `python -m corva.evidence_md` dari corva/labels.py (EVIDENCE) dan",
+        "<!-- Dihasilkan oleh `python -m corva.evidence_md` dari EVIDENCE di corva/labels.py, protocol.py, session.py dan",
         "     corva/references.json. Jangan disunting langsung. -->",
         "",
         "Setiap aturan model menunjuk rujukannya, atau dinyatakan sebagai **asumsi** yang masih harus",

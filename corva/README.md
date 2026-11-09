@@ -7,7 +7,7 @@
 | **Merek** | **CorVa Space**: *Cortico-Vagal Space* |
 | **Nama teknis** | **CASS-NV**: *CASS Neurovisceral State Map* |
 | **Tagar** | **#NeuroVagal** |
-| **Status** | Tahap rancangan (v0.1). Model dan label masih **sementara**; lihat [`DECISIONS.md`](DECISIONS.md). |
+| **Status** | v0.2 (mesin). Keputusan D-01 s.d. D-17 sudah diambil; ambang dan asumsi masih diuji di validasi v0.5. Lihat [`DECISIONS.md`](DECISIONS.md). |
 
 ## Arti nama
 
@@ -33,7 +33,7 @@ CASS-NV menambahkan:
 3. **Protokol standar** di dashboard, 17 menit: relaks (baseline), lalu mata terbuka/tertutup × napas
    biasa/dalam, dengan durasi dari rujukan. Fase dicatat otomatis sebagai penanda.
 4. **Penanda tambahan** untuk sel yang ambigu (θ/β untuk Q3).
-5. **Aturan keyakinan**: label per ruas hanya keluar bila data cukup (≥ 60 s RR valid).
+5. **Aturan keyakinan**: label per fase hanya keluar bila data cukup (≥ 60 s RR valid dan ≥ 40 s EEG bersih).
 
 Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 
@@ -46,11 +46,13 @@ Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 | [`EVIDENCE.md`](EVIDENCE.md) | **peta bukti** aturan → rujukan, dihasilkan dari kode (`python -m corva.evidence_md`) |
 | [`DECISIONS.md`](DECISIONS.md) | keputusan yang sudah diambil dan yang masih terbuka |
 | [`ROADMAP.md`](ROADMAP.md) | tahapan pengembangan dan validasi |
-| [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, ambang Hopkins, nama alternatif, penanda tambahan). Belum tersambung ke explorer. |
+| [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, ambang Hopkins, nama alternatif, penanda tambahan). |
+| [`session.py`](session.py) | **mesin v0.2**: satu sesi rekaman → label per jendela dan per fase protokol, syarat data, perbandingan dengan harapan. `python -m corva.session <folder sesi> [--windows]` mencetak JSON. Belum tampil di explorer (v0.3). |
 | [`protocol.py`](protocol.py) | protokol standar (fase, durasi, instruksi, harapan, rujukan); dipakai panel **Protokol CorVa** di dashboard (`musepolar/static/corva.js`) |
 | `../tests/test_corva_labels.py` | uji aturan label |
 | `../tests/test_corva_evidence.py` | uji keterlacakan: setiap aturan punya rujukan atau dinyatakan asumsi |
 | `../tests/test_corva_protocol.py` | uji protokol: fase, durasi, penanda |
+| `../tests/test_corva_session.py` | uji mesin: penanda → fase → R0 → label per fase, syarat data, perbandingan dengan harapan (sesi sintetis 17 menit) |
 
 ## Prinsip
 
