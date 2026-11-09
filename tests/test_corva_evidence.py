@@ -1,6 +1,8 @@
 """CASS-NV evidence traceability: every rule cites the bibliography or is a declared assumption."""
 
-from corva.labels import CELLS, EVIDENCE, NO_DATA, PHASE_READING, classify, cite, references
+from corva.evidence import all_evidence
+from corva.labels import ALT_NAMES, CELLS, EVIDENCE, NO_DATA, PHASE_READING, classify, cite, references
+from corva.protocol import EXPECTATION_REFS, PROTOCOL
 
 REQUIRED = {"authors", "authors_complete", "year", "title", "journal", "doi", "doi_verified", "read", "finding"}
 
@@ -17,9 +19,10 @@ def test_bibliography_entries_complete():
 def test_every_rule_has_evidence_or_is_a_declared_assumption():
     refs = references()
     codes = {c[0] for c in CELLS.values()} | {NO_DATA[0]}
-    rules = {"axis_x", "axis_y", "two_axes", "threshold", "phases", "min_rr", "q3_qualifier"}
-    assert codes | rules <= set(EVIDENCE)
-    for name, ev in EVIDENCE.items():
+    rules = {"axis_x", "axis_y", "two_axes", "threshold", "phases", "min_rr", "q3_qualifier",
+             "protocol_baseline", "protocol_block", "protocol_eyes", "protocol_slow_breathing"}
+    assert codes | rules <= set(all_evidence())
+    for name, ev in all_evidence().items():
         assert ev["basis"], name
         if ev.get("assumption"):
             assert not ev["refs"], name
@@ -30,7 +33,7 @@ def test_every_rule_has_evidence_or_is_a_declared_assumption():
 
 
 def test_every_reference_is_used():
-    used = {k for ev in EVIDENCE.values() for k in ev["refs"]}
+    used = {k for ev in all_evidence().values() for k in ev["refs"]}
     assert set(references()) == used
 
 
@@ -52,3 +55,20 @@ def test_evidence_md_is_up_to_date():
     from corva.evidence_md import OUT, render
 
     assert OUT.read_text(encoding="utf-8") == render(), "run: python -m corva.evidence_md"
+
+
+def test_alternative_names_cite_known_sources():
+    refs = references()
+    assert set(ALT_NAMES) == {c[0] for c in CELLS.values()} | {NO_DATA[0]}
+    for code, alts in ALT_NAMES.items():
+        for name, src, kind in alts:
+            assert name and kind in ("istilah", "analogi"), code
+            assert src.startswith("internal:") or src in refs, f"{code}: {src}"
+    assert any(src == "russell1980" and kind == "analogi" for _, src, kind in ALT_NAMES["Q2"])
+
+
+def test_protocol_expectations_cite_known_sources():
+    refs = references()
+    assert {p["id"] for p in PROTOCOL} == set(EXPECTATION_REFS)
+    for phase_id, keys in EXPECTATION_REFS.items():
+        assert all(k in refs for k in keys), phase_id

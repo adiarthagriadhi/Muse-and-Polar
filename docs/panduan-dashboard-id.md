@@ -159,6 +159,29 @@ Tombol **Tampilkan CASS** langsung aktif untuk `DEMO_P01`; sesi lain dipilih lew
 Merekam di mode demo juga bisa (data simulasi). Semua data demo **sintetis**, tidak bermakna
 fisiologis, dan hanya untuk mencoba perangkat lunak.
 
+## Protokol CorVa (protokol standar)
+
+Panel **Protokol CorVa** di kolom kanan memandu peserta melalui lima fase (total 17 menit):
+
+1. Relaks (baseline): 5 menit
+2. Mata terbuka · napas biasa: 3 menit
+3. Mata terbuka · napas dalam (6/menit): 3 menit
+4. Mata tertutup · napas biasa: 3 menit
+5. Mata tertutup · napas dalam (6/menit): 3 menit
+
+Cara pakai:
+- Isi **Nama sesi**, hubungkan Muse dan Polar, lalu klik **Mulai protokol standar**. Rekaman dimulai
+  otomatis bila belum berjalan, dan berhenti otomatis setelah fase terakhir.
+- **Layar peserta** menampilkan instruksi besar, hitung mundur, dan bola pemandu napas (5 s tarik,
+  5 s hembus). Aba-aba suara (bahasa Indonesia) dan nada naik/turun memandu fase mata tertutup;
+  pastikan suara Mac menyala, atau hilangkan centang **suara**.
+- Awal tiap fase tercatat sebagai penanda `CorVa: <nama fase>` di `marker.csv`. Menit pertama tiap fase
+  adalah stabilisasi dan tidak dianalisis.
+- Untuk mencoba alur dengan cepat (30× lebih cepat), buka `http://localhost:8765/?protokol=cepat`.
+
+Dasar durasi dan harapan tiap fase ada di [`corva/MODEL.md`](../corva/MODEL.md) dan
+[`corva/EVIDENCE.md`](../corva/EVIDENCE.md).
+
 ## CASS (EEG Muse × RR Polar)
 
 Panel **CASS** di kolom kanan dashboard. Tidak perlu menjalankan skrip lain di Terminal:

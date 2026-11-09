@@ -10,7 +10,9 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from .labels import CELLS, EVIDENCE, NO_DATA, cite, references
+from .evidence import all_evidence
+from .labels import ALT_NAMES, CELLS, NO_DATA, cite, references
+from .protocol import EXPECTATION_REFS, PROTOCOL
 
 OUT = Path(__file__).with_name("EVIDENCE.md")
 ELEMENT_NAMES = {
@@ -20,7 +22,12 @@ ELEMENT_NAMES = {
     "x_alternative": "Alternatif X: β/(α+θ) (D-09)",
     "two_axes": "Dua sumbu ortogonal (bidang CorVa)",
     "qualitative_labels": "Penamaan kualitatif wilayah",
-    "threshold": "Ambang zona netral ±0,5 z (D-06)",
+    "threshold": "Ambang zona netral |z| < 0,6 (D-06)",
+    "protocol_baseline": "Protokol: baseline relaks 5 menit",
+    "protocol_block": "Protokol: tiap blok 3 menit (1 stabilisasi + 2 analisis)",
+    "protocol_eyes": "Protokol: mata terbuka vs tertutup",
+    "protocol_slow_breathing": "Protokol: napas dalam 6/menit",
+    "protocol_carryover": "Protokol: efek terbawa antarblok",
     "phases": "Konteks fase istirahat/aktivitas/pemulihan",
     "min_rr": "Syarat ≥ 60 s RR valid per ruas",
     "q3_qualifier": "Penanda tambahan Q3 (θ/β, fase pemulihan)",
@@ -51,9 +58,23 @@ def render() -> str:
         "| Unsur | Rujukan | Dasar |",
         "|---|---|---|",
     ]
-    for key, ev in EVIDENCE.items():
+    evidence = all_evidence()
+    for key, ev in evidence.items():
         cites = "; ".join(cite(k) for k in ev["refs"]) if ev["refs"] else "**asumsi**"
         lines.append(f"| {_label(key)} | {cites} | {ev['basis']} |")
+    lines += ["", "## Protokol standar", "",
+              "| Fase | Durasi | Stabilisasi | Mata | Napas | Harapan | Dasar harapan |", "|---|---|---|---|---|---|---|"]
+    for ph in PROTOCOL:
+        exp = ", ".join(_label(c) for c in ph["expected"])
+        why = "; ".join(cite(k) for k in EXPECTATION_REFS[ph["id"]]) or ("acuan R0" if ph["reference"] else "kontrol")
+        lines.append(f"| {ph['name']} | {ph['seconds'] // 60} menit | {ph['settle_s']} s | {ph['eyes']} | {ph['breathing']} | {exp} | {why} |")
+    lines += ["", "## Nama alternatif per sel (D-07)", "",
+              "*istilah* = istilah sumber itu sendiri; *analogi* = wilayah model dua sumbu lain (Russell: arousal × valensi).",
+              "", "| Sel | Nama CorVa | Nama alternatif |", "|---|---|---|"]
+    for code, label, _ in [*CELLS.values(), NO_DATA]:
+        alts = "; ".join(f"{n} ({'label lama Research View' if src.startswith('internal:') else cite(src)}, {kind})"
+                         for n, src, kind in ALT_NAMES[code]) or "-"
+        lines.append(f"| `{code}` | {label} | {alts} |")
     lines += [
         "",
         "## Rujukan",
@@ -76,7 +97,7 @@ def render() -> str:
                                                   ("penulis belum lengkap", not r["authors_complete"]),
                                                   ("tanpa DOI", not r["doi"])) if bad]
         status = "✓" if ok else "⚠ " + ", ".join(flags)
-        used = ", ".join(_label(k) for k, ev in EVIDENCE.items() if key in ev["refs"])
+        used = ", ".join(_label(k) for k, ev in evidence.items() if key in ev["refs"])
         lines += [
             f"- **[{key}]** {authors} ({r['year']}). {r['title']}. *{where}*.{doi}",
             f"  {status} · *dibaca:* {r['read']}",

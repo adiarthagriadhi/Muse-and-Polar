@@ -30,8 +30,8 @@ CASS-NV menambahkan:
 1. **Zona netral** per sumbu (|z| < ambang), sehingga peta menjadi grid **3 × 3**: empat kuadran, empat
    zona "satu sumbu saja", dan satu zona netral.
 2. **Label kualitatif** per sel, misalnya *Rileks–pulih* atau *Teraktivasi–terbebani*.
-3. **Konteks fase** istirahat → aktivitas → pemulihan (*Vagal Tank Theory*, Laborde dkk., 2018). Kuadran
-   yang sama dibaca berbeda tergantung fasenya.
+3. **Protokol standar** di dashboard, 17 menit: relaks (baseline), lalu mata terbuka/tertutup × napas
+   biasa/dalam, dengan durasi dari rujukan. Fase dicatat otomatis sebagai penanda.
 4. **Penanda tambahan** untuk sel yang ambigu (θ/β untuk Q3).
 5. **Aturan keyakinan**: label per ruas hanya keluar bila data cukup (≥ 60 s RR valid).
 
@@ -46,9 +46,11 @@ Model lengkap beserta rujukan ada di [`MODEL.md`](MODEL.md).
 | [`EVIDENCE.md`](EVIDENCE.md) | **peta bukti** aturan → rujukan, dihasilkan dari kode (`python -m corva.evidence_md`) |
 | [`DECISIONS.md`](DECISIONS.md) | keputusan yang sudah diambil dan yang masih terbuka |
 | [`ROADMAP.md`](ROADMAP.md) | tahapan pengembangan dan validasi |
-| [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, fase, penanda tambahan). Belum tersambung ke tampilan. |
+| [`labels.py`](labels.py) | kode pemberi label (grid 3 × 3, ambang Hopkins, nama alternatif, penanda tambahan). Belum tersambung ke explorer. |
+| [`protocol.py`](protocol.py) | protokol standar (fase, durasi, instruksi, harapan, rujukan); dipakai panel **Protokol CorVa** di dashboard (`musepolar/static/corva.js`) |
 | `../tests/test_corva_labels.py` | uji aturan label |
 | `../tests/test_corva_evidence.py` | uji keterlacakan: setiap aturan punya rujukan atau dinyatakan asumsi |
+| `../tests/test_corva_protocol.py` | uji protokol: fase, durasi, penanda |
 
 ## Prinsip
 

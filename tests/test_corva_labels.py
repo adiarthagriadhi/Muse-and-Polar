@@ -4,11 +4,11 @@ import math
 
 import pytest
 
-from corva.labels import CELLS, classify, zone
+from corva.labels import CELLS, classify, magnitude, zone
 
 
 def test_zone_edges():
-    assert zone(0.5) == "high" and zone(-0.5) == "low" and zone(0.49) == "neutral"
+    assert zone(0.6) == "high" and zone(-0.6) == "low" and zone(0.59) == "neutral"
     assert zone(None) is None and zone(math.nan) is None
 
 
@@ -40,3 +40,14 @@ def test_q3_qualifier():
 def test_missing_data():
     assert classify(None, 1.0)["code"] == "NO_DATA"
     assert classify(1.0, math.nan)["code"] == "NO_DATA"
+
+
+def test_magnitude_grades():
+    assert [magnitude(z) for z in (0.1, -0.3, 0.8, 1.5, -2.5, 5)] == [
+        "trivial", "kecil", "sedang", "besar", "sangat besar", "amat sangat besar"]
+    assert magnitude(None) is None
+
+
+def test_alternatives_returned():
+    alts = classify(1.5, -2.0)["alternatives"]
+    assert {"name": "stres", "source": "ehrhardt2022", "kind": "istilah"} in alts

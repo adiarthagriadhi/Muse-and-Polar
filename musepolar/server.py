@@ -13,6 +13,7 @@ from aiohttp import WSMsgType, web
 
 from .hub import Hub
 from cass_polar.live_routes import add_routes
+from corva import protocol as corva_protocol
 
 log = logging.getLogger("musepolar")
 STATIC = Path(__file__).parent / "static"
@@ -107,6 +108,11 @@ def build_app(hub: Hub, slots: dict[str, DeviceSlot]) -> web.Application:
     app.router.add_get("/", index)
     app.router.add_get("/ws", ws_handler)
     add_routes(app, hub.data_dir)
+
+    async def corva_protocol_json(_request):
+        return web.json_response(corva_protocol.as_json())
+
+    app.router.add_get("/api/corva/protocol", corva_protocol_json)
     app.router.add_static("/static", STATIC)
     return app
 

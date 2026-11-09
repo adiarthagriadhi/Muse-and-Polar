@@ -39,8 +39,12 @@ Peta aturan → rujukan, beserta status verifikasi tiap rujukan, ada di [`EVIDEN
 Dasar dua sumbu: *autonomic space* (Berntson dkk. 1991) dan model sirkumpleks (Russell 1980). Keterkaitan
 korteks–jantung: Kubota dkk. 2001; Candia-Rivera dkk. 2022.
 
-Tiap sumbu dibagi tiga zona dengan ambang ±0,5 z (sama dengan ambang label lama Research View).
-Ambang ini **belum punya dasar rujukan**: ia asumsi yang diputuskan lewat D-06 dan validasi v0.5.
+Tiap sumbu dibagi tiga zona dengan ambang **|z| < 0,6 = netral** (D-06): batas "sedang" pada skala
+besaran Hopkins dkk. (2009). Besaran tiap sumbu ikut ditampilkan (trivial < 0,2 · kecil < 0,6 ·
+sedang < 1,2 · besar < 2,0 · sangat besar < 4,0). Skala ini aslinya distandardisasi terhadap SD
+antarsubjek; di sini diterapkan pada z robust terhadap R0 orang itu, jadi tetap diuji di validasi v0.5.
+
+Grid 3 × 3 tetap **dua dimensi** (D-05): sumbunya dua, hanya dipotong menjadi 9 sel.
 
 ```
                  Y vagal ↑
@@ -73,19 +77,54 @@ Ambang ini **belum punya dasar rujukan**: ia asumsi yang diputuskan lewat D-06 d
 - θ/β naik (≥ ambang): **lelah/mengantuk** (Borghini dkk. 2014).
 - Selain itu, bila fasenya pemulihan: **pemulihan awal** (vagal belum pulih; alfa naik pascalatihan).
 
-## 4. Konteks fase (Vagal Tank Theory)
+## 4. Fase: protokol standar CorVa (D-08)
 
-| | Istirahat (R0) | Aktivitas | Pemulihan |
+Dashboard live memandu peserta melalui lima fase dan mencatat awal tiap fase sebagai penanda
+"CorVa: …" (`corva/protocol.py`, panel **Protokol CorVa**). Fase berjalan otomatis, ada instruksi di
+layar peserta, pemandu napas visual dan nada, serta aba-aba suara untuk fase mata tertutup.
+
+| # | Fase | Durasi | Mata | Napas | Harapan CorVa |
+|---|---|---|---|---|---|
+| 1 | Relaks (baseline) = **R0** | 5 menit | terbuka | spontan | Netral (acuan) |
+| 2 | Mata terbuka · napas biasa | 3 menit | terbuka | spontan | Netral (kontrol) |
+| 3 | Mata terbuka · napas dalam | 3 menit | terbuka | 6/menit | Q2 atau Vagal naik |
+| 4 | Mata tertutup · napas biasa | 3 menit | tertutup | spontan | Korteks melambat atau Q2 |
+| 5 | Mata tertutup · napas dalam | 3 menit | tertutup | 6/menit | Q2 |
+
+Total 17 menit. Menit pertama tiap fase adalah **stabilisasi** dan tidak dianalisis.
+
+**Dasar durasi:**
+- **Baseline 5 menit** = standar rekaman HRV jangka pendek (Task Force 1996), atau 1 menit stabilisasi
+  + 4 menit analisis (Bourdillon dkk. 2017).
+- **Tiap blok 3 menit** = 1 menit stabilisasi + 2 menit analisis. RMSSD sah dengan jendela 2 menit
+  (Bourdillon dkk. 2017; Muñoz dkk. 2015: 120 s hampir sempurna; Esco & Flatt 2014: 60 s cukup).
+  EEG istirahat stabil dengan epoch ≥ 40 s (Gudmundsson dkk. 2007).
+- **Napas dalam 6/menit** (~0,1 Hz) memberi efek HRV maksimal (Lehrer & Gevirtz 2014). Napas lambat
+  menaikkan HRV vagal (Laborde dkk. 2022) dan alfa EEG (Zaccaro dkk. 2018). Frekuensi resonansi
+  individual bisa berbeda (Shaffer & Meehan 2020; D-16).
+- **Mata tertutup** menaikkan alfa dan menurunkan arousal dibanding mata terbuka (Barry dkk. 2007).
+
+**Catatan urutan (D-15):** efek napas lambat masih terlihat segera sesudah sesi (Laborde dkk. 2022),
+jadi blok 4 bisa terbawa efek blok 3. Menit stabilisasi mengurangi, tetapi tidak menghapus, efek ini.
+Pada studi validasi, urutan sebaiknya diseimbangkan antarpeserta.
+
+**Bacaan fase umum (Vagal Tank Theory).** Untuk protokol lain yang memuat aktivitas dan pemulihan,
+`classify(phase=…)` tetap memberi bacaan kuadran per fase istirahat/aktivitas/pemulihan:
+
+| | Istirahat | Aktivitas | Pemulihan |
 |---|---|---|---|
 | **Q1** | siaga tenang | keterlibatan teratur | pulih, sudah siaga |
 | **Q2** | istirahat baik | keterlibatan rendah | pemulihan baik |
 | **Q3** | mengantuk | kelelahan | pemulihan awal |
 | **Q4** | tidak lazim saat istirahat, periksa | respons wajar (reaktivitas) | pemulihan tertunda |
 
-Fase diambil dari marker dashboard (usulan: *Baseline mulai* = istirahat, *Tugas mulai* = aktivitas,
-*Pemulihan mulai* = pemulihan); keputusan D-05.
-
 ## 5. Aturan label
+
+Setiap label membawa **nama CorVa** dan **semua nama alternatif dari rujukan** (D-07), misalnya Q2 =
+*Rileks–pulih*, juga disebut *Tenang* (label lama Research View), *relaxed* (Bird dkk. 2018), *pemulihan
+vagal* (Laborde dkk. 2018), dan *rileks/tenang* (analogi Russell 1980). Daftar lengkapnya ada di
+[`EVIDENCE.md`](EVIDENCE.md).
+
 
 - **Per jendela 5 s:** titik di peta, untuk lintasan (deskriptif).
 - **Per ruas:** label dari median X dan Y ruas, dengan proporsi okupansi sebagai keterangan.
