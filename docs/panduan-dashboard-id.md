@@ -90,10 +90,20 @@ dashboard tidak memperbaiki ini, karena penanda itu dicatat oleh Mac, bukan oleh
 Solusinya adalah **kejadian fisik bersama** yang terasa di kedua akselerometer:
 
 1. Pasang kedua perangkat, klik **Mulai sinkronisasi (10 s)**.
-2. Dalam 10 detik itu lakukan **3 loncatan kecil** dengan jeda ±2 detik (atau hentakan badan yang tegas).
-3. Aplikasi mencocokkan pola lonjakan akselerometer Muse dan Polar (korelasi silang) lalu
-   menampilkan selisihnya, mis. **+62 ms Muse − Polar**, beserta korelasi dan jumlah kejadian yang terdeteksi.
-   Hasil dianggap *berhasil* bila korelasi ≥ 0,5 dan minimal 2 kejadian terdeteksi di kedua sensor.
+2. Dalam 10 detik itu lakukan **3 loncatan kecil** dengan jeda yang tidak sama, mis. 2 detik lalu
+   3 detik (atau hentakan badan yang tegas).
+3. Aplikasi mencocokkan pola lonjakan akselerometer Muse dan Polar (korelasi silang, pencarian ±3 s)
+   lalu menampilkan selisihnya, mis. **+62 ms Muse − Polar**, beserta korelasi dan jumlah kejadian yang
+   terdeteksi. Hasil dianggap *berhasil* bila korelasi ≥ 0,5, minimal 2 kejadian terdeteksi di kedua
+   sensor, puncak korelasi tidak berada di tepi rentang pencarian, dan tidak ada kecocokan kedua yang
+   hampir sama kuat (`second_peak` < 0,85 × korelasi).
+
+> **Catatan v1.0.0.** Pada v1.0.0 sinkronisasi di lapangan sering gagal dengan pesan *"pola gerakan
+> kedua sensor kurang mirip (korelasi rendah)"*, meskipun loncatan terlihat di kedua sensor. Penyebabnya
+> ada di rekonstruksi stempel waktu (`SampleClock`): satu keterlambatan pengiriman Bluetooth > ~0,3 s
+> membuat semua stempel waktu berikutnya dari aliran itu bergeser maju sampai koneksi diputus, sehingga
+> selisih Muse−Polar bisa melebihi ±1 s (batas pencarian v1.0.0). Diperbaiki di 1.0.1. Rekaman lama
+> dapat diperiksa dengan `python -m musepolar.diagnose <folder sesi>` (keluaran hanya angka teknis).
 4. Hasilnya otomatis disimpan di `session.json` (bagian `sync`) dan sebagai penanda
    `SYNC mulai` / `SYNC selesai (...)` di `marker.csv`.
 
@@ -179,7 +189,8 @@ Setiap sesi disimpan di `recordings/<YYYYMMDD_HHMMSS>_<nama>/`:
 - `timestamp` = waktu Unix (detik, jam Mac) **per sampel**, sama untuk semua perangkat sehingga
   Muse dan Polar bisa langsung diselaraskan.
 - Waktu sampel direkonstruksi dari laju sampling nominal dan nomor urut paket (paket yang hilang
-  terdeteksi dan menggeser waktu), lalu dijangkarkan ke waktu terima Bluetooth. Latensi BLE ~20–100 ms
+  terdeteksi dan menggeser waktu), lalu dijangkarkan ke waktu terima Bluetooth paling awal (paket yang
+  datang terlambat karena pengiriman ulang tidak menggeser jangkar; sejak 1.0.1). Latensi BLE ~20–100 ms
   masih ada; untuk menyelaraskan Muse dan Polar secara presisi gunakan [sinkronisasi](#sinkronisasi-muse--polar).
 - `sensor_ns` = jam internal Polar H10 (nanodetik) untuk setiap sampel EKG/akselerometer, diambil dari
   timestamp frame PMD (timestamp sampel terakhir tiap frame, jarak antarsampel mengikuti jam strap).
