@@ -110,12 +110,19 @@ def _count_events(env: np.ndarray, fs: float, min_g: float = 0.15, refractory: f
 
 
 def estimate_offset(
-    a_t, a_xyz, b_t, b_xyz, fs: float = 500.0, max_lag: float = 1.0, smooth: float = 0.04
+    a_t, a_xyz, b_t, b_xyz, fs: float = 500.0, max_lag: float = 3.0, smooth: float = 0.04,
+    min_corr: float = 0.5, max_second: float = 0.85,
 ) -> dict:
     """Time offset between two accelerometers that felt the same movements (taps/jumps).
 
     Returns ``offset_s`` = how much later the same event appears in stream *a*
     than in stream *b* (on the shared host clock).  To align: ``t_b + offset_s``.
+
+    Accepted (``ok``) when the correlation is at least ``min_corr``, both sensors
+    show at least 2 movements, the peak is not at the edge of the ±``max_lag``
+    search range (the true offset may lie outside it), and the best other peak
+    (more than 0.25 s away) is below ``max_second`` times the best one.
+    v1.0.0 searched only ±1 s and accepted an edge peak.
     """
     a_t, b_t = np.asarray(a_t, float), np.asarray(b_t, float)
     a_xyz, b_xyz = np.asarray(a_xyz, float), np.asarray(b_xyz, float)
@@ -144,17 +151,29 @@ def estimate_offset(
         frac = 0.5 * (y0 - y2) / d if d else 0.0
     lag = (i - L + frac) / fs
     corr = float(seg[i] / denom)
-    ok = corr >= 0.5 and min(events_a, events_b) >= 2
-    reason = "" if ok else (
-        "gerakan kurang jelas — lakukan minimal 2–3 loncatan/ketukan tegas" if min(events_a, events_b) < 2
-        else "pola gerakan kedua sensor kurang mirip (korelasi rendah)"
-    )
+    away = np.abs(np.arange(len(seg)) - i) > int(0.25 * fs)
+    second = float(seg[away].max() / denom) if away.any() else 0.0
+    at_edge = abs(i - L) >= L - max(1, int(0.02 * fs))
+    distinct = second < max_second * corr
+    ok = corr >= min_corr and min(events_a, events_b) >= 2 and not at_edge and distinct
+    if ok:
+        reason = ""
+    elif min(events_a, events_b) < 2:
+        reason = "gerakan kurang jelas — lakukan minimal 2–3 loncatan/ketukan tegas"
+    elif at_edge:
+        reason = f"selisih waktu di luar ±{max_lag:g} s — periksa stempel waktu"
+    elif corr < min_corr:
+        reason = "pola gerakan kedua sensor kurang mirip (korelasi rendah)"
+    else:
+        reason = "hasil ambigu (ada dua kecocokan yang hampir sama) — beri jeda tidak beraturan antarloncatan"
     return {
         "ok": ok,
         "reason": reason,
         "offset_s": float(lag),
         "correlation": corr,
+        "second_peak": second,
         "events_a": events_a,
         "events_b": events_b,
-        "at_edge": abs(i - L) >= L - 1,
+        "at_edge": at_edge,
+        "max_lag_s": max_lag,
     }
