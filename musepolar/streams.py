@@ -25,36 +25,57 @@ class SampleClock:
     """Assigns evenly spaced timestamps to packets of samples.
 
     BLE notifications arrive with jitter, so per-sample times are reconstructed
-    from the nominal sample rate and anchored to the host clock.  The anchor
-    slowly follows the receive times to absorb crystal drift, and is reset when
-    the prediction drifts further than ``tolerance`` seconds (e.g. after a gap).
+    from the nominal sample rate ("device time": samples counted, including
+    ``skipped`` ones the caller detected from sequence numbers or sensor time)
+    and anchored to the host clock with an offset ``host - device``.
+
+    Every packet gives an upper bound for that offset, because its last sample
+    was taken no later than ``recv_time``.  The anchor therefore drops at once
+    to a packet that arrives earlier than predicted, and rises only slowly
+    (``follow`` times the excess, the excess capped at ``tolerance``) to absorb
+    a crystal that runs slower than nominal.  A late packet that is not
+    explained by lost samples (Bluetooth retransmission, a busy event loop)
+    is a delivery delay, not a time jump, so it no longer moves the anchor.
+    Only an excess above ``resync`` seconds re-anchors forward.
+
+    v1.0.0 instead re-anchored to any packet off by more than ``tolerance`` and
+    then refused to step back, so one delivery delay of more than ~0.3 s shifted
+    all later timestamps of that stream forward for the rest of the connection.
     """
 
-    def __init__(self, rate: float, tolerance: float = 0.25, follow: float = 0.01):
+    def __init__(self, rate: float, tolerance: float = 0.25, follow: float = 0.01, resync: float = 5.0):
         self.dt = 1.0 / rate
         self.tolerance = tolerance
         self.follow = follow
-        self.next_t: float | None = None
+        self.resync = resync
+        self.offset: float | None = None  # host time - device time (s)
+        self.dev = 0.0  # device time of the next sample (s)
         self.last_t: float | None = None
 
     def reset(self) -> None:
-        self.next_t = None
+        self.offset = None
+        self.dev = 0.0
         self.last_t = None
 
     def stamps(self, n: int, recv_time: float, skipped: int = 0) -> list[float]:
-        # The last sample of the packet was taken no later than recv_time.
-        start = recv_time - (n - 1) * self.dt
-        if self.next_t is not None:
-            self.next_t += skipped * self.dt
-        if self.next_t is None or abs(self.next_t - start) > self.tolerance:
-            self.next_t = start
+        self.dev += skipped * self.dt
+        # offset implied by this packet: its last sample was taken no later than recv_time
+        o = recv_time - (self.dev + (n - 1) * self.dt)
+        if self.offset is None or o - self.offset > self.resync:
+            self.offset = o
+        elif o < self.offset:
+            self.offset = o
         else:
-            self.next_t += (start - self.next_t) * self.follow
-        if self.last_t is not None and self.next_t <= self.last_t:
-            self.next_t = self.last_t + self.dt
-        ts = [self.next_t + i * self.dt for i in range(n)]
+            self.offset += min(o - self.offset, self.tolerance) * self.follow
+        ts = []
+        floor = -float("inf") if self.last_t is None else self.last_t + 0.5 * self.dt
+        for i in range(n):
+            # stay strictly increasing; after the anchor drops, samples are briefly compressed
+            t = max(self.offset + self.dev + i * self.dt, floor)
+            ts.append(t)
+            floor = t + 0.5 * self.dt
         self.last_t = ts[-1]
-        self.next_t += n * self.dt
+        self.dev += n * self.dt
         return ts
 
 
